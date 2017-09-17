@@ -8,6 +8,7 @@ setup(name='ParamSpace',
       long_description='Classes that allow easy iteration over a multidimensional parameter space, generating dictionaries at each point in this parameter space.',
       author='Yunus Sevinchan',
       author_email='YunusSevinchan@gmail.com',
+      url='https://github.com/blusquare/pspace',
       packages=['pspace'],
       classifiers=[
           'Development Status :: 5 - Production/Stable',
