@@ -692,14 +692,21 @@ class ParamSpace:
 
 	# Iterating over the ParamSpace ...........................................
 
-	def get_points(self, fstr: str=None) -> tuple:
-		''' Returns a generator of all states in state space. If with_state_no is True, a tuple of point number and the point will be returned instead.'''
+	def get_points(self, fstr: str=None, with_span_states: bool=False) -> tuple:
+		''' Returns a generator of all states in state space, returning (state_no, point in state space).
+
+		If `with_span_states` is True, the span states tuple is returned instead of the state number'''
 		if fstr is not None and not isinstance(fstr, str):
 			raise TypeError("Argument fstr needs to be a string or None, was "+str(type(fstr)))
 		elif fstr is None:
 			# No additional return value
 			_add_ret 	= ()
 		# else: will use format string, even if it is empty
+
+		if with_span_states:
+			first_tuple_element 	= self.get_span_states
+		else:
+			first_tuple_element 	= self.get_state_no
 
 		if self.num_dimensions == 0:
 			log.warning("No dimensions in ParamSpace. Returning defaults.")
@@ -723,12 +730,12 @@ class ParamSpace:
 		_add_ret 	= () if not fstr else (fstr.format(self),)
 
 		# Yield the initial state
-		yield (self.get_state_no(), self.get_point()) + _add_ret
+		yield (first_tuple_element(), self.get_point()) + _add_ret
 
 		# Now yield all the other states
 		while self.next_state():
 			_add_ret 	= () if not fstr else (fstr.format(self),)
-			yield (self.get_state_no(), self.get_point()) + _add_ret
+			yield (first_tuple_element(), self.get_point()) + _add_ret
 
 		else:
 			log.info("Visited every point in ParamSpace.")
