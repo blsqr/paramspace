@@ -11,21 +11,26 @@ import numpy as np
 log = logging.getLogger(__name__)
 
 # TODO
-# * add ordering of spans in ParamSpace
-# * add yaml constructors
+# 	- add yaml constructors here?
+# 	- clean up ParamSpace: more private names, properties, iterators; cleaner API; ...
+# 	- more readable argument passing to ParamSpan
+# 	- more Duck Typing, less type checking
 # -----------------------------------------------------------------------------
 
 class ParamSpanBase:
 	''' The ParamSpan base class. This is used so that the actual ParamSpan class can be a child class of this one and thus be distinguished from CoupledParamSpan'''
 
-	def __init__(self, arg): # TODO more readable argument passing
+	def __init__(self, arg):
 		''' Initialise the ParamSpan from an argument that is a list, tuple or a dict.'''
 
-		# Set attributes
-		self.state 		= None # State of the span (idx of the current value or None, if default state)
+		# Set attributes to default values
 		self.enabled 	= True
+		self.state 		= None 	# State of the span (idx of the current value or None, if default state)
+		self.span 		= None 	# Filled with values below
 		self.name 		= None
+		self.order 		= np.inf # default value (i.e.: last) if no order is supplied
 
+		# Parse the argument and fill the span
 		if isinstance(arg, (list, tuple)):
 			# Initialise from sequence: first value is default, all are span
 			self.default 	= arg[0]
@@ -57,7 +62,7 @@ class ParamSpanBase:
 				raise ValueError("No valid span key (span, range, linspace, logspace) found in init argument, got {}.".format(arg.keys()))
 
 			# Add additional values to the span
-			if 'add' in arg:
+			if arg.get('add'):
 				add = arg['add']
 				if isinstance(add, (list, tuple)):
 					self.span += list(add)
@@ -65,6 +70,7 @@ class ParamSpanBase:
 					self.span.append(add)
 
 			# Optionally, cast to int or float
+			# TODO Make this a key-value argument, not three key-bool pairs
 			if arg.get('as_int'):
 				self.span 	= [int(v) for v in self.span]
 
@@ -80,16 +86,15 @@ class ParamSpanBase:
 				self._state 	= arg.get('state')
 
 			# A span can also be not enabled
-			if not arg.get('enabled', True):
-				self.enabled 	= False
+			self.enabled 	= arg.get('enabled', True):
 
 			# And it can have a name
-			if 'name' in arg:
-				self.name 		= arg.get('name')
+			self.name 		= arg.get('name', None)
 
 			log.debug("Initialised ParamSpan object from mapping.")
 
 		else:
+			# TODO not strictly necessary; just let it fail...
 			raise TypeError("ParamSpan init argument needs to be of type list, tuple or dict, was {}.".format(type(arg)))
 
 		return
@@ -325,19 +330,23 @@ class ParamSpace:
 		'''
 		log.debug("Initialising spans ...")
 
-		# Traverse the dict and look for ParamSpan objects; collect them and their key tuples
-		pspans	= _recursive_collect(d, isinstance, ParamSpan, _kv_mode=True)
+		# Traverse the dict and look for ParamSpan objects; collect them as (order, key, value) tuples
+		pspans	= _recursive_collect(d, isinstance, ParamSpan,
+		                             prepend_info=('info', 'keys'),
+		                             info_func=lambda ps: ps.order)
 
-		# Sort by first key (very important for consistency!)
-		pspans.sort(key=lambda tup: tup[0])
+		# Sort them. This looks at the info first, which is the order entry, and then at the keys. If a ParamSpan does not provide an order, it has entry np.inf there, such that those without order get sorted by the key.
+		pspans.sort()
+		# NOTE very important for consistency
 
 		# Cast to an OrderedDict (pspans is a list of tuples -> same data structure as OrderedDict)
 		self._spans 	= OrderedDict(pspans)
 
 		# Also collect the coupled ParamSpans and continue with the same procedure
 		coupled = _recursive_collect(d, isinstance, CoupledParamSpan,
-		                             _kv_mode=True)
-		coupled.sort(key=lambda tup: tup[0])
+		                             prepend_info=('info', 'keys'),
+		                             info_func=lambda ps: ps.order)
+		coupled.sort() # same sorting rules as above, but not as crucial here
 		self._cpspans 	= OrderedDict(coupled)
 
 		# Now resolve the coupling targets and add them to CoupledParamSpan instances ...and create a dict where the coupled span can be accessed via the name of the span it couples to
@@ -359,6 +368,7 @@ class ParamSpace:
 		return str(self._dict)
 
 	def __repr__(self):
+		'''To reconstruct the ParamSpace object ...'''
 		return "ParamSpace("+repr(self._dict)+")"
 
 	def __format__(self, spec: str):
@@ -817,13 +827,22 @@ def _recursive_setitem(d: dict, keys: tuple, val, create_key: bool=False):
 		# reached the end of the recursion
 		d[keys[0]] 	= val
 
-def _recursive_collect(itr, select_func, *select_args, _kv_mode: bool=False, _keys: tuple=None, **select_kwargs) -> list:
+def _recursive_collect(itr, select_func, *select_args, prepend_info: tuple=None, parent_keys: tuple=None, info_func=None, info_func_kwargs: dict=None, **select_kwargs) -> list:
 	''' Go recursively through the dict- or sequence-like (iterable) itr and call select_func(val, *select_args, **select_kwargs) on the values. If the return value is True, that value will be collected to a list, which is returned at the end.
 
-	If _kv_mode is True, this will not collect the values, but also their keys. The argument _keys is used to pass on the tuple list of parent keys.
+	With `prepend_info`, information can be prepended to the return value. Then, not only the values but also these additional items can be gathered:
+		`keys`  	: prepends the key
+		`info_func` : prepends the return value of `info_func(val)`
+	The resulting return value is then a list of tuples
+
+	The argument parent_keys is used to pass on the key sequence of parent keys. (Necessary for the `items` mode.)
 	'''
 
+	# Return value list
 	coll 	= []
+
+	# Default values
+	info_func_kwargs 	= info_func_kwargs if info_func_kwargs else {}
 
 	# TODO check more generally for iterables?!
 	if isinstance(itr, dict):
@@ -835,24 +854,37 @@ def _recursive_collect(itr, select_func, *select_args, _kv_mode: bool=False, _ke
 
 	for key, val in iterator:
 		# Generate the tuple of parent keys... for this iterator of the loop
-		if _keys is None:
+		if parent_keys is None:
 			these_keys 	= (key,)
 		else:
-			these_keys 	= _keys + (key,)
+			these_keys 	= parent_keys + (key,)
 
 		# Apply the select_func and, depending on return, continue recursion or not
 		if select_func(val, *select_args, **select_kwargs):
 			# found the desired element
-			if _kv_mode:
-				coll.append((these_keys, val))
+			# Distinguish cases where information is prepended and where not
+			if not prepend_info:
+				entry 	= val
 			else:
-				coll.append(val)
+				entry 	= (val,)
+				for info in prepend_info:
+					if info in ['key', 'keys']:
+						entry 	= (these_keys,) + entry
+					elif info in ['info_func']:
+						entry 	= (info_func(val, **info_func_kwargs),) + entry
+					else:
+						raise ValueError("No such `prepend_info` entry implemented: "+str(info))
+
+			# Add it to the return list
+			coll.append(entry)
 
 		elif isinstance(val, (dict, list, tuple)):
 			# Not the desired element, but recursion possible ...
-			coll 	+= _recursive_collect(val, select_func,
-			                              *select_args,
-			                              _kv_mode=_kv_mode, _keys=these_keys,
+			coll 	+= _recursive_collect(val, select_func, *select_args,
+			                              prepend_info=prepend_info,
+			                              info_func=info_func,
+			                              info_func_kwargs=info_func_kwargs,
+			                              parent_keys=these_keys,
 			                              **select_kwargs)
 
 		else:
