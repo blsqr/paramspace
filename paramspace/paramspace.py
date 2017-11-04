@@ -86,7 +86,7 @@ class ParamSpanBase:
 				self._state 	= arg.get('state')
 
 			# A span can also be not enabled
-			self.enabled 	= arg.get('enabled', True):
+			self.enabled 	= arg.get('enabled', True)
 
 			# And it can have a name
 			self.name 		= arg.get('name', None)
@@ -332,22 +332,25 @@ class ParamSpace:
 
 		# Traverse the dict and look for ParamSpan objects; collect them as (order, key, value) tuples
 		pspans	= _recursive_collect(d, isinstance, ParamSpan,
-		                             prepend_info=('info', 'keys'),
+		                             prepend_info=('info_func', 'keys'),
 		                             info_func=lambda ps: ps.order)
 
 		# Sort them. This looks at the info first, which is the order entry, and then at the keys. If a ParamSpan does not provide an order, it has entry np.inf there, such that those without order get sorted by the key.
 		pspans.sort()
 		# NOTE very important for consistency
 
+		# Now need to reduce the list items to 2-tuples, ditching the order, to allow to initialise the OrderedDict
+		pspans 	= [tpl[1:] for tpl in pspans]
+
 		# Cast to an OrderedDict (pspans is a list of tuples -> same data structure as OrderedDict)
 		self._spans 	= OrderedDict(pspans)
 
 		# Also collect the coupled ParamSpans and continue with the same procedure
 		coupled = _recursive_collect(d, isinstance, CoupledParamSpan,
-		                             prepend_info=('info', 'keys'),
+		                             prepend_info=('info_func', 'keys'),
 		                             info_func=lambda ps: ps.order)
 		coupled.sort() # same sorting rules as above, but not as crucial here
-		self._cpspans 	= OrderedDict(coupled)
+		self._cpspans 	= OrderedDict([tpl[1:] for tpl in coupled])
 
 		# Now resolve the coupling targets and add them to CoupledParamSpan instances ...and create a dict where the coupled span can be accessed via the name of the span it couples to
 		self._cpspan_targets 	= {}
@@ -867,7 +870,8 @@ def _recursive_collect(itr, select_func, *select_args, prepend_info: tuple=None,
 				entry 	= val
 			else:
 				entry 	= (val,)
-				for info in prepend_info:
+				# Loop over the keys to prepend in reversed order (such that the order of the given tuple is not inverted)
+				for info in reversed(prepend_info):
 					if info in ['key', 'keys']:
 						entry 	= (these_keys,) + entry
 					elif info in ['info_func']:
