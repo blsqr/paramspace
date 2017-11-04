@@ -1,4 +1,4 @@
-# The `pspace` package
+# The `paramspace` package
 
 This package is aimed at being able to iterate over a multidimensional parameter space, where at each point a different dictionary can be returned.
 
@@ -15,6 +15,6 @@ $ python3 setup.py install
 ## Usage
 
 ```python
-import pspace
+import paramspace as psp
 # ... TODO
 ```
