@@ -195,6 +195,13 @@ class ParamSpanBase:
 		else:
 			raise ValueError("Application of slice {} to {}'s span {} resulted in zero-length span, which is illegal.".format(slc, self.__class__.__name__, self.span))
 
+	def squeeze(self):
+		'''If of length one, returns the remaining value in the span; if not, returns itself.'''
+		if len(self) == 1:
+			return self.span[0]
+		else:
+			return self
+
 # .............................................................................
 
 class ParamSpan(ParamSpanBase):
@@ -810,12 +817,16 @@ class ParamSpace:
 
 		# Have the option to squeeze away the size-1 ParamSpans
 		if squeeze:
-			subspace 	= _recursive_replace(subspace,
+			subspace 	= _recursive_replace(subspace._dict,
 			                                 lambda pspan: pspan.squeeze(),
 			                                 isinstance, ParamSpanBase)
+		else:
+			# Just extract the subspace dictionary
+			subspace 	= subspace._dict
+		# The previous subspace ParamSpace object will go out of scope here. The changes however were applied to the ParamSpan objects that are stored in the dictionaries.
 
-		# Now, a new ParamSpace object should be initialised, because the old one was messed with too much. The changes to the ParamSpan objects are taken care of and the old subspace object will go out of scope after the following line ...
-		subspace 	= ParamSpace(subspace._dict)
+		# Now, a new ParamSpace object should be initialised, because the old one was messed with too much.
+		subspace 	= ParamSpace(subspace)
 
 		return subspace
 
@@ -1000,7 +1011,7 @@ def _recursive_replace(itr, replace_func, select_func, *select_args, replace_kwa
 	elif isinstance(itr, (list, tuple)):
 		iterator 	= enumerate(itr)
 	else:
-		raise TypeError("Cannot iterate through argument itr of type {}".format(type(itr)))
+		raise TypeError("Cannot iterate through given iterable of type {}".format(type(itr)))
 
 	for key, val in iterator:
 		if select_func(val, *select_args, **select_kwargs):
