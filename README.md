@@ -6,6 +6,8 @@ The whole parameter space is contained in the `ParamSpace` class, while each dim
 
 **NOTE:** Documentation of this package is very rudimentary at this point and will need to be corrected and extended for version 1.0.
 
+Also, in the long term there should be a version 2.0 rewritten from scratch, aiming to be more simple, pythonistic, and supporting more powerful iterator functionality.
+
 ## Install
 
 For installation, it is best to use `pip` and pass the directory of the cloned repository to it. This will automatically install `paramspace` and its requirements and makes it very easy to uninstall or upgrade later.

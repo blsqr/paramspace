@@ -587,7 +587,7 @@ class ParamSpace:
 		''' Get the iterator over the span keys (tuples of strings).'''
 		return self._spans.keys()
 
-	def get_span_names(self):
+	def get_span_names(self) -> list:
 		''' Get a list of the span names (tuples of strings). If the span was itself named, that name is used rather than the one created from the dictionary key.'''
 		return self.span_names
 
@@ -757,36 +757,49 @@ class ParamSpace:
 
 	# Getting a subspace ......................................................
 
-	def get_subspace(self, *slices): # TODO make possible to use keys to associate slices
-		'''Returns a copy of this ParamSpace with the slices applied to the corresponding ParamSpans.'''
+	def get_subspace(self, *slices, span_names=None, squeeze: bool=True):
+		'''Returns a copy of this ParamSpace with the slices applied to the corresponding ParamSpans.
+
+		If a list of span names is given, they are used to apply the slices. (NotImplemented).
+
+		If `squeeze`, the size one spans are removed. (Not the nicest implementation...)'''
 
 		def apply_slice(pspace, *, slc, name: str):
 			'''Destructively (!) applies a slice to the span with the given name.'''
 			pspan 	= pspace.get_span_by_name(name)
 			pspan.apply_slice(slc)
 
+		if span_names:
+			# TODO
+			raise NotImplementedError("span_names")
+
 		# Work on a copy of this ParamSpace
 		subspace 	= copy.deepcopy(self)
 
 		# Resolve the slices list to a list of (name, slice obj) tuples
-		# Target list with default values
-		slicing_ops = [(name, slice(None))
-		               for name in subspace.get_span_names()]
-
 		# If the first object is an Ellipsis, fill in front; if the last is or the list is shorter than the number of spans, fill in the back
 		if slices[0] is Ellipsis:
-			# TODO continue here
+			# Work on the last names
+			names 		= subspace.get_span_names()[-len(slices):]
 		else:
-			for idx, slc in enumerate(slices):
-				# TODO continue here
-
+			# The determined slicing operations are on the first axes
+			names 		= subspace.get_span_names()[:len(slices)]
 
 		# For each name, apply the slice
-		for name, slc in slicing_ops:
+		for name, slc in zip(names, slices):
 			apply_slice(subspace, slc=slc, name=name)
+			# NOTE this works directly on the ParamSpan objects
+
+		# Have the option to squeeze away the size-1 ParamSpans
+		if squeeze:
+			subspace 	= _recursive_replace(subspace,
+			                                 lambda pspan: pspan.squeeze(),
+			                                 isinstance, ParamSpanBase)
+
+		# Now, a new ParamSpace object should be initialised, because the old one was messed with too much. The changes to the ParamSpan objects are taken care of and the old subspace object will go out of scope after the following line ...
+		subspace 	= ParamSpace(subspace._dict)
 
 		return subspace
-
 
 	# Misc ....................................................................
 
