@@ -12,9 +12,10 @@ log = logging.getLogger(__name__)
 
 # TODO
 # 	- add yaml constructors here?
-# 	- clean up ParamSpace: more private names, properties, iterators; cleaner API; ...
 # 	- more readable argument passing to ParamSpan
 # 	- more Duck Typing, less type checking
+# 	- clean up ParamSpace: more private names, properties, iterators; cleaner API; ...
+# 	- features: better ParamSpace slicing, e.g. with __getitem__ and returning subspaces etc.
 # -----------------------------------------------------------------------------
 
 class ParamSpanBase:
@@ -121,12 +122,25 @@ class ParamSpanBase:
 	def __getitem__(self, idx):
 		if not self.enabled:
 			log.warning("ParamSpan is not enabled. Still returning item ...")
-		try:
-			return self.span[idx]
-		except IndexError:
-			# reached end of span
-			# raise error - is caught by iterators to know that its finished
-			raise
+
+		if isinstance(idx, int):
+			try:
+				return self.span[idx]
+
+			except IndexError:
+				# reached end of span
+				# raise error - is caught by iterators to know that its finished
+				# TODO should better be done using iteration and StopIteration error
+				raise
+
+		else:
+			# Possbile that this is a slice. Try slicing and return as new ParamSpan object
+			pspan 		= copy.deepcopy(self)
+			pspan.span 	= self.span[idx]
+			return pspan
+
+	def __setitem__(self, idx, val):
+		raise NotImplementedError("ParamSpan values are read-only.")
 
 	# Properties
 
@@ -172,6 +186,14 @@ class ParamSpanBase:
 			self.state = 0
 			return True
 		return False
+
+	def apply_slice(self, slc):
+		'''Applies a slice to the span.'''
+		new_span 	= self.span[slc]
+		if len(new_span) > 0:
+			self.span 	= new_span
+		else:
+			raise ValueError("Application of slice {} to {}'s span {} resulted in zero-length span, which is illegal.".format(slc, self.__class__.__name__, self.span))
 
 # .............................................................................
 
@@ -500,6 +522,11 @@ class ParamSpace:
 		return len(self._spans)
 
 	@property
+	def shape(self) -> tuple:
+		'''The shape of the parameter space'''
+		return tuple([len(s) for s in self.get_spans()])
+
+	@property
 	def volume(self) -> int:
 		''' Returns the volume of the parameter space.'''
 		vol 	= 1
@@ -529,16 +556,16 @@ class ParamSpace:
 
 	def get_default(self):
 		''' Returns the default state of the ParamSpace'''
-		_dd = _recursive_replace_by_attr(copy.deepcopy(self._init_dict),
-		                                 'default',
-		                                 isinstance, ParamSpanBase)
+		_dd = _recursive_replace(copy.deepcopy(self._init_dict),
+		                         lambda pspan: pspan.default,
+		                         isinstance, ParamSpanBase)
 		return self._return_class(_dd)
 
 	def get_point(self):
 		''' Return the current point in Parameter Space (i.e. corresponding to the current state).'''
-		_pd = _recursive_replace_by_attr(copy.deepcopy(self._dict),
-		                                 'get_val_by_state',
-		                                 isinstance, ParamSpanBase)
+		_pd = _recursive_replace(copy.deepcopy(self._dict),
+		                         lambda pspan: pspan.get_val_by_state(),
+		                         isinstance, ParamSpanBase)
 		return self._return_class(_pd)
 
 	def get_state_no(self) -> int:
@@ -728,6 +755,39 @@ class ParamSpace:
 
 		return True				# i.e. not reached the end
 
+	# Getting a subspace ......................................................
+
+	def get_subspace(self, *slices): # TODO make possible to use keys to associate slices
+		'''Returns a copy of this ParamSpace with the slices applied to the corresponding ParamSpans.'''
+
+		def apply_slice(pspace, *, slc, name: str):
+			'''Destructively (!) applies a slice to the span with the given name.'''
+			pspan 	= pspace.get_span_by_name(name)
+			pspan.apply_slice(slc)
+
+		# Work on a copy of this ParamSpace
+		subspace 	= copy.deepcopy(self)
+
+		# Resolve the slices list to a list of (name, slice obj) tuples
+		# Target list with default values
+		slicing_ops = [(name, slice(None))
+		               for name in subspace.get_span_names()]
+
+		# If the first object is an Ellipsis, fill in front; if the last is or the list is shorter than the number of spans, fill in the back
+		if slices[0] is Ellipsis:
+			# TODO continue here
+		else:
+			for idx, slc in enumerate(slices):
+				# TODO continue here
+
+
+		# For each name, apply the slice
+		for name, slc in slicing_ops:
+			apply_slice(subspace, slc=slc, name=name)
+
+		return subspace
+
+
 	# Misc ....................................................................
 
 	def reset(self):
@@ -898,8 +958,10 @@ def _recursive_collect(itr, select_func, *select_args, prepend_info: tuple=None,
 
 	return coll
 
-def _recursive_replace_by_attr(itr, attr_name: str, select_func, *select_args, **select_kwargs) -> list:
+def _recursive_replace(itr, replace_func, select_func, *select_args, replace_kwargs=None, **select_kwargs) -> list:
 	''' Go recursively through the dict- or sequence-like (iterable) itr and call select_func(val, *select_args, **select_kwargs) on the values. If the return value is True, that value will be collected to a list, which is returned at the end.'''
+
+	replace_kwargs 	= replace_kwargs if replace_kwargs else {}
 
 	# TODO further types possible?!
 	if isinstance(itr, dict):
@@ -911,19 +973,15 @@ def _recursive_replace_by_attr(itr, attr_name: str, select_func, *select_args, *
 
 	for key, val in iterator:
 		if select_func(val, *select_args, **select_kwargs):
-			# found the desired element -> replace by its attribute (call, if callable)
-			if callable(getattr(val, attr_name)):
-				itr[key] 	= getattr(val, attr_name).__call__()
-			else:
-				itr[key] 	= getattr(val, attr_name)
-
+			# found the desired element -> replace by the value returned from the replace_func
+			itr[key] 	= replace_func(val, **replace_kwargs)
 
 		elif isinstance(val, (dict, list, tuple)):
 			# Not the desired element, but recursion possible ...
-			itr[key] 	=  _recursive_replace_by_attr(val, attr_name,
-			                                          select_func,
-			                                          *select_args,
-			                                          **select_kwargs)
+			itr[key] 	=  _recursive_replace(val, replace_func,
+			                                  select_func, *select_args,
+			                                  replace_kwargs=replace_kwargs,
+			                                  **select_kwargs)
 
 		else:
 			# was not selected and cannot be further recursed, thus: stays the same
