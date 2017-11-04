@@ -8,8 +8,10 @@ The whole parameter space is contained in the `ParamSpace` class, while each dim
 
 ## Install
 
+For installation, it is best to use `pip` and pass the directory of the cloned repository to it. This will automatically install `paramspace` and its requirements and makes it very easy to uninstall or upgrade later.
+
 ```bash
-$ python3 setup.py install
+$ pip3 install paramspace/
 ```
 
 ## Usage
