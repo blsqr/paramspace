@@ -806,6 +806,8 @@ class ParamSpace:
 				else:
 					_slices.append(slc)
 
+			# Use the new slices list
+			slices 		= _slices
 
 		elif len(slices) > subspace.num_dimensions:
 			raise ValueError("More slices than dimensions that could potentially be sliced given.")
