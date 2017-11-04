@@ -757,10 +757,8 @@ class ParamSpace:
 
 	# Getting a subspace ......................................................
 
-	def get_subspace(self, *slices, span_names=None, squeeze: bool=True):
+	def get_subspace(self, *slices, squeeze: bool=True):
 		'''Returns a copy of this ParamSpace with the slices applied to the corresponding ParamSpans.
-
-		If a list of span names is given, they are used to apply the slices. (NotImplemented).
 
 		If `squeeze`, the size one spans are removed. (Not the nicest implementation...)'''
 
@@ -769,21 +767,41 @@ class ParamSpace:
 			pspan 	= pspace.get_span_by_name(name)
 			pspan.apply_slice(slc)
 
-		if span_names:
-			# TODO
-			raise NotImplementedError("span_names")
 
 		# Work on a copy of this ParamSpace
 		subspace 	= copy.deepcopy(self)
 
-		# Resolve the slices list to a list of (name, slice obj) tuples
-		# If the first object is an Ellipsis, fill in front; if the last is or the list is shorter than the number of spans, fill in the back
-		if slices[0] is Ellipsis:
-			# Work on the last names
-			names 		= subspace.get_span_names()[-len(slices):]
+		# Check if the length of the provided slices matches the number of dimensions that could possibly be sliced
+		if len(slices) < subspace.num_dimensions:
+			# See if there are Ellipses in the slices that indicate where to expand the list
+			num_ellipses = sum([s is Ellipsis for s in slices])
+			if num_ellipses == 0:
+				# No. Add one in the end
+				slices.append(Ellipsis)
+
+			elif num_ellipses > 1:
+				raise ValueError("More than one Ellipsis object given!")
+
+			# Now expand them so that the slices list has the same length as the source parameter space has dimensions
+			_slices 	= []
+			for slc in slices:
+				if slc is Ellipsis:
+					# Put a number of slice(None) in place of the Ellipsis
+					fill_num 	= subspace.num_dimensions - len(slices) + 1
+					_slices 	+= [slice(None) for _ in range(fill_num)]
+				else:
+					_slices.append(slc)
+
+
+		elif len(slices) > subspace.num_dimensions:
+			raise ValueError("More slices than dimensions that could potentially be sliced given.")
+
 		else:
-			# The determined slicing operations are on the first axes
-			names 		= subspace.get_span_names()[:len(slices)]
+			# Nothing to do
+			pass
+
+		# Get the list of names
+		names 		= subspace.get_span_names()
 
 		# For each name, apply the slice
 		for name, slc in zip(names, slices):
