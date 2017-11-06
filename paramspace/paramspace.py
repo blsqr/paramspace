@@ -3,6 +3,7 @@
 
 import copy
 import logging
+import pprint
 from collections import OrderedDict, Mapping
 
 import numpy as np
@@ -207,6 +208,18 @@ class ParamSpanBase:
 class ParamSpan(ParamSpanBase):
 	''' The ParamSpan class.'''
 
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+
+		self.target_of 	= []
+
+	def apply_slice(self, slc):
+		super().apply_slice(slc)
+
+		# Also apply to all coupled ParamSpans
+		for cps in self.target_of:
+			cps.apply_slice(slc)
+
 # .............................................................................
 
 class CoupledParamSpan(ParamSpanBase):
@@ -225,8 +238,8 @@ class CoupledParamSpan(ParamSpanBase):
 
 		super().__init__(arg)
 
-		self.coupled_to 	= arg['coupled_to']
 		self.coupled_pspan 	= None # ParamSpace sets this after initialisation
+		self.coupled_to 	= arg['coupled_to']
 
 		if not isinstance(self.coupled_to, str):
 			# ensure it is a tuple; important for span name lookup
@@ -381,16 +394,21 @@ class ParamSpace:
 		                             info_func=lambda ps: ps.order)
 		coupled.sort() # same sorting rules as above, but not as crucial here
 		self._cpspans 	= OrderedDict([tpl[1:] for tpl in coupled])
+		# NOTE: it is actually not necessary to have the coupled pspans collected here, because their replacement happens completely in the get_default and get_point methods
 
-		# Now resolve the coupling targets and add them to CoupledParamSpan instances ...and create a dict where the coupled span can be accessed via the name of the span it couples to
-		self._cpspan_targets 	= {}
-
+		# Now resolve the coupling targets and add them to CoupledParamSpan instances ... also let the target ParamSpan objects know which CoupledParamSpan couples to them
 		for cpspan in self._cpspans.values():
-			c_target 				= cpspan.coupled_to
-			cpspan.coupled_pspan 	= self.get_span_by_name(c_target)
-			self._cpspan_targets[c_target] 	= cpspan
+			c_target_name		= cpspan.coupled_to
 
-		# NOTE: it is not necessary to have the coupled pspans collected here, because their replacement happens completely in the get_default and get_point methods
+			# Try to get it by name
+			c_target 			= self.get_span_by_name(c_target_name)
+
+			# Set attribute of the coupled ParamSpan
+			cpspan.coupled_pspan= c_target
+
+			# And inform the target ParamSpan about it being the target of the coupled param span, if it is not already included there
+			if cpspan not in c_target.target_of:
+				c_target.target_of.append(cpspan)
 
 		log.debug("Initialised %d spans and %d coupled spans.", len(self._spans), len(self._cpspans))
 
@@ -398,11 +416,11 @@ class ParamSpace:
 
 	def __str__(self):
 		log.debug("__str__ called. Returning current state dict.")
-		return str(self._dict)
+		return pprint.pformat(self._dict)
 
 	def __repr__(self):
 		'''To reconstruct the ParamSpace object ...'''
-		return "ParamSpace("+repr(self._dict)+")"
+		return "ParamSpace("+str(self)+")"
 
 	def __format__(self, spec: str):
 		''' Returns a formatted string
@@ -780,7 +798,6 @@ class ParamSpace:
 
 		def apply_slice(pspace, *, slc, name: str):
 			'''Destructively (!) applies a slice to the span with the given name.'''
-			print(slc)
 			pspan 	= pspace.get_span_by_name(name)
 			pspan.apply_slice(slc)
 
@@ -821,6 +838,8 @@ class ParamSpace:
 
 		# Get the list of names
 		names 		= subspace.get_span_names()
+
+		print(subspace)
 
 		# For each name, apply the slice
 		for name, slc in zip(names, slices):
