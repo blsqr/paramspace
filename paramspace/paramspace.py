@@ -30,7 +30,7 @@ class ParamSpanBase:
 		self.state 		= None 	# State of the span (idx of the current value or None, if default state)
 		self.span 		= None 	# Filled with values below
 		self.name 		= None
-		self.order 		= np.inf # default value (i.e.: last) if no order is supplied
+		self.order 		= None
 
 		# Parse the argument and fill the span
 		if isinstance(arg, (list, tuple)):
@@ -92,6 +92,9 @@ class ParamSpanBase:
 
 			# And it can have a name
 			self.name 		= arg.get('name', None)
+
+			# Also set the order
+			self.order 		= arg.get('order', np.inf) # default value (i.e.: last) if no order is supplied
 
 			log.debug("Initialised ParamSpan object from mapping.")
 
@@ -226,7 +229,6 @@ class CoupledParamSpan(ParamSpanBase):
 	''' A CoupledParamSpan object is recognized by the ParamSpace and its state moves alongside with another ParamSpan's state.'''
 
 	def __init__(self, arg):
-
 		# Check if default and/or span were not given; in those cases, the values from the coupled span are to be used upon request
 		self.use_coupled_default 	= bool('default' not in arg)
 		self.use_coupled_span 		= bool('span' not in arg)
@@ -392,9 +394,8 @@ class ParamSpace:
 		coupled = _recursive_collect(d, isinstance, CoupledParamSpan,
 		                             prepend_info=('info_func', 'keys'),
 		                             info_func=lambda ps: ps.order)
-		coupled.sort() # same sorting rules as above, but not as crucial here
+		coupled.sort() # same sorting rules as above, but not as crucial here because they do not change the iteration order through state space
 		self._cpspans 	= OrderedDict([tpl[1:] for tpl in coupled])
-		# NOTE: it is actually not necessary to have the coupled pspans collected here, because their replacement happens completely in the get_default and get_point methods
 
 		# Now resolve the coupling targets and add them to CoupledParamSpan instances ... also let the target ParamSpan objects know which CoupledParamSpan couples to them
 		for cpspan in self._cpspans.values():
@@ -565,11 +566,18 @@ class ParamSpace:
 		return self._spans
 
 	@property
+	def coupled_spans(self):
+		''' Return the OrderedDict that holds the coupled spans.'''
+		return self._cpspans
+
+	@property
 	def span_names(self) -> list:
-		''' Get a list of the span names (tuples of strings). If the span was itself named, that name is used rather than the one created from the dictionary key.'''
+		''' Get a list of the span names (tuples of strings). If the span was itself named, that name is used rather than the one created from the dictionary key.
+
+		NOTE: CoupledParamSpans are not included here, same as in the other methods.'''
 		names 	= []
 
-		for name, span in self._spans.items():
+		for name, span in self.spans.items():
 			if span.name:
 				names.append((span.name,))
 			else:
@@ -607,6 +615,10 @@ class ParamSpace:
 	def get_spans(self):
 		''' Return the spans'''
 		return self._spans.values()
+
+	def get_coupled_spans(self):
+		''' Return the coupled spans'''
+		return self.coupled_spans.values()
 
 	def get_span_keys(self):
 		''' Get the iterator over the span keys (tuples of strings).'''
