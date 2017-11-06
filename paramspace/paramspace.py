@@ -188,7 +188,7 @@ class ParamSpanBase:
 		return False
 
 	def apply_slice(self, slc):
-		'''Applies a slice to the span.'''
+		'''Applies a slice to the span list.'''
 		new_span 	= self.span[slc]
 		if len(new_span) > 0:
 			self.span 	= new_span
@@ -771,13 +771,16 @@ class ParamSpace:
 
 	# Getting a subspace ......................................................
 
-	def get_subspace(self, *slices, squeeze: bool=True):
+	def get_subspace(self, *slices, squeeze: bool=True, as_dict_if_0d: bool=False):
 		'''Returns a copy of this ParamSpace with the slices applied to the corresponding ParamSpans.
 
-		If `squeeze`, the size one spans are removed. (Not the nicest implementation...)'''
+		If `squeeze`, the size one spans are removed.
+
+		 (Not the nicest implementation overall...)'''
 
 		def apply_slice(pspace, *, slc, name: str):
 			'''Destructively (!) applies a slice to the span with the given name.'''
+			print(slc)
 			pspan 	= pspace.get_span_by_name(name)
 			pspan.apply_slice(slc)
 
@@ -836,6 +839,11 @@ class ParamSpace:
 
 		# Now, a new ParamSpace object should be initialised, because the old one was messed with too much.
 		subspace 	= ParamSpace(subspace)
+
+		# Only now is it clear how many dimensions the target space will have. If it is 0-dimensional (i.e. no ParamSpans inside) flatten it (if argument is set to do so)
+		if as_dict_if_0d and subspace.num_dimensions == 0:
+			# Overwrite with the default, which is the same as the current dict. There is no difference, because there are no ParamSpans defined anyway ...
+			subspace 	= subspace.get_default()
 
 		return subspace
 
