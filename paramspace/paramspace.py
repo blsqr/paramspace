@@ -806,12 +806,15 @@ class ParamSpace:
 		subspace 	= copy.deepcopy(self)
 
 		# Check if the length of the provided slices matches the number of dimensions that could possibly be sliced
-		if len(slices) < subspace.num_dimensions:
+		if len(slices) <= subspace.num_dimensions:
 			# See if there are Ellipses in the slices that indicate where to expand the list
 			num_ellipses = sum([s is Ellipsis for s in slices])
 			if num_ellipses == 0:
-				# No. Add one in the end
-				slices.append(Ellipsis)
+				# No.
+				if len(slices) < subspace.num_dimensions:
+					# Add one in the end so that it is clear where to expand.
+					slices.append(Ellipsis)
+				# else: there was one slice defined for each dimension; can and need not add an Ellipsis
 
 			elif num_ellipses > 1:
 				raise ValueError("More than one Ellipsis object given!")
@@ -829,17 +832,11 @@ class ParamSpace:
 			# Use the new slices list
 			slices 		= _slices
 
-		elif len(slices) > subspace.num_dimensions:
-			raise ValueError("More slices than dimensions that could potentially be sliced given.")
-
 		else:
-			# Nothing to do
-			pass
+			raise ValueError("More slices than dimensions that could potentially be sliced given.")
 
 		# Get the list of names
 		names 		= subspace.get_span_names()
-
-		print(subspace)
 
 		# For each name, apply the slice
 		for name, slc in zip(names, slices):
