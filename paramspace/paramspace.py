@@ -193,6 +193,10 @@ class ParamSpanBase:
 
 	def apply_slice(self, slc):
 		'''Applies a slice to the span list.'''
+		if not self.enabled:
+			# Not enabled -> no span -> nothing to do
+			return
+
 		new_span 	= self.span[slc]
 		if len(new_span) > 0:
 			self.span 	= new_span
@@ -201,9 +205,16 @@ class ParamSpanBase:
 
 	def squeeze(self):
 		'''If of length one, returns the remaining value in the span; if not, returns itself.'''
-		if len(self) == 1:
+		if self.enabled and len(self) == 1:
+			# Enabled and have span -> return the first element
 			return self.span[0]
+
+		elif not self.enabled:
+			# Not enabled -> work on default and return that
+			return self.default
+
 		else:
+			# Nothing to squeeze
 			return self
 
 # .............................................................................
