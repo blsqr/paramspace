@@ -534,7 +534,7 @@ class ParamSpace:
 		l += ["  (First spans are iterated over first.)", ""]
 
 		for name, span in self.spans.items():
-			l.append("  * {}".format(" -> ".join(name)))
+			l.append("  * {}".format(" -> ".join([str(e) for e in name])))
 			l.append("      {}".format(span.value_list))
 			l.append("")
 
@@ -544,7 +544,7 @@ class ParamSpace:
 			l += ["  (Move alongside the state of Parameter Spans)", ""]
 
 			for name, cspan in self._cpspans.items():
-				l.append("  * {}".format(" -> ".join(name)))
+				l.append("  * {}".format(" -> ".join([str(e) for e in name])))
 				l.append("      Coupled to:  {}".format(cspan.coupled_to))
 				l.append("      Span:        {}".format(cspan.value_list))
 				l.append("")
