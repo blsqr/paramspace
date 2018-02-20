@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 def _recursive_update(d: dict, u: dict):
-	''' Update Mapping d with values from Mapping u'''
+	"""Update Mapping d with values from Mapping u"""
 	for k, v in u.items():
 		if isinstance(d, Mapping):
 			# Already a Mapping
@@ -32,7 +32,7 @@ def _recursive_update(d: dict, u: dict):
 	return d
 
 def _recursive_contains(d: dict, keys: tuple):
-	''' Checks on the dict-like d, whether a key is present. If the key is a tuple with more than one key, it recursively continues checking.'''
+	"""Checks on the dict-like d, whether a key is present. If the key is a tuple with more than one key, it recursively continues checking."""
 	if len(keys) > 1:
 		# Check and continue recursion
 		if keys[0] in d:
@@ -44,7 +44,7 @@ def _recursive_contains(d: dict, keys: tuple):
 		return keys[0] in d
 
 def _recursive_getitem(d: dict, keys: tuple):
-	''' Recursively goes through dict-like d along the keys in tuple keys and returns the reference to the at the end.'''
+	"""Recursively goes through dict-like d along the keys in tuple keys and returns the reference to the at the end."""
 	if len(keys) > 1:
 		# Check and continue recursion
 		if keys[0] in d:
@@ -56,7 +56,7 @@ def _recursive_getitem(d: dict, keys: tuple):
 		return d[keys[0]]
 
 def _recursive_setitem(d: dict, keys: tuple, val, create_key: bool=False):
-	''' Recursively goes through dict-like d along the keys in tuple keys and sets the value to the child entry.'''
+	"""Recursively goes through dict-like d along the keys in tuple keys and sets the value to the child entry."""
 	if len(keys) > 1:
 		# Check and continue recursion
 		if keys[0] in d:
@@ -74,7 +74,7 @@ def _recursive_setitem(d: dict, keys: tuple, val, create_key: bool=False):
 		d[keys[0]] 	= val
 
 def _recursive_collect(itr, select_func, *select_args, prepend_info: tuple=None, parent_keys: tuple=None, info_func=None, info_func_kwargs: dict=None, **select_kwargs) -> list:
-	''' Go recursively through the dict- or sequence-like (iterable) itr and call select_func(val, *select_args, **select_kwargs) on the values. If the return value is True, that value will be collected to a list, which is returned at the end.
+	"""Go recursively through the dict- or sequence-like (iterable) itr and call select_func(val, *select_args, **select_kwargs) on the values. If the return value is True, that value will be collected to a list, which is returned at the end.
 
 	With `prepend_info`, information can be prepended to the return value. Then, not only the values but also these additional items can be gathered:
 		`keys`  	: prepends the key
@@ -82,7 +82,7 @@ def _recursive_collect(itr, select_func, *select_args, prepend_info: tuple=None,
 	The resulting return value is then a list of tuples
 
 	The argument parent_keys is used to pass on the key sequence of parent keys. (Necessary for the `items` mode.)
-	'''
+	"""
 
 	# Return value list
 	coll 	= []
@@ -141,7 +141,7 @@ def _recursive_collect(itr, select_func, *select_args, prepend_info: tuple=None,
 	return coll
 
 def _recursive_replace(itr, replace_func, select_func, *select_args, replace_kwargs=None, **select_kwargs) -> list:
-	''' Go recursively through the dict- or sequence-like (iterable) itr and call select_func(val, *select_args, **select_kwargs) on the values. If the return value is True, that value will be collected to a list, which is returned at the end.'''
+	"""Go recursively through the dict- or sequence-like (iterable) itr and call select_func(val, *select_args, **select_kwargs) on the values. If the return value is True, that value will be collected to a list, which is returned at the end."""
 
 	replace_kwargs 	= replace_kwargs if replace_kwargs else {}
 

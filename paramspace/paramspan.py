@@ -15,10 +15,10 @@ log = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 class ParamSpanBase:
-	''' The ParamSpan base class. This is used so that the actual ParamSpan class can be a child class of this one and thus be distinguished from CoupledParamSpan'''
+	"""The ParamSpan base class. This is used so that the actual ParamSpan class can be a child class of this one and thus be distinguished from CoupledParamSpan"""
 
 	def __init__(self, arg):
-		''' Initialise the ParamSpan from an argument that is a list, tuple or a dict.'''
+		"""Initialise the ParamSpan from an argument that is a list, tuple or a dict."""
 
 		# Set attributes to default values
 		self.enabled 	= True
@@ -112,7 +112,7 @@ class ParamSpanBase:
                                          name=self.name)))
 
 	def __len__(self):
-		''' Return how many span values there are, if the span is enabled.'''
+		"""Return how many span values there are, if the span is enabled."""
 		if self.enabled:
 			return len(self.span)
 		else:
@@ -150,19 +150,19 @@ class ParamSpanBase:
 	# Public methods
 
 	def get_val_by_state(self):
-		''' Returns the current ParamSpan value according to the state. This is the main method used by the ParamSpace to resolve the dictionary to its correct state.'''
+		"""Returns the current ParamSpan value according to the state. This is the main method used by the ParamSpace to resolve the dictionary to its correct state."""
 		if self.state is None:
 			return self.default
 		else:
 			return self.span[self.state]
 
 	def next_state(self) -> bool:
-		''' Increments the state by one, if the state is enabled.
+		"""Increments the state by one, if the state is enabled.
 
 		If None, sets the state to 0.
 
 		If reaching the last possible state, it will restart at zero and return False, signalising that all states were looped through. In all other cases it will return True.
-		'''
+		"""
 		log.debug("ParamSpan.next_state called ...")
 
 		if not self.enabled:
@@ -180,14 +180,14 @@ class ParamSpanBase:
 		return True
 
 	def set_state_to_zero(self) -> bool:
-		''' Sets the state to zero (necessary before the beginning of an iteration), if the span is enabled.'''
+		"""Sets the state to zero (necessary before the beginning of an iteration), if the span is enabled."""
 		if self.enabled:
 			self.state = 0
 			return True
 		return False
 
 	def apply_slice(self, slc):
-		'''Applies a slice to the span list.'''
+		"""Applies a slice to the span list."""
 		if not self.enabled:
 			# Not enabled -> no span -> nothing to do
 			return
@@ -199,7 +199,7 @@ class ParamSpanBase:
 			raise ValueError("Application of slice {} to {}'s span {} resulted in zero-length span, which is illegal.".format(slc, self.__class__.__name__, self.span))
 
 	def squeeze(self):
-		'''If of length one, returns the remaining value in the span; if not, returns itself.'''
+		"""If of length one, returns the remaining value in the span; if not, returns itself."""
 		if self.enabled and len(self) == 1:
 			# Enabled and have span -> return the first element
 			return self.span[0]
@@ -215,7 +215,7 @@ class ParamSpanBase:
 # .............................................................................
 
 class ParamSpan(ParamSpanBase):
-	''' The ParamSpan class.'''
+	"""The ParamSpan class."""
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -232,7 +232,7 @@ class ParamSpan(ParamSpanBase):
 # .............................................................................
 
 class CoupledParamSpan(ParamSpanBase):
-	''' A CoupledParamSpan object is recognized by the ParamSpace and its state moves alongside with another ParamSpan's state.'''
+	"""A CoupledParamSpan object is recognized by the ParamSpace and its state moves alongside with another ParamSpan's state."""
 
 	def __init__(self, arg):
 		# Check if default and/or span were not given; in those cases, the values from the coupled span are to be used upon request
@@ -268,7 +268,7 @@ class CoupledParamSpan(ParamSpanBase):
 
 	@property
 	def default(self):
-		''' If the CoupledParamSpan was initialised with a default value on its own, returns that. If not, returns the default value of the coupled ParamSpan object. If not yet coupled to that, returns None.'''
+		"""If the CoupledParamSpan was initialised with a default value on its own, returns that. If not, returns the default value of the coupled ParamSpan object. If not yet coupled to that, returns None."""
 		if not self.use_coupled_default:
 			return self._default
 		elif self.coupled_pspan:
@@ -282,7 +282,7 @@ class CoupledParamSpan(ParamSpanBase):
 
 	@property
 	def span(self):
-		''' If the CoupledParamSpan was initialised with a span on its own, returns that span. If not, returns the span of the coupled ParamSpan object. If not yet coupled to that, returns None.'''
+		"""If the CoupledParamSpan was initialised with a span on its own, returns that span. If not, returns the span of the coupled ParamSpan object. If not yet coupled to that, returns None."""
 		if not self.use_coupled_span:
 			return self._span
 		elif self.coupled_pspan:
@@ -319,7 +319,7 @@ class CoupledParamSpan(ParamSpanBase):
 	# Methods
 
 	def get_val_by_state(self):
-		''' Adds a try-except clause to the parent method, to give an understandable error message in case of an index error (due to a coupled span with unequal length).'''
+		"""Adds a try-except clause to the parent method, to give an understandable error message in case of an index error (due to a coupled span with unequal length)."""
 		try:
 			return super().get_val_by_state()
 		except IndexError as err:

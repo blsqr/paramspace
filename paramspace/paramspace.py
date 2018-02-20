@@ -17,10 +17,10 @@ log = logging.getLogger(__name__)
 class ParamSpace:
 
 	def __init__(self, d, return_class=dict):
-		''' Initialise the ParamSpace object from a dictionary.
+		"""Initialise the ParamSpace object from a dictionary.
 
 		Upon init, the dictionary is traversed; when meeting a ParamSpan object, it will be collected and then added to the spans.
-		'''
+		"""
 
 		log.debug("Initialising ParamSpace ...")
 
@@ -30,8 +30,8 @@ class ParamSpace:
 		log.info("Initialised ParamSpace object. (%d dimensions, volume %d)", len(self._spans), self._max_state)
 
 	def _init(self, d, return_class=dict):
-		''' Initialisation helper, which is called from __init__ and from update. It Initialises the base dictionaries (_init_dict and _dict) as well as the spans and some variables regarding state number.
-		'''
+		"""Initialisation helper, which is called from __init__ and from update. It Initialises the base dictionaries (_init_dict and _dict) as well as the spans and some variables regarding state number.
+		"""
 
 		# Keep the initial dictionary. This will never be messed with (only exception being an update, where this _init method is called again).
 		self._init_dict = copy.deepcopy(d) 	# includes the ParamSpan objects
@@ -59,10 +59,10 @@ class ParamSpace:
 		return
 
 	def _init_spans(self, d):
-		''' Looks for instances of ParamSpan in the dictionary d, extracts spans from there, and carries them over
+		"""Looks for instances of ParamSpan in the dictionary d, extracts spans from there, and carries them over
 		- Their default value stays in the init_dict
 		- Their spans get saved in the spans dictionary
-		'''
+		"""
 		log.debug("Initialising spans ...")
 
 		# Traverse the dict and look for ParamSpan objects; collect them as (order, key, value) tuples
@@ -110,14 +110,14 @@ class ParamSpace:
 		return pprint.pformat(self._dict)
 
 	def __repr__(self):
-		'''To reconstruct the ParamSpace object ...'''
+		"""To reconstruct the ParamSpace object ..."""
 		return "ParamSpace("+str(self)+")"
 
 	def __format__(self, spec: str):
-		''' Returns a formatted string
+		"""Returns a formatted string
 
 		The spec argument is the part right of the colon in the '{foo:bar}' of a format string.
-		'''
+		"""
 
 		ALLOWED_JOIN_STRS 	=  ["_", "__"]
 
@@ -201,7 +201,7 @@ class ParamSpace:
 		# return None
 
 	def get_info_str(self) -> str:
-		'''Returns an information string about the ParamSpace'''
+		"""Returns an information string about the ParamSpace"""
 		l = ["ParamSpace Information"]
 
 		# General information about the Parameter Space
@@ -234,17 +234,17 @@ class ParamSpace:
 
 	@property
 	def num_dimensions(self) -> int:
-		''' Returns the number of dimensions, i.e. the number of spans.'''
+		"""Returns the number of dimensions, i.e. the number of spans."""
 		return len(self._spans)
 
 	@property
 	def shape(self) -> tuple:
-		'''The shape of the parameter space'''
+		"""The shape of the parameter space"""
 		return tuple([len(s) for s in self.get_spans()])
 
 	@property
 	def volume(self) -> int:
-		''' Returns the volume of the parameter space.'''
+		"""Returns the volume of the parameter space."""
 		vol 	= 1
 		for pspan in self.get_spans():
 			vol *= len(pspan)
@@ -252,19 +252,19 @@ class ParamSpace:
 
 	@property
 	def spans(self):
-		''' Return the OrderedDict that holds the spans.'''
+		"""Return the OrderedDict that holds the spans."""
 		return self._spans
 
 	@property
 	def coupled_spans(self):
-		''' Return the OrderedDict that holds the coupled spans.'''
+		"""Return the OrderedDict that holds the coupled spans."""
 		return self._cpspans
 
 	@property
 	def span_names(self) -> list:
-		''' Get a list of the span names (tuples of strings). If the span was itself named, that name is used rather than the one created from the dictionary key.
+		"""Get a list of the span names (tuples of strings). If the span was itself named, that name is used rather than the one created from the dictionary key.
 
-		NOTE: CoupledParamSpans are not included here, same as in the other methods.'''
+		NOTE: CoupledParamSpans are not included here, same as in the other methods."""
 		names 	= []
 
 		for name, span in self.spans.items():
@@ -278,21 +278,21 @@ class ParamSpace:
 	# TODO migrate the following to properties
 
 	def get_default(self):
-		''' Returns the default state of the ParamSpace'''
+		"""Returns the default state of the ParamSpace"""
 		_dd = _recursive_replace(copy.deepcopy(self._init_dict),
 		                         lambda pspan: pspan.default,
 		                         isinstance, ParamSpanBase)
 		return self._return_class(_dd)
 
 	def get_point(self):
-		''' Return the current point in Parameter Space (i.e. corresponding to the current state).'''
+		"""Return the current point in Parameter Space (i.e. corresponding to the current state)."""
 		_pd = _recursive_replace(copy.deepcopy(self._dict),
 		                         lambda pspan: pspan.get_val_by_state(),
 		                         isinstance, ParamSpanBase)
 		return self._return_class(_pd)
 
 	def get_state_no(self) -> int:
-		''' Returns the state number'''
+		"""Returns the state number"""
 		return self._state_no
 
 	def get_span(self, dim_no: int) -> ParamSpan:
@@ -303,27 +303,27 @@ class ParamSpace:
 			raise
 
 	def get_spans(self):
-		''' Return the spans'''
+		"""Return the spans"""
 		return self._spans.values()
 
 	def get_coupled_spans(self):
-		''' Return the coupled spans'''
+		"""Return the coupled spans"""
 		return self.coupled_spans.values()
 
 	def get_span_keys(self):
-		''' Get the iterator over the span keys (tuples of strings).'''
+		"""Get the iterator over the span keys (tuples of strings)."""
 		return self._spans.keys()
 
 	def get_span_names(self) -> list:
-		''' Get a list of the span names (tuples of strings). If the span was itself named, that name is used rather than the one created from the dictionary key.'''
+		"""Get a list of the span names (tuples of strings). If the span was itself named, that name is used rather than the one created from the dictionary key."""
 		return self.span_names
 
 	def get_span_states(self):
-		''' Returns a tuple of the current span states'''
+		"""Returns a tuple of the current span states"""
 		return tuple([span.state for span in self.get_spans()])
 
 	def get_span_dim_no(self, name: str) -> int:
-		''' Returns the dimension number of a span, i.e. the index of the ParamSpan object in the list of spans of this ParamSpace. As the spans are held in an ordered data structure, the dimension number can be used to identify the span. This number also corresponds to the index in the inverse mapping of the ParamSpace.
+		"""Returns the dimension number of a span, i.e. the index of the ParamSpan object in the list of spans of this ParamSpace. As the spans are held in an ordered data structure, the dimension number can be used to identify the span. This number also corresponds to the index in the inverse mapping of the ParamSpace.
 
 		Args:
 			name (tuple, str) : the name of the span, which can be a tuple of strings or a string. If name is a tuple of strings, the exact tuple is required to find the span by its span_name. If name is a string, only the last element of the span_name is considered.
@@ -334,7 +334,7 @@ class ParamSpace:
 
 		Raises:
 			ValueError: If argument name was only a string, there can be duplicates. In the case of duplicate entries, a ValueError is raised.
-		'''
+		"""
 		dim_no 	= None
 
 		if isinstance(name, str):
@@ -357,7 +357,7 @@ class ParamSpace:
 		return dim_no
 
 	def get_span_by_name(self, name: str) -> ParamSpan:
-		''' Returns the ParamSpan corresponding to this name.
+		"""Returns the ParamSpan corresponding to this name.
 
 		Args:
 			name (tuple, str) : the name of the span, which can be a tuple of strings or a string. If name is a tuple of strings, the exact tuple is required to find the span by its span_name. If name is a string, only the last element of the span_name is considered.
@@ -368,16 +368,16 @@ class ParamSpace:
 
 		Raises:
 			ValueError: If argument name was only a string, there can be duplicates. In the case of duplicate entries, a ValueError is raised.
-		'''
+		"""
 
 		return self.get_span(self.get_span_dim_no(name))
 
 	def get_inverse_mapping(self) -> np.ndarray:
-		''' Creates a mapping of the state tuple to a state number and the corresponding span parameters.
+		"""Creates a mapping of the state tuple to a state number and the corresponding span parameters.
 
 		Returns:
 			np.ndarray with the shape of the spans and the state number as value
-		'''
+		"""
 
 		if hasattr(self, '_imap') and self._imap is not None:
 			# Return the cached result
@@ -413,9 +413,9 @@ class ParamSpace:
 	# Iterating over the ParamSpace ...........................................
 
 	def get_points(self, fstr: str=None, with_span_states: bool=False) -> tuple:
-		''' Returns a generator of all states in state space, returning (state_no, point in state space).
+		"""Returns a generator of all states in state space, returning (state_no, point in state space).
 
-		If `with_span_states` is True, the span states tuple is returned instead of the state number'''
+		If `with_span_states` is True, the span states tuple is returned instead of the state number"""
 		if fstr is not None and not isinstance(fstr, str):
 			raise TypeError("Argument fstr needs to be a string or None, was "+str(type(fstr)))
 		elif fstr is None:
@@ -464,7 +464,7 @@ class ParamSpace:
 			return
 
 	def next_state(self) -> bool:
-		''' Increments the state variable'''
+		"""Increments the state variable"""
 		log.debug("ParamSpace.next_state called ...")
 
 		for pspan in self.get_spans():
@@ -492,14 +492,14 @@ class ParamSpace:
 	# Getting a subspace ......................................................
 
 	def get_subspace(self, *slices, squeeze: bool=True, as_dict_if_0d: bool=False):
-		'''Returns a copy of this ParamSpace with the slices applied to the corresponding ParamSpans.
+		"""Returns a copy of this ParamSpace with the slices applied to the corresponding ParamSpans.
 
 		If `squeeze`, the size one spans are removed.
 
-		 (Not the nicest implementation overall...)'''
+		 (Not the nicest implementation overall...)"""
 
 		def apply_slice(pspace, *, slc, name: str):
-			'''Destructively (!) applies a slice to the span with the given name.'''
+			"""Destructively (!) applies a slice to the span with the given name."""
 			pspan 	= pspace.get_span_by_name(name)
 			pspan.apply_slice(slc)
 
@@ -568,7 +568,7 @@ class ParamSpace:
 	# Misc ....................................................................
 
 	def reset(self):
-		''' Resets all state variables, the state id, and the current dictionary back to the initial dictionary (i.e. with the default values).'''
+		"""Resets all state variables, the state id, and the current dictionary back to the initial dictionary (i.e. with the default values)."""
 
 		for pspan in self.get_spans():
 			# Reset the pspan state
@@ -579,15 +579,15 @@ class ParamSpace:
 		log.debug("ParamSpace resetted.")
 
 	def add_span(self): # TODO
-		''' Add a span to the ParamSpace manually, e.g. after initialisation with a regular dict.'''
+		"""Add a span to the ParamSpace manually, e.g. after initialisation with a regular dict."""
 		raise NotImplementedError("Manually adding a span is not implemented yet. Please initialise the ParamSpace object with the ParamSpan objects already in place.")
 
 	def update(self, u, recessively: bool=True):
-		''' Update the dictionaries of the ParamSpace with the values from u.
+		"""Update the dictionaries of the ParamSpace with the values from u.
 
 		If recessively is True, the update dictionary u will be updated with the values from self._dict.
 		For False, the regular dictionary update will be performed, where self._dict is updated with u.
-		'''
+		"""
 
 		if self.get_state_no() is not None:
 			log.warning("ParamSpace object can only be updated in the default state, but was in state %s. Call .reset() on the ParamSpace to return to the default state.", self.get_state_no())
