@@ -1,0 +1,12 @@
+image: python:3.6-alpine
+
+stages:
+  # - install # TODO
+  - test
+
+all_tests:
+  stage: test
+  script:
+    - python3 -m unittest discover
+  tags:
+    - light
