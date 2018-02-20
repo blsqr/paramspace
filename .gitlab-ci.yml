@@ -16,9 +16,10 @@ all_tests:
   allow_failure: true # not finished writing these yet
   tags:
     - light
+  before_script:
+    - pip3 install numpy
+    - pip3 install pytest-cov
   script:
     - python3 -m unittest discover
-  after_script:
-    - pip3 install pytest-cov
     - py.test --cov=paramspace tests/ # TODO suppress testing here
   coverage: '/\d+\.\d+%$/'
