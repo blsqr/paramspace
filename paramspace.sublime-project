@@ -5,10 +5,10 @@
 			"name": "root",
 			"path": ".",
 			"folder_exclude_patterns": [
-				"__pycache__"
+				"__pycache__", ".pytest_cache"
 			],
 			"file_exclude_patterns": [
-
+				".coverage"
 			]
 		},
 		{
