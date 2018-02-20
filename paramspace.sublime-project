@@ -3,7 +3,17 @@
 	[
 		{
 			"name": "root",
-			"path": "/Users/Yunus/Dropbox/Documents/Science/Roth/Coding/paramspace",
+			"path": ".",
+			"folder_exclude_patterns": [
+				"__pycache__"
+			],
+			"file_exclude_patterns": [
+
+			]
+		},
+		{
+			"name": "package",
+			"path": "paramspace",
 			"folder_exclude_patterns": [
 				"__pycache__"
 			],
