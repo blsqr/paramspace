@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
-import paramspace
-
 from setuptools import setup
 
 setup(name='ParamSpace',
-      version=paramspace.__version__,
+      version='1.0a',
       description='Multidimensional parameter space with dictionaries at each point.',
       long_description='Classes that allow easy iteration over a multidimensional parameter space, generating dictionaries at each point in this parameter space.',
       author='Yunus Sevinchan',
