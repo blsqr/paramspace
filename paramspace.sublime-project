@@ -12,7 +12,7 @@
 			]
 		},
 		{
-			"name": "package",
+			"name": "paramspace (package)",
 			"path": "paramspace",
 			"folder_exclude_patterns": [
 				"__pycache__"
@@ -34,14 +34,6 @@
 	],
 	"settings":
 	{
-        "python_interpreter": "/Users/Yunus/.virtualenvs/paramspace/bin/python",
         "spell-check": false
-	},
-    "build_systems":
-    [
-        {
-            "name": "Python3 (paramspace)",
-            "cmd": ["/Users/Yunus/.virtualenvs/paramspace/bin/python", "$file"]
-        }
-    ]
+	}
 }
