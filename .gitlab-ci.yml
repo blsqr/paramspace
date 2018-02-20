@@ -21,4 +21,4 @@ all_tests:
   after_script:
     - pip3 install pytest-cov
     - py.test --cov=paramspace tests/ # TODO suppress testing here
-  coverage: '\d+\%\s*$'
+  coverage: '/\d+\.\d+%$/'
