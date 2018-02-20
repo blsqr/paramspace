@@ -12,9 +12,13 @@ setup:
     - light
 
 all_tests:
-  stage: test
-  script:
-    - python3 -m unittest discover
+  stage: test # TODO distinguish modules
+  allow_failure: true # not finished writing these yet
   tags:
     - light
-  allow_failure: true # not finished writing these yet
+  script:
+    - python3 -m unittest discover
+  after_script:
+    - pip3 install pytest-cov
+    - py.test --cov=paramspace tests/ # TODO suppress testing here
+  coverage: '\d+\%\s*$'

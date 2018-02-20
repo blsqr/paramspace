@@ -3,3 +3,5 @@ dist
 files.txt
 MANIFEST
 ParamSpace.egg-info
+.coverage
+.pytest_cache
