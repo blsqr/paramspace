@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import paramspace
 
@@ -10,7 +10,7 @@ setup(name='ParamSpace',
       long_description='Classes that allow easy iteration over a multidimensional parameter space, generating dictionaries at each point in this parameter space.',
       author='Yunus Sevinchan',
       author_email='Yunus.Sevinchan@iup.uni-heidelberg.de',
-      url='https://zwackelmann.iup.uni-heidelberg.de:10443/yunus/paramspace',
+      url='https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace',
       licence='MIT',
       classifiers=[
           'Development Status :: 5 - Production/Stable',

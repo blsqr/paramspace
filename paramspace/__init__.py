@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+__version__ = "1.0a"
 
-__version__ = "0.9.9"
-
-from paramspace.paramspace import ParamSpace, ParamSpan, CoupledParamSpan
+from paramspace.paramspace import ParamSpace
+from paramspace.paramspan import ParamSpan, CoupledParamSpan
