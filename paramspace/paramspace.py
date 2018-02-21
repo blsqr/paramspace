@@ -3,11 +3,13 @@
 import copy
 import logging
 import pprint
-from collections import OrderedDict, Mapping
+from collections import OrderedDict
+from typing import Union
 
 import numpy as np
 
-# TODO clean these up
+from .paramspan import ParamSpan, CoupledParamSpan
+from .tools import recursive_collect, recursive_update, recursive_replace
 
 # Get logger
 log = logging.getLogger(__name__)
@@ -66,7 +68,7 @@ class ParamSpace:
         log.debug("Initialising spans ...")
 
         # Traverse the dict and look for ParamSpan objects; collect them as (order, key, value) tuples
-        pspans  = _recursive_collect(d, isinstance, ParamSpan,
+        pspans  = recursive_collect(d, isinstance, ParamSpan,
                                      prepend_info=('info_func', 'keys'),
                                      info_func=lambda ps: ps.order)
 
@@ -81,7 +83,7 @@ class ParamSpace:
         self._spans     = OrderedDict(pspans)
 
         # Also collect the coupled ParamSpans and continue with the same procedure
-        coupled = _recursive_collect(d, isinstance, CoupledParamSpan,
+        coupled = recursive_collect(d, isinstance, CoupledParamSpan,
                                      prepend_info=('info_func', 'keys'),
                                      info_func=lambda ps: ps.order)
         coupled.sort() # same sorting rules as above, but not as crucial here because they do not change the iteration order through state space
@@ -279,14 +281,14 @@ class ParamSpace:
 
     def get_default(self):
         """Returns the default state of the ParamSpace"""
-        _dd = _recursive_replace(copy.deepcopy(self._init_dict),
+        _dd = recursive_replace(copy.deepcopy(self._init_dict),
                                  lambda pspan: pspan.default,
                                  isinstance, ParamSpanBase)
         return self._return_class(_dd)
 
     def get_point(self):
         """Return the current point in Parameter Space (i.e. corresponding to the current state)."""
-        _pd = _recursive_replace(copy.deepcopy(self._dict),
+        _pd = recursive_replace(copy.deepcopy(self._dict),
                                  lambda pspan: pspan.get_val_by_state(),
                                  isinstance, ParamSpanBase)
         return self._return_class(_pd)
@@ -547,7 +549,7 @@ class ParamSpace:
 
         # Have the option to squeeze away the size-1 ParamSpans
         if squeeze:
-            subspace    = _recursive_replace(subspace._dict,
+            subspace    = recursive_replace(subspace._dict,
                                              lambda pspan: pspan.squeeze(),
                                              isinstance, ParamSpanBase)
         else:
@@ -595,11 +597,11 @@ class ParamSpace:
 
         if recessively:
             # Recessive behaviour: Old values have priority
-            new_d   = _recursive_update(u, self._dict)
+            new_d   = recursive_update(u, self._dict)
         else:
             # Normal update: New values overwrite old ones
             log.info("Performing non-recessive update. Note that the new values have priority over any previous values, possibly overwriting ParamSpan objects with the same keys.")
-            new_d   = _recursive_update(self._dict, u)
+            new_d   = recursive_update(self._dict, u)
 
         # In order to make the changes apply to _dict and _init_dict, the _init method is called again. This makes sure, the ParamSpace object is in a consistent state after the update.
         self._init(new_d, return_class=self._return_class)

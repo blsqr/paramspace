@@ -2,12 +2,8 @@
 
 import copy
 import logging
-import pprint
-from collections import OrderedDict, Mapping
 
 import numpy as np
-
-# TODO clean these up
 
 # Get logger
 log = logging.getLogger(__name__)
