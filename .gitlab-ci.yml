@@ -1,37 +1,42 @@
 image: python:3.6-slim
 
 stages:
-  - install
+  - setup
   - test
 
-variables:
-  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
-
-cache:
-  paths:
-    - "$CI_PROJECT_DIR/.pip-cache"
-  key: "$CI_PROJECT_ID"
-
-py_setup:
-  stage: install
+# -----------------------------------------------------------------------------
+setup:py:
+  stage: setup
   tags:
     - light
   script:
     - python3 setup.py test
     - python3 setup.py install
 
-pip_install:
-  stage: install
+setup:pip:
+  stage: setup
   tags:
     - light
   script:
-    # NOTE This step is required for the next stages to have all dependencies:
-    - pip3 install .[test_deps] --cache-dir .pip-cache
+    - pip3 install .
 
-test:
-  stage: test
+setup:venv:
+  # NOTE This step is required for the next stages to have all dependencies:
+  stage: setup
   tags:
     - light
   script:
+    - python3 -m virtualenv env     # creates it in the current directory
+    - source ./env/bin/activate     # enter virtual environment
+    - pip3 install .[test_deps]     # installation including test dependencies
+
+test:all:
+  stage: test
+  dependencies:
+    - setup:venv
+  tags:
+    - light
+  script:
+    - source ./env/bin/activate     # is passed over from last stage
     - python3 -m pytest --cov=paramspace tests/
-  coverage: '/\d+\.\d+%$/' # also set in GitLab CI/CD settings
+  coverage: '/\d+\.\d+%$/'          # also set in GitLab CI/CD settings
