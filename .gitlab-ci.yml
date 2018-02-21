@@ -46,4 +46,3 @@ test:all:
   script:
     - source ./env/bin/activate     # is passed over from last stage
     - python3 -m pytest --cov=paramspace tests/
-  coverage: '/\d+\.\d+%$/'          # also set in GitLab CI/CD settings
