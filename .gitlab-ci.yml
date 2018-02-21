@@ -31,6 +31,11 @@ setup:venv:
     - python3 -m virtualenv env     # creates it in the current directory
     - source ./env/bin/activate     # enter virtual environment
     - pip3 install .[test_deps]     # installation including test dependencies
+  artifacts:
+    paths:
+      - env/                        # to pass the environment to the next stage
+    expire_in: 10min                # to not let them persist on the server
+
 
 test:all:
   stage: test
