@@ -35,6 +35,8 @@ setup:venv:
     paths:
       - env/                        # to pass the environment to the next stage
     expire_in: 10min                # to not let them persist on the server
+    # NOTE keep track of a feature to expire at end of pipeline
+    # https://gitlab.com/gitlab-org/gitlab-ce/issues/19505
 
 
 test:all:
@@ -45,4 +47,4 @@ test:all:
     - light
   script:
     - source ./env/bin/activate     # is passed over from last stage
-    - python3 -m pytest --cov=paramspace tests/
+    - python3 -m pytest -v --cov=paramspace tests/
