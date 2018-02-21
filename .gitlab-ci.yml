@@ -32,5 +32,5 @@ paramspace:
   tags:
     - light
   script:
-    - py.test --cov=paramspace tests/
+    - python3 -m pytest --cov=paramspace tests/
   coverage: '/\d+\.\d+%$/' # also set in GitLab CI/CD settings
