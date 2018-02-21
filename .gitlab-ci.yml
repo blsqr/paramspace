@@ -4,22 +4,33 @@ stages:
   - install
   - test
 
-setup:
-  stage: install
-  script:
-    - pip3 install .
-  tags:
-    - light
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
 
-all_tests:
-  stage: test # TODO distinguish modules
-  allow_failure: true # not finished writing these yet
+cache:
+  paths:
+    - "$CI_PROJECT_DIR/.pip-cache"
+  key: "$CI_PROJECT_ID"
+
+py_setup:
+  stage: install
   tags:
     - light
-  before_script:
-    - pip3 install numpy
-    - pip3 install pytest-cov
   script:
-    - python3 -m unittest discover
-    - py.test --cov=paramspace tests/ # TODO suppress testing here
-  coverage: '/\d+\.\d+%$/'
+    - python3 setup.py test
+    - python3 setup.py install
+
+pip_install:
+  stage: install
+  tags:
+    - light
+  script:
+    - pip3 install .[test_deps] # full installation
+
+paramspace:
+  stage: test
+  tags:
+    - light
+  script:
+    - py.test --cov=paramspace tests/
+  coverage: '/\d+\.\d+%$/' # also set in GitLab CI/CD settings

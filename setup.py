@@ -2,6 +2,11 @@
 
 from setuptools import setup
 
+# Dependency lists
+install_deps = ['numpy>=1.13']
+test_deps    = ['pytest>=3.4.0', 'pytest-cov>=2.5.1']
+
+
 setup(name='ParamSpace',
       version='1.0a',
       description='Multidimensional parameter space with dictionaries at each point.',
@@ -9,7 +14,7 @@ setup(name='ParamSpace',
       author='Yunus Sevinchan',
       author_email='Yunus.Sevinchan@iup.uni-heidelberg.de',
       url='https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace',
-      licence='MIT',
+      license='MIT',
       classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Science/Research',
@@ -19,7 +24,8 @@ setup(name='ParamSpace',
       ],
       packages=['paramspace'],
       include_package_data=True,
-      install_requires=[
-        'numpy>=1.13',
-      ]
+      install_requires=install_deps,
+      tests_require=test_deps,
+      test_suite='py.test',
+      extras_require=dict(test_deps=test_deps)
       )
