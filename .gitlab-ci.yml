@@ -25,6 +25,8 @@ setup:venv:
   stage: setup
   tags:
     - light
+  before_script:
+    - pip3 install virtualenv       # not included in 3.6-slim
   script:
     - python3 -m virtualenv env     # creates it in the current directory
     - source ./env/bin/activate     # enter virtual environment
