@@ -3,8 +3,7 @@
 import pytest
 from paramspace import ParamSpace
 
-# -----------------------------------------------------------------------------
-# Setup methods
+# Setup methods ---------------------------------------------------------------
 
 @pytest.fixture(scope='module')
 def pspace(request):
