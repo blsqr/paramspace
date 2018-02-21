@@ -25,9 +25,10 @@ pip_install:
   tags:
     - light
   script:
-    - pip3 install .[test_deps] # full installation
+    # NOTE This step is required for the next stages to have all dependencies:
+    - pip3 install .[test_deps] --cache-dir .pip-cache
 
-paramspace:
+test:
   stage: test
   tags:
     - light
