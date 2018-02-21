@@ -8,7 +8,7 @@ from typing import Union
 
 import numpy as np
 
-from .paramspan import ParamSpan, CoupledParamSpan
+from .paramdim import ParamDim, CoupledParamDim
 from .tools import recursive_collect, recursive_update, recursive_replace
 
 # Get logger
@@ -21,7 +21,7 @@ class ParamSpace:
     def __init__(self, d, return_class=dict):
         """Initialise the ParamSpace object from a dictionary.
 
-        Upon init, the dictionary is traversed; when meeting a ParamSpan object, it will be collected and then added to the spans.
+        Upon init, the dictionary is traversed; when meeting a ParamDim object, it will be collected and then added to the spans.
         """
 
         log.debug("Initialising ParamSpace ...")
@@ -36,7 +36,7 @@ class ParamSpace:
         """
 
         # Keep the initial dictionary. This will never be messed with (only exception being an update, where this _init method is called again).
-        self._init_dict = copy.deepcopy(d)  # includes the ParamSpan objects
+        self._init_dict = copy.deepcopy(d)  # includes the ParamDim objects
 
         # The current dictionary (in default state as copy from initial dict)
         # This dictionary is what is returned on request and what is worked on.
@@ -45,8 +45,8 @@ class ParamSpace:
         # Initialise the self._spans attribute
         self._spans     = None              # ...is defined in _init_spans
         self._init_spans(self._dict)
-        # self._spans is an OrderedDict, which includes as keys the name of the span keys (or a tuple with the traversal path to an entry), and as values the ParamSpan objects
-        # The current state of the parameter space is saved in the ParamSpan objects and can be incremented there as well.
+        # self._spans is an OrderedDict, which includes as keys the name of the span keys (or a tuple with the traversal path to an entry), and as values the ParamDim objects
+        # The current state of the parameter space is saved in the ParamDim objects and can be incremented there as well.
 
         # Additionally, the state_id counts the number of the point the current dictionary is in. It is incremented upon self._next_state() until the number self._max_state is reached.
         self._state_no  = None              # None means: default vals
@@ -61,18 +61,18 @@ class ParamSpace:
         return
 
     def _init_spans(self, d):
-        """Looks for instances of ParamSpan in the dictionary d, extracts spans from there, and carries them over
+        """Looks for instances of ParamDim in the dictionary d, extracts spans from there, and carries them over
         - Their default value stays in the init_dict
         - Their spans get saved in the spans dictionary
         """
         log.debug("Initialising spans ...")
 
-        # Traverse the dict and look for ParamSpan objects; collect them as (order, key, value) tuples
-        pspans  = recursive_collect(d, isinstance, ParamSpan,
+        # Traverse the dict and look for ParamDim objects; collect them as (order, key, value) tuples
+        pspans  = recursive_collect(d, isinstance, ParamDim,
                                      prepend_info=('info_func', 'keys'),
                                      info_func=lambda ps: ps.order)
 
-        # Sort them. This looks at the info first, which is the order entry, and then at the keys. If a ParamSpan does not provide an order, it has entry np.inf there, such that those without order get sorted by the key.
+        # Sort them. This looks at the info first, which is the order entry, and then at the keys. If a ParamDim does not provide an order, it has entry np.inf there, such that those without order get sorted by the key.
         pspans.sort()
         # NOTE very important for consistency
 
@@ -82,24 +82,24 @@ class ParamSpace:
         # Cast to an OrderedDict (pspans is a list of tuples -> same data structure as OrderedDict)
         self._spans     = OrderedDict(pspans)
 
-        # Also collect the coupled ParamSpans and continue with the same procedure
-        coupled = recursive_collect(d, isinstance, CoupledParamSpan,
+        # Also collect the coupled ParamDims and continue with the same procedure
+        coupled = recursive_collect(d, isinstance, CoupledParamDim,
                                      prepend_info=('info_func', 'keys'),
                                      info_func=lambda ps: ps.order)
         coupled.sort() # same sorting rules as above, but not as crucial here because they do not change the iteration order through state space
         self._cpspans   = OrderedDict([tpl[1:] for tpl in coupled])
 
-        # Now resolve the coupling targets and add them to CoupledParamSpan instances ... also let the target ParamSpan objects know which CoupledParamSpan couples to them
+        # Now resolve the coupling targets and add them to CoupledParamDim instances ... also let the target ParamDim objects know which CoupledParamDim couples to them
         for cpspan in self._cpspans.values():
             c_target_name       = cpspan.coupled_to
 
             # Try to get it by name
             c_target            = self.get_span_by_name(c_target_name)
 
-            # Set attribute of the coupled ParamSpan
+            # Set attribute of the coupled ParamDim
             cpspan.coupled_pspan= c_target
 
-            # And inform the target ParamSpan about it being the target of the coupled param span, if it is not already included there
+            # And inform the target ParamDim about it being the target of the coupled param span, if it is not already included there
             if cpspan not in c_target.target_of:
                 c_target.target_of.append(cpspan)
 
@@ -266,7 +266,7 @@ class ParamSpace:
     def span_names(self) -> list:
         """Get a list of the span names (tuples of strings). If the span was itself named, that name is used rather than the one created from the dictionary key.
 
-        NOTE: CoupledParamSpans are not included here, same as in the other methods."""
+        NOTE: CoupledParamDims are not included here, same as in the other methods."""
         names   = []
 
         for name, span in self.spans.items():
@@ -283,21 +283,21 @@ class ParamSpace:
         """Returns the default state of the ParamSpace"""
         _dd = recursive_replace(copy.deepcopy(self._init_dict),
                                  lambda pspan: pspan.default,
-                                 isinstance, ParamSpanBase)
+                                 isinstance, ParamDimBase)
         return self._return_class(_dd)
 
     def get_point(self):
         """Return the current point in Parameter Space (i.e. corresponding to the current state)."""
         _pd = recursive_replace(copy.deepcopy(self._dict),
                                  lambda pspan: pspan.get_val_by_state(),
-                                 isinstance, ParamSpanBase)
+                                 isinstance, ParamDimBase)
         return self._return_class(_pd)
 
     def get_state_no(self) -> int:
         """Returns the state number"""
         return self._state_no
 
-    def get_span(self, dim_no: int) -> ParamSpan:
+    def get_span(self, dim_no: int) -> ParamDim:
         try:
             return list(self.get_spans())[dim_no]
         except IndexError:
@@ -325,7 +325,7 @@ class ParamSpace:
         return tuple([span.state for span in self.get_spans()])
 
     def get_span_dim_no(self, name: str) -> int:
-        """Returns the dimension number of a span, i.e. the index of the ParamSpan object in the list of spans of this ParamSpace. As the spans are held in an ordered data structure, the dimension number can be used to identify the span. This number also corresponds to the index in the inverse mapping of the ParamSpace.
+        """Returns the dimension number of a span, i.e. the index of the ParamDim object in the list of spans of this ParamSpace. As the spans are held in an ordered data structure, the dimension number can be used to identify the span. This number also corresponds to the index in the inverse mapping of the ParamSpace.
 
         Args:
             name (tuple, str) : the name of the span, which can be a tuple of strings or a string. If name is a tuple of strings, the exact tuple is required to find the span by its span_name. If name is a string, only the last element of the span_name is considered.
@@ -358,8 +358,8 @@ class ParamSpace:
 
         return dim_no
 
-    def get_span_by_name(self, name: str) -> ParamSpan:
-        """Returns the ParamSpan corresponding to this name.
+    def get_span_by_name(self, name: str) -> ParamDim:
+        """Returns the ParamDim corresponding to this name.
 
         Args:
             name (tuple, str) : the name of the span, which can be a tuple of strings or a string. If name is a tuple of strings, the exact tuple is required to find the span by its span_name. If name is a string, only the last element of the span_name is considered.
@@ -494,7 +494,7 @@ class ParamSpace:
     # Getting a subspace ......................................................
 
     def get_subspace(self, *slices, squeeze: bool=True, as_dict_if_0d: bool=False):
-        """Returns a copy of this ParamSpace with the slices applied to the corresponding ParamSpans.
+        """Returns a copy of this ParamSpace with the slices applied to the corresponding ParamDims.
 
         If `squeeze`, the size one spans are removed.
 
@@ -545,24 +545,24 @@ class ParamSpace:
         # For each name, apply the slice
         for name, slc in zip(names, slices):
             apply_slice(subspace, slc=slc, name=name)
-            # NOTE this works directly on the ParamSpan objects
+            # NOTE this works directly on the ParamDim objects
 
-        # Have the option to squeeze away the size-1 ParamSpans
+        # Have the option to squeeze away the size-1 ParamDims
         if squeeze:
             subspace    = recursive_replace(subspace._dict,
                                              lambda pspan: pspan.squeeze(),
-                                             isinstance, ParamSpanBase)
+                                             isinstance, ParamDimBase)
         else:
             # Just extract the subspace dictionary
             subspace    = subspace._dict
-        # The previous subspace ParamSpace object will go out of scope here. The changes however were applied to the ParamSpan objects that are stored in the dictionaries.
+        # The previous subspace ParamSpace object will go out of scope here. The changes however were applied to the ParamDim objects that are stored in the dictionaries.
 
         # Now, a new ParamSpace object should be initialised, because the old one was messed with too much.
         subspace    = ParamSpace(subspace)
 
-        # Only now is it clear how many dimensions the target space will have. If it is 0-dimensional (i.e. no ParamSpans inside) flatten it (if argument is set to do so)
+        # Only now is it clear how many dimensions the target space will have. If it is 0-dimensional (i.e. no ParamDims inside) flatten it (if argument is set to do so)
         if as_dict_if_0d and subspace.num_dimensions == 0:
-            # Overwrite with the default, which is the same as the current dict. There is no difference, because there are no ParamSpans defined anyway ...
+            # Overwrite with the default, which is the same as the current dict. There is no difference, because there are no ParamDims defined anyway ...
             subspace    = subspace.get_default()
 
         return subspace
@@ -582,7 +582,7 @@ class ParamSpace:
 
     def add_span(self): # TODO
         """Add a span to the ParamSpace manually, e.g. after initialisation with a regular dict."""
-        raise NotImplementedError("Manually adding a span is not implemented yet. Please initialise the ParamSpace object with the ParamSpan objects already in place.")
+        raise NotImplementedError("Manually adding a span is not implemented yet. Please initialise the ParamSpace object with the ParamDim objects already in place.")
 
     def update(self, u, recessively: bool=True):
         """Update the dictionaries of the ParamSpace with the values from u.
@@ -600,7 +600,7 @@ class ParamSpace:
             new_d   = recursive_update(u, self._dict)
         else:
             # Normal update: New values overwrite old ones
-            log.info("Performing non-recessive update. Note that the new values have priority over any previous values, possibly overwriting ParamSpan objects with the same keys.")
+            log.info("Performing non-recessive update. Note that the new values have priority over any previous values, possibly overwriting ParamDim objects with the same keys.")
             new_d   = recursive_update(self._dict, u)
 
         # In order to make the changes apply to _dict and _init_dict, the _init method is called again. This makes sure, the ParamSpace object is in a consistent state after the update.
