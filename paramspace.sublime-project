@@ -1,39 +1,41 @@
 {
-	"folders":
-	[
-		{
-			"name": "root",
-			"path": ".",
-			"folder_exclude_patterns": [
-				"__pycache__", ".pytest_cache"
-			],
-			"file_exclude_patterns": [
-				".coverage"
-			]
-		},
-		{
-			"name": "paramspace (package)",
-			"path": "paramspace",
-			"folder_exclude_patterns": [
-				"__pycache__"
-			],
-			"file_exclude_patterns": [
+    "folders":
+    [
+        {
+            "name": "root",
+            "path": ".",
+            "folder_exclude_patterns": [
+                "__pycache__", ".pytest_cache"
+            ],
+            "file_exclude_patterns": [
+                ".coverage"
+            ]
+        },
+        {
+            "name": "paramspace (package)",
+            "path": "paramspace",
+            "folder_exclude_patterns": [
+                "__pycache__"
+            ],
+            "file_exclude_patterns": [
 
-			]
-		},
-		{
-			"name": "tests",
-			"path": "tests",
-			"folder_exclude_patterns": [
-				"__pycache__"
-			],
-			"file_exclude_patterns": [
+            ]
+        },
+        {
+            "name": "tests",
+            "path": "tests",
+            "folder_exclude_patterns": [
+                "__pycache__"
+            ],
+            "file_exclude_patterns": [
 
-			]
-		},
-	],
-	"settings":
-	{
-        "spell-check": false
-	}
+            ]
+        },
+    ],
+    "settings":
+    {
+        "spell-check": false,
+        "use_tab_stops": false,
+        "translate_tabs_to_spaces": true
+    }
 }

@@ -11,15 +11,15 @@ setup(name='ParamSpace',
       url='https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace',
       licence='MIT',
       classifiers=[
-          'Development Status :: 5 - Production/Stable',
-          'Intended Audience :: Science/Research',
-          'License :: OSI Approved :: MIT License',
-          'Programming Language :: Python :: 3.6',
-          'Topic :: Utilities'
-          ],
+        'Development Status :: 5 - Production/Stable',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3.6',
+        'Topic :: Utilities'
+      ],
       packages=['paramspace'],
       include_package_data=True,
       install_requires=[
-          'numpy>=1.13',
-          ],
-     )
+        'numpy>=1.13',
+      ]
+      )
