@@ -47,18 +47,19 @@ class ParamDimBase:
         # Carry over arguments
         self.default = default
 
-        # Set the values, either via the `values` argument or via values from `kwargs`
+        # Set the values, first via the `values` argument, and check whether there are enough arguments to set the values
         if values is not None:
             self.values = values
 
-        elif (self.values is None
-            and any([k in kwargs for k in ('range', 'linspace', 'logspace')])):
+        elif not any([k in kwargs for k in ('range', 'linspace', 'logspace')]):
+            raise ValueError("No argument `values` or other `**kwargs` was specified, but at least one of these is needed for initialisation.")
+
+        # Check again, now including the `kwargs`
+        if kwargs and self.values is None:
             # Need to parse the additional keyword arguments to generate the values attribute from it
             if len(kwargs) > 1:
-                warnings.warn("{}.__init__ was called with multiple additional"
-                    "`**kwargs`; only one of these will be used! The order in "
-                    "which the arguments are used is: `range`, `linspace`, "
-                    "`logspace`.".format(self.__class__.__name__))
+                warnings.warn("{}.__init__ was called with multiple additional `**kwargs`; only one of these will be used! The order in which the arguments are used is: `range`, `linspace`, `logspace`.".format(self.__class__.__name__),
+                              UserWarning)
 
             if 'range' in kwargs:
                 self.values = range(*kwargs.get('range'))
@@ -69,16 +70,9 @@ class ParamDimBase:
             # else: not possible
 
         elif kwargs and self.values is not None:
-            warnings.warn("{}.__init__ was called with both the argument "
-                    "`values` and additional `**kwargs`: {}. With `values` "
-                    "present, the additional keyword arguments are ignored."
-                    "".format(self.__class__.__name__, kwargs),
-                warnings.UserWarning)
-
-        # Check if it is still not set
-        if self.values is None:
-            raise ValueError("No argument `values` or other `**kwargs` specified, but at least one of these is needed for initialisation.")
-
+            warnings.warn("{}.__init__ was called with both the argument `values` and additional `**kwargs`: {}. With `values` present, the additional keyword arguments are ignored.".format(self.__class__.__name__, kwargs),
+                          UserWarning)
+            
 
     # Properties ..............................................................
     @property
@@ -92,10 +86,10 @@ class ParamDimBase:
 
     @values.setter
     def values(self, values: Iterable):
-        """Set the possible parameter values. Can only be done once.
+        """Set the possible parameter values. Can only be done once and converts the given Iterable to an immutable.
         
         Args:
-            values (Iterable): Description
+            values (Iterable): Which values to set. Will be converted to tuple.
         
         Raises:
             RuntimeError: Raised when a span value was already set before
@@ -105,14 +99,18 @@ class ParamDimBase:
             if not len(values):
                 raise ValueError("Argument `values` needs to be an iterable of at least length 1, was " + str(values))
 
-            self._vals = values
+            self._vals = tuple(values)
 
         else:
-            raise RuntimeError("Span is already set and cannot be set again.")
+            raise AttributeError("Span is already set and cannot be set again.")
 
     @property
-    def state(self):
-        """The current iterator state"""
+    def state(self) -> Union[int, None]:
+        """The current iterator state
+        
+        Returns:
+            Union[int, None]: The state of the iterator; if it is None, the ParamDim is not inside an iteration.
+        """
         return self._state
 
     @property
@@ -124,19 +122,47 @@ class ParamDimBase:
             return self.default
 
     # Magic methods ...........................................................
-    # TODO str, repr, len
 
-    def __len__(self):
-        """ """
+    def __len__(self) -> int:
+        """
+        Returns:
+            int: The length of the associated values list; if not enabled, returns 1.
+        """
         if not self.enabled:
             return 1
         else:
             return len(self.values)
 
+    def __repr__(self) -> str:
+        """
+        Returns:
+            str: Returns the string representation of the ParamDimBase-derived object
+        """
+        return "{}({})".format(self.__class__.__name__,
+                               repr(dict(default=self.default,
+                                         order=self.order,
+                                         values=self.values,
+                                         enabled=self.enabled,
+                                         name=self.name)))
+
+    def __str__(self) -> str:
+        """
+        Returns:
+            str: Returns the string representation of the ParamDimBase-derived object
+        """
+        return repr(self)
+
     # Iterator functionality ..................................................
 
     def __next__(self):
-        """Move to the next valid state and return the corresponding parameter value."""
+        """Move to the next valid state and return the corresponding parameter value.
+        
+        Returns:
+            The current value of the iteration
+        
+        Raises:
+            StopIteration: When the iteration has finished
+        """
 
         if not self.enabled:
             log.debug("__next__ called on disabled ParamDim")
