@@ -96,12 +96,18 @@ class ParamSpace:
     @property
     def default(self) -> dict:
         """Returns the dictionary with all parameter dimensions resolved to their default values."""
-        raise NotImplementedError
+        return recursive_replace(copy.deepcopy(self._dict),
+                                 select_func=isinstance,
+                                 select_args=(ParamSpanBase,),
+                                 replace_func=lambda pdim: pdim.default)
 
     @property
-    def current_value(self) -> dict:
-        """Returns the dictionary with all parameter dimensions resolved to the values, depending on their states."""
-        raise NotImplementedError
+    def current_point(self) -> dict:
+        """Returns the dictionary with all parameter dimensions resolved to the values, depending on the point in parameter space at which the iteration is."""
+        return recursive_replace(copy.deepcopy(self._dict),
+                                 select_func=isinstance,
+                                 select_args=(ParamSpanBase,),
+                                 replace_func=lambda pdim: pdim.current_value)
 
     @property
     def volume(self) -> int:
@@ -185,8 +191,9 @@ class ParamSpace:
         Raises:
             StopIteration: When the iteration has finished
         """
-
         log.debug("__next__ called")
+
+
 
 
     # Public API ..............................................................

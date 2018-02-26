@@ -4,6 +4,7 @@ import copy
 import logging
 import pprint
 from collections import OrderedDict, Mapping
+from typing import Iterable, Sequence, Callable, Mapping
 
 import numpy as np
 
@@ -31,7 +32,7 @@ def recursive_update(d: dict, u: dict):
             d = {k: u[k]}
     return d
 
-def recursive_contains(d: dict, keys: tuple):
+def recursive_contains(d: dict, *, keys: tuple):
     """Checks on the dict-like d, whether a key is present. If the key is a tuple with more than one key, it recursively continues checking."""
     if len(keys) > 1:
         # Check and continue recursion
@@ -43,7 +44,7 @@ def recursive_contains(d: dict, keys: tuple):
         # reached the end of the recursion
         return keys[0] in d
 
-def recursive_getitem(d: dict, keys: tuple):
+def recursive_getitem(d: dict, *, keys: tuple):
     """Recursively goes through dict-like d along the keys in tuple keys and returns the reference to the at the end."""
     if len(keys) > 1:
         # Check and continue recursion
@@ -55,7 +56,7 @@ def recursive_getitem(d: dict, keys: tuple):
         # reached the end of the recursion
         return d[keys[0]]
 
-def recursive_setitem(d: dict, keys: tuple, val, create_key: bool=False):
+def recursive_setitem(d: dict, *, keys: tuple, val, create_key: bool=False):
     """Recursively goes through dict-like d along the keys in tuple keys and sets the value to the child entry."""
     if len(keys) > 1:
         # Check and continue recursion
@@ -140,33 +141,59 @@ def recursive_collect(itr, select_func, *select_args, prepend_info: tuple=None, 
 
     return coll
 
-def recursive_replace(itr, replace_func, select_func, *select_args, replace_kwargs=None, **select_kwargs) -> list:
-    """Go recursively through the dict- or sequence-like (iterable) itr and call select_func(val, *select_args, **select_kwargs) on the values. If the return value is True, that value will be collected to a list, which is returned at the end."""
+def recursive_replace(m: Mapping, *, select_func: Callable, select_args: Sequence, select_kwargs: dict=None, replace_func: Callable, replace_kwargs: dict=None) -> Mapping:
+    """Go recursively through the mapping `m` and call a replace function on each element that the select function returned true on.
+    
+    The call of the select function is:
+        select_func(val, *select_args, **select_kwargs)
 
-    replace_kwargs  = replace_kwargs if replace_kwargs else {}
+    The call of the replace function is:
+        m[key] = replace_func(val, **replace_kwargs)
 
-    # TODO further types possible?!
-    if isinstance(itr, dict):
-        iterator    = itr.items()
-    elif isinstance(itr, (list, tuple)):
-        iterator    = enumerate(itr)
+    Args:
+        m (Mapping): The mapping to go through recursively
+        select_func (Callable): The function that each value is passed to
+        select_args (Sequence): The arguments for the selection function
+        select_kwargs (dict, optional): Keyword arguments for selection func
+        replace_func (Callable): The replacement function, called if the selection function returned True on an element of the mapping
+        replace_kwargs (dict, optional): Keyword arguments for the replacement function
+    
+    Returns:
+        Mapping: The mapping with each element that was selected replaced by the return value of the replacement function.
+    
+    Raises:
+        TypeError: Description
+    """
+
+    log.debug("recursive_replace called")
+
+    select_kwargs = select_kwargs if select_kwargs else {}
+    replace_kwargs = replace_kwargs if replace_kwargs else {}
+
+    # Generate iterator object for special cases of lists and tuples
+    if isinstance(m, (list, tuple)): # TODO generalise
+        it = enumerate(m)
     else:
-        raise TypeError("Cannot iterate through given iterable of type {}".format(type(itr)))
+        # Assume dict behaviour
+        it = m.items()
 
-    for key, val in iterator:
+    # Go through all items
+    for key, val in it:
         if select_func(val, *select_args, **select_kwargs):
             # found the desired element -> replace by the value returned from the replace_func
-            itr[key]    = replace_func(val, **replace_kwargs)
+            m[key] = replace_func(val, **replace_kwargs)
 
         elif isinstance(val, (dict, list, tuple)):
             # Not the desired element, but recursion possible ...
-            itr[key]    =  recursive_replace(val, replace_func,
-                                              select_func, *select_args,
-                                              replace_kwargs=replace_kwargs,
-                                              **select_kwargs)
+            m[key] = recursive_replace(val,
+                                       select_func=select_func,
+                                       select_args=select_args,
+                                       select_kwargs=select_kwargs,
+                                       replace_func=replace_func,
+                                       replace_kwargs=replace_kwargs)
 
         else:
             # was not selected and cannot be further recursed, thus: stays the same
             pass
 
-    return itr
+    return m
