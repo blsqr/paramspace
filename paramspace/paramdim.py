@@ -16,7 +16,7 @@ class ParamDimBase:
     """The ParamDim base class."""
 
     def __init__(self, *, default, values: Iterable=None, enabled: bool=True, order: float=np.inf, name: str=None, **kwargs) -> None:
-        """Initialise the ParamDim.
+        """Initialise a parameter dimension object.
         
         Args:
             default: default value of this parameter dimension
@@ -73,7 +73,6 @@ class ParamDimBase:
             warnings.warn("{}.__init__ was called with both the argument `values` and additional `**kwargs`: {}. With `values` present, the additional keyword arguments are ignored.".format(self.__class__.__name__, kwargs),
                           UserWarning)
             
-
     # Properties ..............................................................
     @property
     def values(self):
