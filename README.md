@@ -1,5 +1,8 @@
 # The `paramspace` package
 
+[![pipeline status](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/badges/master/pipeline.svg)](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/commits/master)
+[![coverage report](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/badges/master/coverage.svg)](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/commits/master)
+
 This package is aimed at being able to iterate over a multidimensional parameter space, where at each point a different dictionary can be returned.
 
 The whole parameter space is contained in the `ParamSpace` class, while each dimension is a so-called `ParamSpan`. To couple one value of the parameter space to a dimension, the `CoupledParamSpan` class can be used.
