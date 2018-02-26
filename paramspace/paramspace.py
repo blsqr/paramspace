@@ -5,7 +5,7 @@ import logging
 import pprint
 from itertools import chain
 from collections import OrderedDict
-from typing import Union, Sequence, Tuple
+from typing import Union, Sequence, Tuple, Generator
 
 import numpy as np
 
@@ -110,6 +110,9 @@ class ParamSpace:
     @property
     def volume(self) -> int:
         """Returns the volume of the parameter space, not counting coupled parameter dimensions."""
+        if self.num_dims == 0:
+            return 0
+
         vol = 1
         for pdim in self.dims.values():
             vol *= len(pdim)
@@ -189,28 +192,92 @@ class ParamSpace:
         Raises:
             StopIteration: When the iteration has finished
         """
-        log.debug("__next__ called")
+        raise NotImplementedError
 
+    def all_points(self) -> dict:
+        """Returns iterator over all points of the parameter space."""
+        
+        if self.volume < 1:
+            raise ValueError("Cannot iterate over ParamSpace of zero volume.")
 
+        log.debug("Starting iteration over all %d points in ParamSpace ...",
+                  self.volume)
 
+        # Prepare parameter dimensions: set them to state 0
+        for pdim in self.dims.values():
+            pdim.enter_iteration()
+
+        # This corresponds to ParamSpace's state 0
+        self._state_no = 0
+
+        # Yield the first state
+        yield self.current_point
+
+        # Now yield all the other states, while available.
+        while self._next_state():
+            yield self.current_point
+
+        else:
+            log.debug("Visited every point in ParamSpace.")
+            self.reset()
+            log.debug("Reset ParamSpace and ParamDims.")
+            return
+
+    def _next_state(self) -> bool:
+        """Iterates the state of the parameter dimensions managed by this ParamSpace.
+
+        Important: this assumes that the parameter dimensions already have been prepared for an iteration and that self.state_no == 0.
+        
+        Returns:
+            bool: Returns False when iteration finishes
+        """
+        log.debug("ParamSpace._next_state called")
+
+        for pdim in self.dims.values():
+            try:
+                pdim.iterate_state()
+
+            except StopIteration:
+                # Went through all states of this span -> go to next dimension and start iterating that (similar to the carry bit in addition)
+                # Important: prepare pdim such that it is at state zero again
+                pdim.enter_iteration()
+                continue
+            else:
+                # Iterated to next step without reaching the last span item
+                break
+        else:
+            # Loop went through -> all states visited
+            self._reset()            
+            return False
+
+        # Broke out of loop -> Got the next state and not at the end yet
+        # Increment state number
+        self._state_no += 1
+
+        # Have not reached the end yet; communicate that
+        return True
+
+    def _reset(self) -> None:
+        """Resets the paramter space and all of its dimensions to the initial state, i.e. where all states are None.
+        """
+        for pdim in self.dims.values():
+            pdim.reset()
+
+        self._state_no = None
 
     # Public API ..............................................................
 
-    def all_points(self):
-        """Returns iterator over all points of the parameter space."""
-        raise NotImplementedError
-
-    def subspace(self, **slices):
-        """Returns iterator over a subspace of the parameter space."""
-        raise NotImplementedError
-
-
-    # Non-public API ..........................................................
-
-    def _dim_by_name(self, name: str) -> ParamDimBase:
+    def inverse_mapping(self) -> np.ndarray:
         """ """
         raise NotImplementedError
 
-    def _dim_by_name(self, name: str) -> ParamDimBase:
+    def get_subspace(self, **slices):
+        """Returns a subspace of this parameter space."""
+        # TODO find a way to preserve the state numbers from the parent
+        raise NotImplementedError
+
+    # Non-public API ..........................................................
+
+    def _dim_by_name(self, name: str, include_coupled: bool=False) -> ParamDimBase:
         """ """
         raise NotImplementedError

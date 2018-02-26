@@ -169,28 +169,40 @@ class ParamDimBase:
 
         log.debug("__next__ called")
 
-        if self.state is None:
-            # Start of iteration: Set state and return first value
-            self._state = 0
-            return self.current_value
-
-        else:
-            # Continuation of iteration: increment state and 
-            self._state += 1
-
-            if self.state == len(self):
-                # Reached the end of the iteration: reset state
-                # NOTE: unlike with other Python iterators, the object is still usable after this.
-                self._state = None
-                raise StopIteration
-            else:
-                return self.current_value
+        # Iterate the state and return the 
+        self.iterate_state()
+        return self.current_value
 
 
     # Public API ..............................................................
+    # These are needed by the ParamSpace class to more controllably iterate
+
+    def iterate_state(self) -> None:
+        """Iterates the state of the parameter dimension.
+        
+        Raises:
+            StopIteration: Upon end of iteration
+        """
+        # Set to zero or increment, depending on whether inside or outside of an iteration
+        if self.state is None:
+            self.enter_iteration()
+        else:
+            self._state += 1
+
+        # Check if end of iteration is reached
+        if self.state == len(self):
+            # Yes. Reset the state, allowing to reuse the object (unlike with other Python iterators)
+            self.reset()
+            raise StopIteration
 
 
+    def enter_iteration(self) -> None:
+        """Sets the state to 0, symbolising that an iteration has started."""
+        self._state = 0
 
+    def reset(self) -> None:
+        """Resets the state to None, called after the end of an iteration."""
+        self._state = None
 
     # Non-public API ..........................................................
 
