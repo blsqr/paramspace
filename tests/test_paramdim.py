@@ -37,11 +37,18 @@ def test_init(various_pdims):
     # No values given
     with pytest.raises(ValueError):
         ParamDim(default=0)
+    
+    with pytest.raises(ValueError):
+        ParamDim(default=0, values=[])
+
+    with pytest.raises(ValueError):
         ParamDim(default=0, foo="bar")
 
     # Multiple values or kwargs given
     with pytest.warns(UserWarning):
         ParamDim(default=0, values=[1,2,3], linspace=[10,20,30])
+    
+    with pytest.warns(UserWarning):
         ParamDim(default=0, range=[1,2], linspace=[10,20,30])
 
     # Assert correct range, linspace, logspace creation
@@ -57,20 +64,26 @@ def test_properties(various_pdims):
     # Whether the values are write-protected
     with pytest.raises(AttributeError):
         vpd['one'].values = 0
+    
+    with pytest.raises(AttributeError):
         vpd['two'].values = [1,2,3]
 
     # Assert immutability of values
     with pytest.raises(TypeError):
         vpd['one'].values[0] = "foo"
+    
+    with pytest.raises(TypeError):
         vpd['two'].values[1] = "bar"
 
     # Whether the state is write protected
     with pytest.raises(AttributeError):
         vpd['one'].state = 0
+    
+    with pytest.raises(AttributeError):
         vpd['two'].state = None
 
 
-def test_iteration():
+def test_iteration(various_pdims):
     """Tests whether the iteration over the span's state works."""
     pd = ParamDim(default=0, values=[0,1,2])
 
@@ -91,8 +104,18 @@ def test_iteration():
     # State should be None now
     assert pd.state is None
 
-def test_disabled_without_default():
-    """Tests whether an exception is raised when disabling is tried without a default value being present."""
+    # For disabled ParamDim
+    assert various_pdims['disabled'].current_value == 0
+    assert len(various_pdims['disabled']) == 1
+    with pytest.raises(StopIteration):
+        various_pdims['disabled'].__next__()
+
+def test_magic_methods(various_pdims):
+    """Run through the magic methods and see if they work."""
+    # Whether string representation works ok -- mainly for coverage here
+    for pd in various_pdims.values():
+        assert str(pd)[:9] == "ParamDim("
+        assert repr(pd)[:9] == "ParamDim("
 
 
 # Tests still to write --------------------------------------------------------

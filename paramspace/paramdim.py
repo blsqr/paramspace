@@ -128,10 +128,10 @@ class ParamDimBase:
         Returns:
             int: The length of the associated values list; if not enabled, returns 1.
         """
-        if not self.enabled:
-            return 1
-        else:
+        if self.enabled:
             return len(self.values)
+        else:
+            return 1
 
     def __repr__(self) -> str:
         """
