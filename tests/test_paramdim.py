@@ -37,7 +37,7 @@ def test_properties(various_pdims):
 
 def test_iteration():
     """Tests whether the iteration over the span's state works."""
-    pd = ParamDim(values=[0,1,2])
+    pd = ParamDim(default=0, values=[0,1,2])
 
     # First iteration
     assert pd.__next__() == 0
@@ -52,6 +52,9 @@ def test_iteration():
     assert pd.__next__() == 2
     with pytest.raises(StopIteration):
         pd.__next__()
+
+    # State should be None now
+    assert pd.state is None
 
 def test_disabled_without_default():
     """Tests whether an exception is raised when disabling is tried without a default value being present."""

@@ -36,24 +36,29 @@ class ParamDimBase:
             ValueError: Description
         """
         # Initialize attributes that are not managed
-        self.name      = name
-        self.order     = order
-        self.enabled   = enabled
+        self.name = name
+        self.order = order
+        self.enabled = enabled
         
         # Initialize attributes that are managed by properties or methods
-        self._vals     = None
-        self._state    = None
+        self._vals = None
+        self._state = None
 
         # Carry over arguments
-        self.default   = default
-        self.values    = values
+        self.default = default
 
-        # If applicable, parse other keyword arguments
-        if (self.values is None
+        # Set the values, either via the `values` argument or via values from `kwargs`
+        if values is not None:
+            self.values = values
+
+        elif (self.values is None
             and any([k in kwargs for k in ('range', 'linspace', 'logspace')])):
             # Need to parse the additional keyword arguments to generate the values attribute from it
             if len(kwargs) > 1:
-                warnings.warn("{}.__init__ was called with multiple additional `**kwargs`; only one of these will be used! The order is: `range`, `linspace`, `logspace`.".format(self.__class__.__name__))
+                warnings.warn("{}.__init__ was called with multiple additional"
+                    "`**kwargs`; only one of these will be used! The order in "
+                    "which the arguments are used is: `range`, `linspace`, "
+                    "`logspace`.".format(self.__class__.__name__))
 
             if 'range' in kwargs:
                 self.values = range(*kwargs.get('range'))
@@ -64,9 +69,14 @@ class ParamDimBase:
             # else: not possible
 
         elif kwargs and self.values is not None:
-            warnings.warn("{}.__init__ was called with both the argument `values` and additional `**kwargs`: {}. With `values` present, the additional keyword arguments are ignored.".format(self.__class__.__name__, kwargs), warnings.UserWarning)
+            warnings.warn("{}.__init__ was called with both the argument "
+                    "`values` and additional `**kwargs`: {}. With `values` "
+                    "present, the additional keyword arguments are ignored."
+                    "".format(self.__class__.__name__, kwargs),
+                warnings.UserWarning)
 
-        else:
+        # Check if it is still not set
+        if self.values is None:
             raise ValueError("No argument `values` or other `**kwargs` specified, but at least one of these is needed for initialisation.")
 
 
