@@ -141,34 +141,28 @@ def recursive_collect(itr, select_func, *select_args, prepend_info: tuple=None, 
 
     return coll
 
-def recursive_replace(m: Mapping, *, select_func: Callable, select_args: Sequence, select_kwargs: dict=None, replace_func: Callable, replace_kwargs: dict=None) -> Mapping:
+def recursive_replace(m: Mapping, *, select_func: Callable, replace_func: Callable) -> Mapping:
     """Go recursively through the mapping `m` and call a replace function on each element that the select function returned true on.
     
     The call of the select function is:
         select_func(val, *select_args, **select_kwargs)
-
+    
     The call of the replace function is:
         m[key] = replace_func(val, **replace_kwargs)
-
+    
     Args:
         m (Mapping): The mapping to go through recursively
         select_func (Callable): The function that each value is passed to
-        select_args (Sequence): The arguments for the selection function
-        select_kwargs (dict, optional): Keyword arguments for selection func
         replace_func (Callable): The replacement function, called if the selection function returned True on an element of the mapping
-        replace_kwargs (dict, optional): Keyword arguments for the replacement function
     
     Returns:
         Mapping: The mapping with each element that was selected replaced by the return value of the replacement function.
     
-    Raises:
+    No Longer Raises:
         TypeError: Description
     """
 
     log.debug("recursive_replace called")
-
-    select_kwargs = select_kwargs if select_kwargs else {}
-    replace_kwargs = replace_kwargs if replace_kwargs else {}
 
     # Generate iterator object for special cases of lists and tuples
     if isinstance(m, (list, tuple)): # TODO generalise
@@ -179,18 +173,14 @@ def recursive_replace(m: Mapping, *, select_func: Callable, select_args: Sequenc
 
     # Go through all items
     for key, val in it:
-        if select_func(val, *select_args, **select_kwargs):
+        if select_func(val):
             # found the desired element -> replace by the value returned from the replace_func
-            m[key] = replace_func(val, **replace_kwargs)
+            m[key] = replace_func(val)
 
         elif isinstance(val, (dict, list, tuple)):
             # Not the desired element, but recursion possible ...
-            m[key] = recursive_replace(val,
-                                       select_func=select_func,
-                                       select_args=select_args,
-                                       select_kwargs=select_kwargs,
-                                       replace_func=replace_func,
-                                       replace_kwargs=replace_kwargs)
+            m[key] = recursive_replace(val, select_func=select_func,
+                                       replace_func=replace_func)
 
         else:
             # was not selected and cannot be further recursed, thus: stays the same
