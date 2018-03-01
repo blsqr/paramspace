@@ -8,6 +8,35 @@ class Dummy:
     def __init__(self, i: int):
         self.i = i
 
+def test_contains():
+    """Tests the recursive_contains function"""
+    d = dict(a=dict(b=dict(c=dict(d=['e'], _="foo"), _="foo"), _="foo"), _="foo")
+
+    # Test both possible cases
+    assert t.recursive_contains(d, keys=('a', 'b', 'c', 'd', 'e')) == True
+    assert t.recursive_contains(d, keys=('a', 'b', 'bar', 'd')) == False
+
+    # There should be a TypeError if the last element was a list
+    with pytest.raises(TypeError):
+        assert t.recursive_contains(d, keys=('a', 'b', 'c', 'd', 'e', 'f'))
+
+def test_getitem():
+    """Tests the recursive_getitem function"""
+    d = dict(a=dict(b=dict(c=dict(d=[0])), l=[dict(l0l=0)]))
+
+    # Should pass
+    assert 0 == t.recursive_getitem(d, keys=('a', 'b', 'c', 'd', 0))
+    assert 0 == t.recursive_getitem(d, keys=('a', 'l', 0, 'l0l'))
+
+    # Should fail
+    with pytest.raises(KeyError):
+        t.recursive_getitem(d, keys=('a', 'l', 0, 'l'))
+    with pytest.raises(KeyError):
+        t.recursive_getitem(d, keys=('a', 'x', 'c', 'd'))
+    with pytest.raises(IndexError):
+        t.recursive_getitem(d, keys=('a', 'b', 'c', 'd', 1))
+    with pytest.raises(IndexError):
+        t.recursive_getitem(d, keys=('a', 'l', 1, 'l0l'))
 
 def test_collect():
     """Tests the recursive_collect function"""

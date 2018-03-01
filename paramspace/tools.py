@@ -5,7 +5,7 @@ import logging
 import pprint
 import collections
 from collections import OrderedDict, Mapping
-from typing import Union, Sequence, Mapping, Callable, Iterator, MutableSequence, MutableMapping
+from typing import Union, Sequence, Mapping, Callable, Iterator, MutableSequence, MutableMapping, Collection
 
 import numpy as np
 
@@ -13,6 +13,48 @@ import numpy as np
 log = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
+
+def recursive_contains(d: Collection, *, keys: Sequence) -> bool:
+    """Checks on the Mapping d, whether a certain key sequence is reachable.
+    
+    Args:
+        d (Collection): The collection to go through
+        keys (Sequence): The sequence of keys to check for
+    
+    Returns:
+        bool: Whether the key sequence is reachable
+    """
+    if len(keys) > 1:
+        # Check and continue recursion
+        if keys[0] in d:
+            return recursive_contains(d[keys[0]], keys=keys[1:])
+        else:
+            return False
+    else:
+        # reached the end of the recursion
+        return keys[0] in d
+
+def recursive_getitem(d: dict, *, keys: Sequence):
+    """Recursively goes through dict-like d along the keys in tuple keys and returns the reference to the at the end."""
+    keyerr_fstr = "No such key '{}' of key sequence {} is available in {}."
+    idxerr_fstr = "No such index '{}' of key sequence {} is available in {}."
+
+    if len(keys) > 1:
+        # Check and continue recursion
+        try:
+            return recursive_getitem(d[keys[0]], keys=keys[1:])
+        except KeyError as err:
+            raise KeyError(keyerr_fstr.format(keys[0], keys, d)) from err
+        except IndexError as err:
+            raise IndexError(idxerr_fstr.format(keys[0], keys, d)) from err
+    else:
+        # reached the end of the recursion
+        try:
+            return d[keys[0]]
+        except KeyError as err:
+            raise KeyError(keyerr_fstr.format(keys[0], keys, d)) from err
+        except IndexError as err:
+            raise IndexError(idxerr_fstr.format(keys[0], keys, d)) from err
 
 def recursive_update(d: dict, u: dict):
     """Update Mapping d with values from Mapping u"""
@@ -29,30 +71,6 @@ def recursive_update(d: dict, u: dict):
             # Not a mapping -> create one
             d = {k: u[k]}
     return d
-
-def recursive_contains(d: dict, *, keys: tuple):
-    """Checks on the dict-like d, whether a key is present. If the key is a tuple with more than one key, it recursively continues checking."""
-    if len(keys) > 1:
-        # Check and continue recursion
-        if keys[0] in d:
-            return recursive_contains(d[keys[0]], keys[1:])
-        else:
-            return False
-    else:
-        # reached the end of the recursion
-        return keys[0] in d
-
-def recursive_getitem(d: dict, *, keys: tuple):
-    """Recursively goes through dict-like d along the keys in tuple keys and returns the reference to the at the end."""
-    if len(keys) > 1:
-        # Check and continue recursion
-        if keys[0] in d:
-            return recursive_getitem(d[keys[0]], keys[1:])
-        else:
-            raise KeyError("No key '{}' found in dict {}.".format(keys[0], d))
-    else:
-        # reached the end of the recursion
-        return d[keys[0]]
 
 def recursive_setitem(d: dict, *, keys: tuple, val, create_key: bool=False):
     """Recursively goes through dict-like d along the keys in tuple keys and sets the value to the child entry."""
