@@ -2,6 +2,7 @@
 
 import copy
 import logging
+import warnings
 import pprint
 from itertools import chain
 import collections
@@ -29,9 +30,13 @@ class ParamSpace:
                 object is mutable.
         """
 
+        # Warn if type is unusual
         if not isinstance(d, (collections.abc.MutableMapping,
                               collections.abc.MutableSequence)):
-            raise TypeError("Can only generate ParamSpace objects from a mutable sequence or mapping, got "+str(type(d)))
+            warnings.warn("Got unusual type {} for ParamSpace initialisation."
+                          "If the given object is not mutable, this might fail"
+                          " somewhere unexpected.".format(type(d)),
+                          UserWarning)
 
         # Save a deep copy of the base dictionary. This dictionary will never be changed.
         self._init_dict = copy.deepcopy(d)
@@ -56,7 +61,7 @@ class ParamSpace:
 
         # Traverse the dict and look for ParamDim objects; collect them as (order, key, value) tuples
         pdims = recursive_collect(self._dict,
-                                  isinstance, ParamDim,
+                                  select_func=lambda p: isinstance(p,ParamDim),
                                   prepend_info=('info_func', 'keys'),
                                   info_func=lambda ps: ps.order)
 
@@ -72,7 +77,7 @@ class ParamSpace:
         log.debug("Gathering CoupledParamDim objects ...")
         # Also collect the coupled ParamDims and continue with the same procedure
         cpdims = recursive_collect(self._dict,
-                                   isinstance, CoupledParamDim,
+                                   select_func=lambda p: isinstance(p, CoupledParamDim),
                                    prepend_info=('info_func', 'keys'),
                                    info_func=lambda ps: ps.order)
         cpdims.sort() # same sorting rules as above, but not as crucial here because they do not change the iteration order through state space

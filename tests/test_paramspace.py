@@ -52,8 +52,8 @@ def test_init(basic_psp, adv_psp):
     ParamSpace(OrderedDict(a=1))
     ParamSpace(list(range(10)))
 
-    # These should fail (not mutable)
-    with pytest.raises(TypeError):
+    # These should create a warning (not mutable)
+    with pytest.warns(UserWarning):
         ParamSpace(tuple(range(10)))
-    with pytest.raises(TypeError):
+    with pytest.warns(UserWarning):
         ParamSpace(set(range(10)))
