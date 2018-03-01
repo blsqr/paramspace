@@ -146,9 +146,7 @@ def recursive_collect(obj: Union[Mapping, Sequence], *, select_func: Callable, p
                                       info_func=info_func,
                                       _parent_keys=these_keys)
 
-        else:
-            # is something that cannot be selected and cannot be further recursed ...
-            pass
+        # else: is something that cannot be selected and cannot be further recursed ...
 
     return coll
 
@@ -191,9 +189,7 @@ def recursive_replace(obj: Union[Mapping, Sequence], *, select_func: Callable, r
                                                  select_func=select_func,
                                                  replace_func=replace_func))
 
-        else:
-            # was not selected and cannot be further recursed, thus: stays the same
-            pass
+        # else: was not selected and cannot be further recursed, thus: stays the same
 
     return obj
 

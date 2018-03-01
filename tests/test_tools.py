@@ -20,8 +20,30 @@ def test_collect():
              b=tuple([1,2,find_me[0], find_me[1]]),
              c=find_me[2],
              d=dict(aa=find_me[3], bb=2, cc=dict(aa=find_me[4])))
+    # The keys at which the dummies sit
+    find_keys = [('b', 2), ('b', 3), ('c',), ('d', 'aa'), ('d', 'cc', 'aa')]
+    find_dvals = [d.i for d in find_me]
 
-    assert find_me == collect(d, select_func=lambda x: isinstance(x, Dummy))
+    # A selection function
+    sel_dummies = lambda x: isinstance(x, Dummy)
+
+    # Test if all dummies are found
+    assert find_me == collect(d, select_func=sel_dummies)
+
+    # Test if they return the correct prepended info key
+    for k, ctup in zip(find_keys, collect(d, select_func=sel_dummies,
+                                          prepend_info=('keys',))):
+        assert k == ctup[0]
+
+    # Test if info func works
+    for i, ctup in zip(find_dvals, collect(d, select_func=sel_dummies,
+                                           prepend_info=('info_func',),
+                                           info_func=lambda d: d.i)):
+        assert i == ctup[0]
+
+    # Test if error is raised for wrong prepend info keys
+    with pytest.raises(ValueError):
+        collect(d, select_func=sel_dummies, prepend_info=('invalid_entry',))
 
 
 def test_replace():
