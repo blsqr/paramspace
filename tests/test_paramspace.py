@@ -1,5 +1,7 @@
 """Tests for the ParamSpace class"""
 
+from collections import OrderedDict
+
 import pytest
 from paramspace import ParamSpace, ParamDim
 
@@ -44,5 +46,14 @@ def adv_psp(request):
 # Tests -----------------------------------------------------------------------
 
 def test_init(basic_psp, adv_psp):
-    """Test whether initialisation from a dictionary works."""
-    pspace = ParamSpace(dict(a=1))
+    """Test whether initialisation from a dictionary works; and fails for certain other cases"""
+    # These should work
+    ParamSpace(dict(a=1))
+    ParamSpace(OrderedDict(a=1))
+    ParamSpace(list(range(10)))
+
+    # These should fail (not mutable)
+    with pytest.raises(TypeError):
+        ParamSpace(tuple(range(10)))
+    with pytest.raises(TypeError):
+        ParamSpace(set(range(10)))

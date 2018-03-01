@@ -4,8 +4,9 @@ import copy
 import logging
 import pprint
 from itertools import chain
+import collections
 from collections import OrderedDict
-from typing import Union, Sequence, Tuple, Generator
+from typing import Union, Sequence, Tuple, Generator, MutableMapping, MutableSequence
 
 import numpy as np
 
@@ -19,8 +20,18 @@ log = logging.getLogger(__name__)
 
 class ParamSpace:
 
-    def __init__(self, d):
-        """Initialize a ParamSpace object from a given dictionary."""
+    def __init__(self, d: Union[MutableMapping, MutableSequence]):
+        """Initialize a ParamSpace object from a given mapping or sequence.
+        
+        Args:
+            d (Union[MutableMapping, MutableSequence]): The mapping or sequence
+                that will form the parameter space. It is crucial that this
+                object is mutable.
+        """
+
+        if not isinstance(d, (collections.abc.MutableMapping,
+                              collections.abc.MutableSequence)):
+            raise TypeError("Can only generate ParamSpace objects from a mutable sequence or mapping, got "+str(type(d)))
 
         # Save a deep copy of the base dictionary. This dictionary will never be changed.
         self._init_dict = copy.deepcopy(d)

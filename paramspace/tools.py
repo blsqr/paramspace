@@ -3,8 +3,9 @@
 import copy
 import logging
 import pprint
+import collections
 from collections import OrderedDict, Mapping
-from typing import Iterable, Sequence, Callable, Mapping
+from typing import Union, Iterable, MutableSequence, Callable, MutableMapping
 
 import numpy as np
 
@@ -141,35 +142,36 @@ def recursive_collect(itr, select_func, *select_args, prepend_info: tuple=None, 
 
     return coll
 
-def recursive_replace(m: Mapping, *, select_func: Callable, replace_func: Callable) -> Mapping:
-    """Go recursively through the mapping `m` and call a replace function on each element that the select function returned true on.
+def recursive_replace(m: Union[MutableMapping, MutableSequence], *, select_func: Callable, replace_func: Callable) -> Union[MutableMapping, MutableSequence]:
+    """Go recursively through `m` and call a replace function on each element that the select function returned true on.
     
-    The call of the select function is:
-        select_func(val, *select_args, **select_kwargs)
-    
-    The call of the replace function is:
-        m[key] = replace_func(val, **replace_kwargs)
+    For passing arguments to any of the two, use lambda functions.    
     
     Args:
-        m (Mapping): The mapping to go through recursively
+        m (Union[MutableMapping, MutableSequence]): The mapping or sequence to
+            go through recursively
         select_func (Callable): The function that each value is passed to
-        replace_func (Callable): The replacement function, called if the selection function returned True on an element of the mapping
+        replace_func (Callable): The replacement function, called if the
+            selection function returned True on an element of the mapping
     
     Returns:
-        Mapping: The mapping with each element that was selected replaced by the return value of the replacement function.
+        Union[MutableMapping, MutableSequence]: The updated mapping where each
+            element that was selected was replaced by the return value of the
+            replacement function.
     
-    No Longer Raises:
+    Raises:
         TypeError: Description
     """
 
     log.debug("recursive_replace called")
 
     # Generate iterator object for special cases of lists and tuples
-    if isinstance(m, (list, tuple)): # TODO generalise
+    if isinstance(m, collections.abc.MutableSequence):
         it = enumerate(m)
-    else:
-        # Assume dict behaviour
+    elif isinstance(m, collections.abc.MutableMapping):
         it = m.items()
+    else:
+        raise TypeError("Require mutable sequence or mapping for recursive_replace, got " + str(type(m)))
 
     # Go through all items
     for key, val in it:
