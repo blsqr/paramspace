@@ -145,7 +145,7 @@ class ParamSpace:
     @property
     def shape(self) -> Tuple[int]:
         """Returns the shape of the parameter space"""
-        raise NotImplementedError
+        return tuple([len(pd) for pd in self.dims.values()])
 
     @property
     def state_no(self) -> int:
@@ -235,7 +235,7 @@ class ParamSpace:
 
         else:
             log.debug("Visited every point in ParamSpace.")
-            self.reset()
+            self._reset()
             log.debug("Reset ParamSpace and ParamDims.")
             return
 
@@ -284,8 +284,36 @@ class ParamSpace:
     # Public API ..............................................................
 
     def inverse_mapping(self) -> np.ndarray:
-        """ """
-        raise NotImplementedError
+        """Returns an inverse mapping of dimension to state numbers."""
+        if self._imap is not None:
+            # Return the cached result
+            log.debug("Using previously created inverse mapping ...")
+            return self._imap
+        # else: calculate the inverse mapping
+
+        # Create empty n-dimensional array
+        shape = tuple([len(_span) for _span in self.get_spans()])
+        imap = np.ndarray(shape, dtype=int)
+        imap.fill(-1) # i.e., not set yet
+
+        # Iterate over all points and save the state number to the map
+        for state_no, _ in self.all_points():
+            # Get the span states and convert all Nones to zeros, as these dimensions have no entry
+            s = [Ellipsis if i is None else i for i in self.get_span_states()]
+
+            # Save the state number to the mapping
+            try:
+                imap[tuple(s)] = state_no
+            except IndexError as err:
+                fstr = ("Creating inverse mapping failed, probably due to a "
+                        "change in the parameter dimensions sizes."
+                        " Selector: {} -- imap shape: {}")
+                raise RuntimeError(fstr.format(s, imap.shape)) from err
+
+        # Save the result to attributes for caching
+        self._imap = imap
+
+        return imap
 
     def get_subspace(self, **slices):
         """Returns a subspace of this parameter space."""
@@ -295,5 +323,9 @@ class ParamSpace:
     # Non-public API ..........................................................
 
     def _dim_by_name(self, name: str, include_coupled: bool=False) -> ParamDimBase:
-        """ """
+        """Get the ParamDim object with the given name"""
+        raise NotImplementedError
+
+    def _dim_no_by_name(self, name: str, include_coupled: bool=False) -> int:
+        """Returns the number of the dimension object with that name."""
         raise NotImplementedError
