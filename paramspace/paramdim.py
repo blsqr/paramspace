@@ -1,4 +1,4 @@
-"""The ParamSpam classes ...""" # TODO
+"""The ParamDim classes ...""" # TODO
 
 import copy
 import logging
