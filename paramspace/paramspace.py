@@ -162,7 +162,7 @@ class ParamSpace:
         return tuple([s.state for s in self.dims.values()])
 
     @property
-    def full_state_vector(self) -> OrderedDict[int]:
+    def full_state_vector(self) -> OrderedDict:
         """Returns an OrderedDict of all parameter space dimensions, including coupled ones."""
         return OrderedDict((k, v) for k, v in chain(self.dims.items(),
                                                     self.coupled_dims.items()))
