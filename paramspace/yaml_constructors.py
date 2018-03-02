@@ -86,7 +86,7 @@ def _pspace_constructor(loader, node, sort_if_mapping: bool=False) -> ParamSpace
         # Recursively order the content to have consistent loading
         if sort_if_mapping:
             log.debug("Recursively sorting the mapping ...")
-            d = sortOD(OrderedDict(d))
+            d = recursively_sort_dict(OrderedDict(d))
 
     elif isinstance(node, yaml.nodes.SequenceNode):
         log.debug("Constructing sequence from node ...")
@@ -109,7 +109,8 @@ def _pdim_constructor(loader, node, default_if_disabled: bool=False, get_default
 
     if isinstance(node, yaml.nodes.MappingNode):
         log.debug("Encountered !pspan tag. Constructing mapping ...")
-        pdim = ParamDim(loader.construct_mapping(node, deep=True))
+        mapping = loader.construct_mapping(node, deep=True)
+        pdim = ParamDim(**mapping)
     else:
         raise TypeError("ParamDim can only be constructed from a mapping node,"
                         " got node of type {} "
@@ -136,7 +137,7 @@ def recursively_sort_dict(d: dict) -> OrderedDict:
     # Fill it with the values from the dictionary
     for k, v in sorted(d.items()):
         if isinstance(v, dict):
-            res[k] = sortOD(v)
+            res[k] = recursively_sort_dict(v)
         else:
             res[k] = v
     return res
