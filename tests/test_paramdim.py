@@ -23,6 +23,12 @@ def various_pdims(request):
     pds['with_order']= ParamDim(default=0, values=[1,2,3], order=42)
     pds['disabled']  = ParamDim(default=0, values=[1,2,3], enabled=False)
 
+    # coupled
+    pds['coupled1']  = CoupledParamDim(target_pdim=pds['one'])
+    pds['coupled2']  = CoupledParamDim(target_pdim=pds['one'],
+                                       values=[1,2,3],
+                                       use_coupled_values=False)
+
     return pds
 
 
@@ -75,13 +81,12 @@ def test_properties(various_pdims):
     with pytest.raises(TypeError):
         vpd['two'].values[1] = "bar"
 
-    # Whether the state is write protected
-    with pytest.raises(AttributeError):
-        vpd['one'].state = 0
+    # Whether the state is restricted to the value bounds
+    with pytest.raises(ValueError):
+        vpd['one'].state = -1
     
-    with pytest.raises(AttributeError):
-        vpd['two'].state = None
-
+    with pytest.raises(ValueError):
+        vpd['two'].state = 4
 
 def test_iteration(various_pdims):
     """Tests whether the iteration over the span's state works."""
@@ -110,13 +115,40 @@ def test_iteration(various_pdims):
     with pytest.raises(StopIteration):
         various_pdims['disabled'].__next__()
 
-def test_magic_methods(various_pdims):
-    """Run through the magic methods and see if they work."""
+def test_str_methods(various_pdims):
+    """Run through the string methods, just to call them..."""
     # Whether string representation works ok -- mainly for coverage here
     for pd in various_pdims.values():
-        assert str(pd)[:9] == "ParamDim("
-        assert repr(pd)[:9] == "ParamDim("
+        str(pd)
+        repr(pd)
 
+def test_coupled():
+    """Test whether initialisation of CoupledParamDim works"""
+    # These should work
+    CoupledParamDim(target_name=("foo",))
+    CoupledParamDim(target_name=("foo",), default=0)
+    CoupledParamDim(target_name=("foo",), values=[1,2,3])
+
+    # These should fail
+    with pytest.raises(TypeError):
+        # No default given
+        CoupledParamDim(target_name=("foo",), use_coupled_default=False)
+
+    with pytest.raises(ValueError):
+        # No values given
+        CoupledParamDim(target_name=("foo",), use_coupled_values=False)
+
+    with pytest.raises(TypeError):
+        # Wrong target name type
+        CoupledParamDim(target_name="foo")
+
+    # Set target
+    pd = ParamDim(default=0, values=[1,2,3])
+    cpd = CoupledParamDim(target_pdim=pd)
+    assert len(pd) == len(cpd)
+    assert pd.values == cpd.values
+    assert pd.default == cpd.default
+        
 
 # Tests still to write --------------------------------------------------------
 

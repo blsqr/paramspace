@@ -43,6 +43,19 @@ def adv_psp(request):
    
     return ParamSpace(d)
 
+
+@pytest.fixture(scope='module')
+def psp_with_coupled(request):
+    """Used to setup a pspace object with coupled param dims"""
+    d = dict(a=ParamDim(default=0, values=[1,2,3], order=0),
+             c1=CoupledParamDim(target_name=('a')),
+             d=dict(aa=ParamDim(default=0, values=[1,2,3], order=-1),
+                    cc1=CoupledParamDim(),
+                    cc2=CoupledParamDim())
+             )
+   
+    return ParamSpace(d)
+
 # Tests -----------------------------------------------------------------------
 
 def test_init(basic_psp, adv_psp):

@@ -3,7 +3,7 @@
 import copy
 import logging
 import warnings
-from typing import Iterable, Union
+from typing import Iterable, Union, Tuple, Hashable, Sequence
 
 import numpy as np
 
@@ -45,7 +45,7 @@ class ParamDimBase:
         self._state = None
 
         # Carry over arguments
-        self.default = default
+        self._default = default
 
         # Set the values, first via the `values` argument, and check whether there are enough arguments to set the values
         if values is not None:
@@ -74,8 +74,14 @@ class ParamDimBase:
                           UserWarning)
             
     # Properties ..............................................................
+
     @property
-    def values(self):
+    def default(self):
+        """The default value."""
+        return self._default
+
+    @property
+    def values(self) -> tuple:
         """The values that are iterated over.
         
         Returns:
@@ -95,13 +101,9 @@ class ParamDimBase:
             ValueError: Raised when the given iterable was not at least of length 1
         """
         if self._vals is None:
-            if not len(values):
-                raise ValueError("Argument `values` needs to be an iterable of at least length 1, was " + str(values))
-
             self._vals = tuple(values)
-
         else:
-            raise AttributeError("Span is already set and cannot be set again.")
+            raise AttributeError("Values are already set and cannot be set again.")
 
     @property
     def state(self) -> Union[int, None]:
@@ -111,6 +113,22 @@ class ParamDimBase:
             Union[int, None]: The state of the iterator; if it is None, the ParamDim is not inside an iteration.
         """
         return self._state
+
+    @state.setter
+    def state(self, new_state: Union[int, None]):
+        """Sets the current iterator state."""
+        if new_state is None:
+            self._state = None
+        elif isinstance(new_state, int):
+            if new_state < 0 or new_state >= len(self):
+                raise ValueError("New state needs to be positive and cannot "
+                                 "exceed the highest index of the value "
+                                 "container ({}), "
+                                 "was {}.".format(len(self)-1, new_state))
+            self._state = new_state
+        else:
+            raise TypeError("new state can only be of type int or None, "
+                            "was "+str(type(new_state)))
 
     @property
     def current_value(self):
@@ -186,38 +204,271 @@ class ParamDimBase:
         # Set to zero or increment, depending on whether inside or outside of an iteration
         if self.state is None:
             self.enter_iteration()
+            # NOTE This is always possible, as the length of the values is ensured to be at least 1
         else:
-            self._state += 1
-
-        # Check if end of iteration is reached
-        if self.state == len(self):
-            # Yes. Reset the state, allowing to reuse the object (unlike with other Python iterators)
-            self.reset()
-            raise StopIteration
-
+            try:
+                self.state += 1
+            except ValueError:
+                # Reached end of possible state values
+                # Reset the state, allowing to reuse the object (unlike with other Python iterators)
+                self.reset()
+                raise StopIteration
 
     def enter_iteration(self) -> None:
         """Sets the state to 0, symbolising that an iteration has started."""
-        self._state = 0
+        self.state = 0
 
     def reset(self) -> None:
         """Resets the state to None, called after the end of an iteration."""
-        self._state = None
+        self.state = None
 
     # Non-public API ..........................................................
-
-
-    
-
 
 class ParamDim(ParamDimBase):
     """The ParamDim class."""
 
-    pass
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        # Additional attributes, needed for coupling.
+        self._target_of = []
+
+    # Changes to the properties
+
+    @property
+    def values(self):
+        return super().values
+
+    @values.setter
+    def values(self, values: Iterable):
+        """Set the possible parameter values. Can only be done once and converts the given Iterable to an immutable.
+        
+        Args:
+            values (Iterable): Which values to set. Will be converted to tuple.
+        
+        Raises:
+            RuntimeError: Raised when a span value was already set before
+            ValueError: Raised when the given iterable was not at least of length 1
+        """
+        if self._vals is None:
+            if not len(values):
+                raise ValueError("Argument `values` needs to be an iterable of at least length 1, was " + str(values))
+
+            self._vals = tuple(values)
+
+        else:
+            raise AttributeError("Span is already set and cannot be set again.")
+
+    @property
+    def target_of(self):
+        """Returns the list that holds all the CoupledParamDim objects that point to this instance of ParamDim."""
+        return self._target_of
 
 
 class CoupledParamDim(ParamDimBase):
     """A CoupledParamDim object is recognized by the ParamSpace and its state moves alongside with another ParamDim's state."""
 
-    pass
+    def __init__(self, *, target_pdim: ParamDim=None, target_name: Sequence[str]=None, use_coupled_default: bool=None, use_coupled_values: bool=None, **kwargs):
+        """
+        Args:
+            target_pdim (ParamDim, optional): The ParamDim object to couple to
+            target_name (Sequence[str], optional): The *name* of the ParamDim
+                object to couple to; needs to be within the same ParamSpace!
+            use_coupled_default (bool, optional): Whether to use the default
+                value of the coupled ParamDim; need not be given: if it is not
+                set it is determined by looking at whether argument `default`
+                was passed in the kwargs.
+            use_coupled_values (bool, optional): Whether to use the values
+                of the coupled ParamDim; need not be given: if it is not
+                set it is determined by looking at whether argument `values`
+                was passed in the kwargs.
+            **kwargs: All ParamDim kwargs
+        
+        Raises:
+            ValueError: If neither target_pdim nor target_name were given
+        """
 
+        # Determine whether the coupled values will be used or not
+        if use_coupled_default is None:
+            use_coupled_default = 'default' not in kwargs
+        if use_coupled_values is None:
+            use_coupled_values = 'values' not in kwargs
+
+        # Set these attributes
+        self.use_coupled_default = use_coupled_default
+        self.use_coupled_values = use_coupled_values
+
+        # Make sure that they are set in the kwargs, such that the __init__ call of the parent class does not get confused
+        # NOTE these will never actually be used!
+        if self.use_coupled_default is True:
+            if 'default' in kwargs:
+                warnings.warn("argument `default` was given despite "
+                              "`use_coupled_default` being set to True. "
+                              "Will ignore the given defaults!")
+            kwargs['default'] = None
+
+        if self.use_coupled_values is True:
+            if 'values' in kwargs:
+                warnings.warn("argument `values` was given despite "
+                              "`use_coupled_values` being set to True. "
+                              "Will ignore the given defaults!")
+            kwargs['values'] = []
+
+        # Initialise via parent 
+        super().__init__(**kwargs)
+
+        # Set property-managed attributes
+        self._target_pdim = None  # the object that is coupled to
+        self._target_name = None  # the name of it in a ParamSpace
+
+        # Carry over further arguments
+        if target_pdim:
+            self.target_pdim = target_pdim
+
+            if target_name is not None:
+                warnings.warn("Got both `target_pdim` and `target_name` "
+                              "arguments; will ignore the latter.",
+                              UserWarning)
+        elif target_name:
+            # save the name of the object to couple to, later resolved by ParamSpace
+            self.target_name = target_name
+
+        else:
+            raise ValueError("Need either argument target_pdim or target_name "
+                             "to ensure coupling, got none of those.")
+
+        log.debug("CoupledParamDim initialised.")
+
+    # Properties that only the CoupledParamDim has ----------------------------
+
+    @property
+    def target_name(self) -> Tuple[Hashable]:
+        """The ParamDim object this CoupledParamDim couples to."""
+        return self._target_name
+
+    @target_name.setter
+    def target_name(self, target_name: Tuple[Hashable]):
+        """Sets the target name, ensuring it to be a valid key sequence."""
+        if self._target_name is not None:
+            raise RuntimeError("Target name cannot be changed after initialisation!")
+        # Make sure it is not a string, which is also interpreted as sequence
+        if not isinstance(target_name, tuple):
+            raise TypeError("Argument `target_name` should be a tuple, "
+                            "i.e. a key sequence, "
+                            "was of type: "+str(type(target_name)))
+
+        # Check if a pdim is already set
+        if self._target_pdim is not None:
+            warnings.warn("A target ParamDim was already set; setting the "
+                          "target_name will have no effect.", UserWarning)
+
+        self._target_name = target_name
+
+    @property
+    def target_pdim(self) -> ParamDim:
+        """The ParamDim object this CoupledParamDim couples to."""
+        if not self._target_pdim:
+            raise ValueError("The coupling target has not been set ")
+        return self._target_pdim
+
+    @target_pdim.setter
+    def target_pdim(self, pdim: ParamDim):
+        if self._target_pdim is not None:
+            raise ValueError("Cannot change target of CoupledParamDim!")
+        elif not isinstance(pdim, ParamDim):
+            raise TypeError("Target of CoupledParamDim needs to be of type "
+                            "ParamDim, was "+str(type(pdim)))
+        elif not self.use_coupled_values and len(self) != len(pdim):
+            raise ValueError("The lengths of the value sequences of "
+                             "target ParamDim and this CoupledParamDim "
+                             "need to match, were: {} and {}, "
+                             "respectively.".format(len(pdim), len(self)))
+
+        self._target_pdim = pdim
+        log.debug("Set CoupledParamDim target.")
+
+    # Properties that need to relay to the coupled ParamDim -------------------
+    
+    @property
+    def default(self):
+        """The default value.
+        
+        Returns:
+            the default value this parameter dimension can take.
+        
+        Raises:
+            RuntimeError: If no ParamDim was associated yet
+        """
+        if self.use_coupled_default:
+            if not self.target_pdim:
+                raise RuntimeError("No target ParamDim was associated yet, "
+                                   "cannot return coupled default!")
+            return self.target_pdim.default
+        else:
+            return self._default
+
+    @property
+    def values(self) -> tuple:
+        """The values that are iterated over.
+        
+        If self.use_coupled_values is set, will be those of the coupled pdim.
+        
+        Returns:
+            tuple: The values of this CoupledParamDim or the target ParamDim
+        
+        Raises:
+            RuntimeError: Description
+        """
+        if self.use_coupled_values:
+            if not self.target_pdim:
+                raise RuntimeError("No target ParamDim was associated yet, "
+                                   "cannot return coupled values!")
+            return self.target_pdim.values
+        else:
+            return self._vals
+
+    @values.setter
+    def values(self, values: Iterable):
+        """Set the possible parameter values. Can only be done once and converts the given Iterable to an immutable.
+        
+        Args:
+            values (Iterable): Which values to set. Will be converted to tuple.
+        
+        Raises:
+            RuntimeError: Raised when a span value was already set before
+            ValueError: Raised when the given iterable was not at least of length 1
+        """
+        if self._vals is None:
+            self._vals = tuple(values)
+        else:
+            raise AttributeError("Values are already set and cannot be set again.")
+
+    @property
+    def state(self) -> Union[int, None]:
+        """The current iterator state of the target ParamDim
+        
+        Returns:
+            Union[int, None]: The state of the iterator; if it is None, the ParamDim is not inside an iteration.
+        """
+        if self.enabled:
+            if self.target_pdim:
+                return self.target_pdim.state
+            else:
+                raise RuntimeError("The state of a CoupledParamDim is defined "
+                                   "only by the target ParamDim, but no "
+                                   "target was associated yet!")
+        else:
+            return None
+
+    @state.setter
+    def state(self, new_state):
+        """The state of a coupled ParamDim is of no importance; don't change it."""
+        pass
+
+    @property
+    def current_value(self):
+        """If in an iteration: return the value according to the current state. If not in an iteration and/or disabled, return the default value."""
+        if self.enabled and self.state is not None:
+            return self.values[self.state]
+        else:
+            return self.default

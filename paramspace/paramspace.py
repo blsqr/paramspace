@@ -91,14 +91,14 @@ class ParamSpace:
         for cpdim in self.coupled_dims.values():
             # Try to get the coupling target by name
             try:
-                c_target = self._dim_by_name(cpdim.coupled_to)
+                c_target = self._dim_by_name(cpdim.target_name)
             except NameError as err:
                 # Could not resolve it
                 # TODO informative error message here
                 raise
 
             # Set attribute of the coupled ParamDim
-            cpdim.coupled_obj = c_target
+            cpdim.target_pdim = c_target
 
             # And inform the target ParamDim about it being the target of the coupled param span, if it is not already included there
             if cpdim not in c_target.target_of:
