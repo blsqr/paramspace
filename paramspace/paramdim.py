@@ -171,6 +171,9 @@ class ParamDimBase:
 
     # Iterator functionality ..................................................
 
+    def __iter__(self):
+        return self
+
     def __next__(self):
         """Move to the next valid state and return the corresponding parameter value.
         

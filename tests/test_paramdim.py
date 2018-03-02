@@ -6,6 +6,7 @@ import pytest
 import numpy as np
 
 from paramspace import ParamDim, CoupledParamDim
+from paramspace.paramdim import ParamDimBase
 
 # Setup methods ---------------------------------------------------------------
 
@@ -25,9 +26,11 @@ def various_pdims(request):
 
     # coupled
     pds['coupled1']  = CoupledParamDim(target_pdim=pds['one'])
-    pds['coupled2']  = CoupledParamDim(target_pdim=pds['one'],
-                                       values=[1,2,3],
-                                       use_coupled_values=False)
+    pds['coupled2']  = CoupledParamDim(target_pdim=pds['two'],values=[1,2,3,4])
+    pds['coupled3']  = CoupledParamDim(target_pdim=pds['range'], default=0)
+
+    # base
+    pds['base']      = ParamDimBase(default=0, values=[1,2,3])
 
     return pds
 
@@ -74,6 +77,9 @@ def test_properties(various_pdims):
     with pytest.raises(AttributeError):
         vpd['two'].values = [1,2,3]
 
+    with pytest.raises(AttributeError):
+        vpd['base'].values = "baz"
+
     # Assert immutability of values
     with pytest.raises(TypeError):
         vpd['one'].values[0] = "foo"
@@ -87,6 +93,15 @@ def test_properties(various_pdims):
     
     with pytest.raises(ValueError):
         vpd['two'].state = 4
+
+    with pytest.raises(TypeError):
+        vpd['two'].state = "foo"
+
+    # Misc
+    for pd in vpd.values():
+        if isinstance(pd, ParamDim):
+            # Can be a target of a coupled ParamDim
+            pd.target_of
 
 def test_iteration(various_pdims):
     """Tests whether the iteration over the span's state works."""
@@ -114,6 +129,10 @@ def test_iteration(various_pdims):
     assert len(various_pdims['disabled']) == 1
     with pytest.raises(StopIteration):
         various_pdims['disabled'].__next__()
+
+    # And as a loop
+    for _ in pd:
+        continue
 
 def test_str_methods(various_pdims):
     """Run through the string methods, just to call them..."""
@@ -148,6 +167,10 @@ def test_coupled():
     assert len(pd) == len(cpd)
     assert pd.values == cpd.values
     assert pd.default == cpd.default
+
+    # Iteration
+    for pd_val, cpd_val in zip(pd, cpd):
+        assert pd_val == cpd_val
         
 
 # Tests still to write --------------------------------------------------------
