@@ -17,11 +17,14 @@ from .tools import recursive_collect, recursive_update, recursive_replace
 # Get logger
 log = logging.getLogger(__name__)
 
+# Define an input type for the dictionary
+PStype = Union[MutableMapping, MutableSequence]
+
 # -----------------------------------------------------------------------------
 
 class ParamSpace:
 
-    def __init__(self, d: Union[MutableMapping, MutableSequence]):
+    def __init__(self, d: PStype):
         """Initialize a ParamSpace object from a given mapping or sequence.
         
         Args:
@@ -54,6 +57,7 @@ class ParamSpace:
 
         # Initialize caching attributes
         self._imap = None
+        self._iter = None
 
     def _gather_paramdims(self):
         """Gathers the ParamDim objects by recursively going through the dictionary."""
@@ -199,7 +203,7 @@ class ParamSpace:
 
     # Iterator functionality ..................................................
 
-    def __next__(self) -> dict:
+    def __iter__(self) -> PStype:
         """Move to the next valid point in parameter space and return the corresponding dictionary.
         
         Returns:
@@ -208,11 +212,18 @@ class ParamSpace:
         Raises:
             StopIteration: When the iteration has finished
         """
-        raise NotImplementedError
+        if self._iter is None:
+            # Associate with the all_points iteration
+            self._iter = self.all_points
 
-    def all_points(self) -> dict:
-        """Returns iterator over all points of the parameter space."""
+        # Let generator yield and given the return value, check how to proceed
+        return self._iter()
+        # NOTE the generator will also raise StopIteration once it ended
         
+
+    def all_points(self, with_info: Sequence=None) -> Generator[PStype, None, None]:
+        """Returns a generator yielding all points of the parameter space."""
+
         if self.volume < 1:
             raise ValueError("Cannot iterate over ParamSpace of zero volume.")
 
@@ -227,11 +238,11 @@ class ParamSpace:
         self._state_no = 0
 
         # Yield the first state
-        yield self.current_point
+        yield self._gen_info_tuple(self.current_point, with_info=with_info)
 
         # Now yield all the other states, while available.
         while self._next_state():
-            yield self.current_point
+            yield self._gen_info_tuple(self.current_point, with_info=with_info)
 
         else:
             log.debug("Visited every point in ParamSpace.")
@@ -292,28 +303,30 @@ class ParamSpace:
         # else: calculate the inverse mapping
 
         # Create empty n-dimensional array
-        shape = tuple([len(_span) for _span in self.get_spans()])
+        shape = self.shape
         imap = np.ndarray(shape, dtype=int)
         imap.fill(-1) # i.e., not set yet
 
         # Iterate over all points and save the state number to the map
-        for state_no, _ in self.all_points():
-            # Get the span states and convert all Nones to zeros, as these dimensions have no entry
-            s = [Ellipsis if i is None else i for i in self.get_span_states()]
+        for _, state_no, state_vec in self.all_points(with_info=['state_no',
+                                                      'state_vec']):
+            # Need to convert entries in the state vector if there are Nones
+            s = [0 if i is None else i for i in state_vec]
 
             # Save the state number to the mapping
             try:
                 imap[tuple(s)] = state_no
+
             except IndexError as err:
                 fstr = ("Creating inverse mapping failed, probably due to a "
                         "change in the parameter dimensions sizes."
                         " Selector: {} -- imap shape: {}")
                 raise RuntimeError(fstr.format(s, imap.shape)) from err
+        else:
+            log.debug("Finished creating inverse mapping. Caching it...")
+            self._imap = imap
 
-        # Save the result to attributes for caching
-        self._imap = imap
-
-        return imap
+        return self._imap
 
     def get_subspace(self, **slices):
         """Returns a subspace of this parameter space."""
@@ -329,3 +342,24 @@ class ParamSpace:
     def _dim_no_by_name(self, name: str, include_coupled: bool=False) -> int:
         """Returns the number of the dimension object with that name."""
         raise NotImplementedError
+
+    def _gen_info_tuple(self, pt, *, with_info: Sequence) -> tuple:
+        """Is used during iteration to add additional information to the return tuple."""
+        if not with_info:
+            return pt
+
+        # Parse the tuple and add information
+        info_tup = tuple()
+        for info in with_info:
+            if info in ['state_no']:
+                info_tup += (self.state_no,)
+            elif info in ['state_vector', 'state_vec']:
+                info_tup += (self.state_vector,)
+            elif info in ['progress']:
+                info_tup += ((self.state_no+1)/self.volume,)
+            else:
+                raise ValueError("No such information '{}' available. "
+                                 "Check the `with_info` argument!".format(info))
+
+        # Concatenate and return
+        return (pt,) + info_tup

@@ -101,6 +101,9 @@ def test_volume(basic_psp, adv_psp):
     assert p.volume == 1*5*20*12
     assert p.volume == p.full_volume
 
+    # And of a paramspace without dimensions
+    assert ParamSpace(dict(a=1)).volume == 0
+
 def test_shape(basic_psp, adv_psp):
     """Asserts that the returned shape is correct"""
     assert basic_psp.shape == (3,3,3,3,3,3)
@@ -142,18 +145,41 @@ def test_dim_order(basic_psp, adv_psp):
 
 def test_iteration(basic_psp, adv_psp):
     """Tests whether the iteration goes through all points"""
-    cntr = dict(basic=0, adv=0)
+    def check_counts(iters, counts):
+        cntrs = {i:0 for i, _ in enumerate(counts)}
 
-    for _, _ in zip(basic_psp.all_points(), adv_psp.all_points()):
-        cntr['basic'] += 1
-        cntr['adv'] += 1
+        for it_no, (it, count) in enumerate(zip(iters, counts)):
+            for _ in it:
+                cntrs[it_no] += 1
+            assert cntrs[it_no] == count
 
-    assert cntr['basic'] == basic_psp.volume
-    assert cntr['adv'] == adv_psp.volume
+    # For the explicit call
+    check_counts((basic_psp.all_points(), adv_psp.all_points()),
+                 (basic_psp.volume, adv_psp.volume))
 
-@pytest.mark.skip("getting state number not implemented yet")
+    # For the call via __next__
+    check_counts((basic_psp, adv_psp),
+                 (basic_psp.volume, adv_psp.volume))
+
+    # Also test all information tuples
+    info = ("state_no","state_vec","progress")
+    check_counts((basic_psp.all_points(with_info=info),
+                  adv_psp.all_points(with_info=info)),
+                 (basic_psp.volume, adv_psp.volume))
+
+    # and whether invalid values lead to failure
+    with pytest.raises(ValueError):
+        info = ("state_no","foo bar")
+        check_counts((basic_psp.all_points(with_info=info),
+                      adv_psp.all_points(with_info=info)),
+                     (basic_psp.volume, adv_psp.volume))        
+
 def test_inverse_mapping(basic_psp, adv_psp):
     """Test whether the state mapping is correct."""
+    basic_psp.inverse_mapping()
+    adv_psp.inverse_mapping()
+
+    # Test caching
     basic_psp.inverse_mapping()
     adv_psp.inverse_mapping()
 
