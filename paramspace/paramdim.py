@@ -355,9 +355,9 @@ class CoupledParamDim(ParamDimBase):
         if self._target_name is not None:
             raise RuntimeError("Target name cannot be changed after initialisation!")
         # Make sure it is not a string, which is also interpreted as sequence
-        if not isinstance(target_name, tuple):
-            raise TypeError("Argument `target_name` should be a tuple, "
-                            "i.e. a key sequence, "
+        if not isinstance(target_name, (tuple, list)):
+            raise TypeError("Argument `target_name` should be a tuple or list,"
+                            " i.e. a key sequence, "
                             "was of type: "+str(type(target_name)))
 
         # Check if a pdim is already set
@@ -365,7 +365,7 @@ class CoupledParamDim(ParamDimBase):
             warnings.warn("A target ParamDim was already set; setting the "
                           "target_name will have no effect.", UserWarning)
 
-        self._target_name = target_name
+        self._target_name = tuple(target_name)
 
     @property
     def target_pdim(self) -> ParamDim:

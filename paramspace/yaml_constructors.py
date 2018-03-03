@@ -49,28 +49,69 @@ def pdim_enabled_only(loader, node) -> ParamDim:
 
     if pdim.enabled:
         return pdim
-    else:
-        log.debug("ParamDim was disabled; returning default.")
-        return pdim.default
+    
+    log.debug("ParamDim was disabled; returning default.")
+    return pdim.default
 
 def pdim_get_default(loader, node) -> ParamDim:
     """constructor for creating a ParamDim object from a mapping, but only return the default value.
 
-    Suggested tag: !disabled-pdim
+    Suggested tag: !pdim-default
     """
-    pdim = _pdim_constructor(loader, node, get_default=True)
+    pdim = _pdim_constructor(loader, node)
     log.debug("Returning default value of constructed ParamDim.")
     return pdim.default
 
 def pdim_always_disable(loader, node) -> ParamDim:
-    """constructor for creating a ParamDim object from a mapping, but only return the default value.
+    """constructor for creating a ParamDim object from a mapping, but always disabling it.
 
     Suggested tag: !disabled-pdim
     """
-    pdim = _pdim_constructor(loader, node, get_default=True)
+    pdim = _pdim_constructor(loader, node)
     log.debug("Disabling constructed ParamDim.")
     pdim.enabled = False
     return pdim
+
+def coupled_pdim(loader, node) -> CoupledParamDim:
+    """constructor for creating a CoupledParamDim object from a mapping
+
+    Suggested tag: !coupled-pdim
+    """
+    return _coupled_pdim_constructor(loader, node)
+
+def coupled_pdim_enabled_only(loader, node) -> CoupledParamDim:
+    """constructor for creating a CoupledParamDim object from a mapping
+
+    If the ParamDim would not be enabled, the default value is returned.
+
+    Suggested tag: !coupled-pdim
+    """
+    cpdim = _coupled_pdim_constructor(loader, node)
+
+    if cpdim.enabled:
+        return cpdim
+    
+    log.debug("ParamDim was disabled; returning default.")
+    return cpdim.default
+
+def coupled_pdim_get_default(loader, node) -> CoupledParamDim:
+    """constructor for creating a CoupledParamDim object from a mapping, but only return the default value.
+
+    Suggested tag: !coupled-pdim-default
+    """
+    cpdim = _coupled_pdim_constructor(loader, node)
+    log.debug("Returning default value of constructed ParamDim.")
+    return cpdim.default
+
+def coupled_pdim_always_disable(loader, node) -> CoupledParamDim:
+    """constructor for creating a CoupledParamDim object from a mapping, but always disabling it
+
+    Suggested tag: !disabled-coupled-pdim
+    """
+    cpdim = _coupled_pdim_constructor(loader, node)
+    log.debug("Disabling constructed ParamDim.")
+    cpdim.enabled = False
+    return cpdim
 
 # -----------------------------------------------------------------------------
 
@@ -100,7 +141,7 @@ def _pspace_constructor(loader, node, sort_if_mapping: bool=False) -> ParamSpace
     log.debug("Instantiating ParamSpace ...")
     return ParamSpace(d)
 
-def _pdim_constructor(loader, node, default_if_disabled: bool=False, get_default: bool=False) -> ParamDim:
+def _pdim_constructor(loader, node) -> ParamDim:
     """constructor for creating a ParamDim object from a mapping
 
     For it to be incorported into a ParamSpace, one parent (or higher) of this node needs to be tagged such that the pspace_constructor is invoked.
@@ -117,6 +158,24 @@ def _pdim_constructor(loader, node, default_if_disabled: bool=False, get_default
                         "with value:\n{}".format(type(node), node))
 
     return pdim
+
+def _coupled_pdim_constructor(loader, node) -> ParamDim:
+    """constructor for creating a ParamDim object from a mapping
+
+    For it to be incorported into a ParamSpace, one parent (or higher) of this node needs to be tagged such that the pspace_constructor is invoked.
+    """
+    log.debug("Encountered tag associated with ParamDim.")
+
+    if isinstance(node, yaml.nodes.MappingNode):
+        log.debug("Encountered !pspan tag. Constructing mapping ...")
+        mapping = loader.construct_mapping(node, deep=True)
+        cpdim = CoupledParamDim(**mapping)
+    else:
+        raise TypeError("ParamDim can only be constructed from a mapping node,"
+                        " got node of type {} "
+                        "with value:\n{}".format(type(node), node))
+
+    return cpdim
 
 # Helpers ---------------------------------------------------------------------
 

@@ -5,14 +5,29 @@ import yaml
 import pytest
 from paramspace import ParamSpace, ParamDim, yaml_constructors
 
+import numpy as np
+
 # Add the constructors
 yaml.add_constructor(u'!pspace', yaml_constructors.pspace)
 yaml.add_constructor(u'!pspace-sorted', yaml_constructors.pspace_sorted)
 
-yaml.add_constructor(u'!pdim', yaml_constructors.pdim)
-yaml.add_constructor(u'!pdim-if-enabled', yaml_constructors.pdim_enabled_only)
-yaml.add_constructor(u'!pdim-disabled', yaml_constructors.pdim_get_default)
-yaml.add_constructor(u'!pdim-default', yaml_constructors.pdim_always_disable)
+yaml.add_constructor(u'!pdim',
+                     yaml_constructors.pdim)
+yaml.add_constructor(u'!pdim-if-enabled',
+                     yaml_constructors.pdim_enabled_only)
+yaml.add_constructor(u'!pdim-default',
+                     yaml_constructors.pdim_get_default)
+yaml.add_constructor(u'!pdim-disabled',
+                     yaml_constructors.pdim_always_disable)
+
+yaml.add_constructor(u'!coupled-pdim',
+                     yaml_constructors.coupled_pdim)
+yaml.add_constructor(u'!coupled-pdim-if-enabled',
+                     yaml_constructors.coupled_pdim_enabled_only)
+yaml.add_constructor(u'!coupled-pdim-default',
+                     yaml_constructors.coupled_pdim_get_default)
+yaml.add_constructor(u'!coupled-pdim-disabled',
+                     yaml_constructors.coupled_pdim_always_disable)
 
 
 @pytest.fixture(scope='module')
@@ -29,7 +44,7 @@ mapping: !pspace
   a: 1
   b: 2
   c: 3
-sequence_sorted: !pspace-sorted  # should not actually be sorted!
+sequence_sorted: !pspace-sorted  # is a sequence, should not have an effect
   - 1
   - 2
   - 3
@@ -74,6 +89,29 @@ pdims:
    values: [1,2,3]
     """
 
+    strs['cpdims_only'] = """
+pdims:
+ - !coupled-pdim
+   target_name: [foo, bar]
+ - !coupled-pdim
+   target_name: [foo, bar]
+ - !coupled-pdim
+   target_name: [foo, bar]
+ - !coupled-pdim
+   target_name: [foo, bar]
+ - !coupled-pdim-if-enabled
+   target_name: [foo, bar]
+ - !coupled-pdim-if-enabled
+   target_name: [foo, bar]
+   default: 0
+   enabled: False
+ - !coupled-pdim-disabled
+   target_name: [foo, bar]
+ - !coupled-pdim-default
+   target_name: [foo, bar]
+   default: 0
+    """
+
     strs['fail_pspace'] = """not_a_mapping_or_sequence: !pspace 1 """
 
     strs['fail_pdim1'] = """not_a_mapping: !pdim 1 """
@@ -88,7 +126,7 @@ def test_loading(yamlstrs):
     for name, ystr in yamlstrs.items():
         if name[:5] == "fail_":
             continue
-        print("Name of yamlstr: ", name)
+        print("Name of yamlstr that will be loaded: ", name)
         yaml.load(ystr)
 
     # Test some where it should be failing
@@ -97,9 +135,45 @@ def test_loading(yamlstrs):
     with pytest.raises(TypeError):
         yaml.load(yamlstrs['fail_pdim1'])
     with pytest.raises(TypeError):
+        yaml.load(yamlstrs['fail_pdim2'])
+    with pytest.raises(TypeError):
         yaml.load(yamlstrs['fail_pdim3'])
 
-@pytest.mark.skip("To Do!")
 def test_correctness(yamlstrs):
     """Tests the correctness"""
-    pass
+    res = {}
+
+    # Load the resolved yaml strings
+    for name, ystr in yamlstrs.items():
+        if name[:5] == "fail_":
+            continue
+        print("Name of yamlstr: ", name)
+        res[name] = yaml.load(ystr)
+
+    # Test the ParamDim objects
+    pdims = res['pdims_only']['pdims']
+
+    assert pdims[0].default == 0
+    assert pdims[0].values == (1,2,3)
+
+    assert pdims[1].default == 0
+    assert pdims[1].values == tuple(range(10))
+
+    assert pdims[2].default == 0
+    assert pdims[2].values == tuple(np.linspace(1,2,3))
+
+    assert pdims[3].default == 0
+    assert pdims[3].values == tuple(np.logspace(1,2,3))
+
+    assert pdims[4].default == 0
+    assert pdims[4].values == (1,2,3)
+
+    assert pdims[5] == 0
+
+    assert pdims[6].enabled is False
+
+    assert pdims[7] == 0
+
+    # Test the ParamSpace's
+    for psp in res['pspace_only'].values():
+        assert isinstance(psp, ParamSpace)
