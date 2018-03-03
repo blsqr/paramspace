@@ -1,24 +1,20 @@
-"""The tools module provides methods that both the ParamSpan and ParamSpace classes use or depend upon."""
+"""This module provides general methods needed by the ParamSpan and ParamSpace classes."""
 
-import copy
 import logging
-import pprint
 import collections
-from collections import OrderedDict, Mapping
-from typing import Union, Sequence, Mapping, Callable, Iterator, MutableSequence, MutableMapping, Collection
-
-import numpy as np
+from typing import Union, Callable, Iterator
+from typing import Sequence, Mapping, MutableSequence, MutableMapping
 
 # Get logger
 log = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
 
-def recursive_contains(d: Collection, *, keys: Sequence) -> bool:
-    """Checks on the Mapping d, whether a certain key sequence is reachable.
+def recursive_contains(obj: Union[Mapping, Sequence], *, keys: Sequence) -> bool:
+    """Checks whether the given keysequence is reachable in the `obj`.
     
     Args:
-        d (Collection): The collection to go through
+        obj (Union[Mapping, Sequence]): The object to check recursively
         keys (Sequence): The sequence of keys to check for
     
     Returns:
@@ -26,51 +22,82 @@ def recursive_contains(d: Collection, *, keys: Sequence) -> bool:
     """
     if len(keys) > 1:
         # Check and continue recursion
-        if keys[0] in d:
-            return recursive_contains(d[keys[0]], keys=keys[1:])
-        else:
-            return False
-    else:
-        # reached the end of the recursion
-        return keys[0] in d
+        if keys[0] in obj:
+            return recursive_contains(obj[keys[0]], keys=keys[1:])
+        # else: not available
+        return False
+    # else: reached the end of the recursion
+    return keys[0] in obj
 
-def recursive_getitem(d: dict, *, keys: Sequence):
-    """Recursively goes through dict-like d along the keys in tuple keys and returns the reference to the at the end."""
+def recursive_getitem(obj: Union[Mapping, Sequence], *, keys: Sequence):
+    """Go along the sequence of `keys` through `obj` and return the target item.
+    
+    Args:
+        obj (Union[Mapping, Sequence]): The object to get the item from
+        keys (Sequence): The sequence of keys to follow
+    
+    Returns:
+        The target item from `obj`, specified by `keys`
+    
+    Raises:
+        IndexError: If any index in the key sequence was not available
+        KeyError: If any key in the key sequence was not available
+    """
+    # Define some error format strings
     keyerr_fstr = "No such key '{}' of key sequence {} is available in {}."
     idxerr_fstr = "No such index '{}' of key sequence {} is available in {}."
 
     if len(keys) > 1:
         # Check and continue recursion
         try:
-            return recursive_getitem(d[keys[0]], keys=keys[1:])
+            return recursive_getitem(obj[keys[0]], keys=keys[1:])
         except KeyError as err:
-            raise KeyError(keyerr_fstr.format(keys[0], keys, d)) from err
+            raise KeyError(keyerr_fstr.format(keys[0], keys, obj)) from err
         except IndexError as err:
-            raise IndexError(idxerr_fstr.format(keys[0], keys, d)) from err
+            raise IndexError(idxerr_fstr.format(keys[0], keys, obj)) from err
     else:
         # reached the end of the recursion
         try:
-            return d[keys[0]]
+            return obj[keys[0]]
         except KeyError as err:
-            raise KeyError(keyerr_fstr.format(keys[0], keys, d)) from err
+            raise KeyError(keyerr_fstr.format(keys[0], keys, obj)) from err
         except IndexError as err:
-            raise IndexError(idxerr_fstr.format(keys[0], keys, d)) from err
+            raise IndexError(idxerr_fstr.format(keys[0], keys, obj)) from err
 
-def recursive_update(d: dict, u: dict):
-    """Update Mapping d with values from Mapping u"""
-    for k, v in u.items():
-        if isinstance(d, Mapping):
+def recursive_update(obj: Mapping, upd: Mapping, update_lists: bool=False) -> Mapping:
+    """Recursively update items in `obj` with the values from `upd`.
+    
+    Be aware that objects are not copied from `upd` to `obj`, but only
+    assigned. This means:
+        * the given `obj` will be changed in place
+        * changing mutable elements in `obj` will also change them in `upd`
+    
+    If a key exits in `upd` that does not exist in `obj`, it will be generated.
+    Sequences will also be updated and (if needed) extended.
+    
+    Args:
+        obj (Mapping): The object to update.
+        upd (Mapping): The object to use for updating.
+        update_lists (bool, optional): If True, lists and list-derived object
+            will also be updated recursively updated.
+    
+    Returns:
+        Mapping: The updated `obj`
+    """
+    # Go over the items of the upd object
+    for key, val in upd.items():
+        if isinstance(obj, collections.Mapping):
             # Already a Mapping
-            if isinstance(v, Mapping):
+            if isinstance(val, collections.Mapping):
                 # Already a Mapping, continue recursion
-                d[k] = recursive_update(d.get(k, {}), v)
+                obj[key] = recursive_update(obj.get(key, {}), val)
             else:
                 # Not a mapping -> at leaf -> update value
-                d[k] = v    # ... which is just u[k]
+                obj[key] = val
         else:
             # Not a mapping -> create one
-            d = {k: u[k]}
-    return d
+            obj = {key: val}
+    return obj
 
 def recursive_setitem(d: dict, *, keys: tuple, val, create_key: bool=False):
     """Recursively goes through dict-like d along the keys in tuple keys and sets the value to the child entry."""
@@ -81,14 +108,14 @@ def recursive_setitem(d: dict, *, keys: tuple, val, create_key: bool=False):
                                val=val, create_key=create_key)
         else:
             if create_key:
-                d[keys[0]]  = {}
+                d[keys[0]] = {}
                 recursive_setitem(d=d[keys[0]], keys=keys[1:],
                                    val=val, create_key=create_key)
             else:
                 raise KeyError("No key '{}' found in dict {}; if it should be created, set create_key argument to True.".format(keys[0], d))
     else:
         # reached the end of the recursion
-        d[keys[0]]  = val
+        d[keys[0]] = val
 
 def recursive_collect(obj: Union[Mapping, Sequence], *, select_func: Callable, prepend_info: Sequence=None, info_func: Callable=None, _parent_keys: tuple=None) -> list:
     """Go recursively through a mapping or sequence and collect selected elements.
@@ -225,8 +252,7 @@ def is_iterable(obj) -> bool:
         iter(obj)
     except TypeError:
         return False
-    else:
-        return True
+    return True
 
 def get_key_val_iter(obj: Union[Mapping, Sequence]) -> Iterator:
     """Given an object -- assumed dict- or sequence-like -- returns a (key, value) iterator.
@@ -241,6 +267,5 @@ def get_key_val_iter(obj: Union[Mapping, Sequence]) -> Iterator:
     if hasattr(obj, 'items') and callable(obj.items):
         # assume it is dict-like
         return obj.items()
-    else:
-        # assume sequence-like
-        return enumerate(obj)
+    # assume sequence-like
+    return enumerate(obj)

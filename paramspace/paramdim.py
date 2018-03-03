@@ -190,7 +190,7 @@ class ParamDimBase:
 
         log.debug("__next__ called")
 
-        # Iterate the state and return the 
+        # Iterate the state and return the
         self.iterate_state()
         return self.current_value
 
