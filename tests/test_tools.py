@@ -1,5 +1,6 @@
 """Tests for the tool functions of the paramspace package"""
 
+import copy
 import pytest
 import paramspace.tools as t
 
@@ -106,3 +107,56 @@ def test_replace():
         replace(tuple(range(3)),
                 select_func=lambda v: isinstance(v, int),
                 replace_func=lambda *args: 0)
+
+
+def test_update():
+    """Tests the recursive_update function"""
+    d = dict(a=1, b=2,
+             d=dict(a=1, b=2,
+                    d=dict(a=1, b=2, d="not_a_dict")),
+             l1=[1,2,3],
+             l2="foobar",
+             l3=[1,2,3],
+             l4=(1,2,3,4),
+             l5=[1,2,3,dict(a=1)],
+             l6=[1,2,3],
+             fail_conversion=None,
+             )
+
+    u = dict(a=2, b=3, c=4,
+             d=dict(a=2, b=3, c=4,
+                    d=dict(a=2, b=3, c=4, d=dict(a=2))),
+             l1=[2,3,4,5], # longer here
+             l2=[2,3,4], # not a list in obj
+             l3=[2,3], # shorter here
+             l4=[2,3], # tuple in obj,
+             l5=[2,3,4,dict(a=2, b=3,)], # tuple in obj,
+             l6=[t.SKIP, t.SKIP, 4], # skip updating
+             fail_conversion=["none"]
+             )
+
+    du = t.recursive_update(copy.deepcopy(d), u)
+    # Check the dict values
+    assert du['a'] == 2
+    assert du['b'] == 3
+    assert du['c'] == 4
+    assert du['d']['a'] == 2
+    assert du['d']['b'] == 3
+    assert du['d']['c'] == 4
+
+    # Check the lists
+    assert du['l1'] == [2,3,4,5]
+    assert du['l2'] == [2,3,4]
+    assert du['l3'] == [2,3,3] 
+
+    # With trying to convert the lists
+    with pytest.warns(UserWarning):
+        du = t.recursive_update(copy.deepcopy(d), u, try_list_conversion=True)
+
+    assert du['l1'] == [2,3,4,5]
+    assert du['l2'] == [2,3,4]
+    assert du['l3'] == [2,3,3] 
+    assert du['l4'] == [2,3,3,4] 
+    assert du['l5'] == [2,3,4,dict(a=2, b=3)] 
+    assert du['l6'] == [1,2,4] 
+

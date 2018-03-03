@@ -1,12 +1,21 @@
 """This module provides general methods needed by the ParamSpan and ParamSpace classes."""
 
+import warnings
 import logging
 import collections
-from typing import Union, Callable, Iterator
-from typing import Sequence, Mapping, MutableSequence, MutableMapping
+from typing import Union, Callable, Iterator, Sequence, Mapping, List
 
 # Get logger
 log = logging.getLogger(__name__)
+
+# Special class for indicating that a value is to be skipped
+# Used in recursive_update
+class Skip:
+    """A skip object can be used to indiciate that no action should be taken."""
+    pass
+
+# Also initialise such an object, simplifying the calls
+SKIP = Skip()
 
 # -----------------------------------------------------------------------------
 
@@ -64,7 +73,7 @@ def recursive_getitem(obj: Union[Mapping, Sequence], *, keys: Sequence):
         except IndexError as err:
             raise IndexError(idxerr_fstr.format(keys[0], keys, obj)) from err
 
-def recursive_update(obj: Mapping, upd: Mapping, update_lists: bool=False) -> Mapping:
+def recursive_update(obj: Union[Mapping, List], upd: Union[Mapping, List], *, try_list_conversion: bool=False, no_convert: tuple=(str,)) -> Union[Mapping, List]:
     """Recursively update items in `obj` with the values from `upd`.
     
     Be aware that objects are not copied from `upd` to `obj`, but only
@@ -72,32 +81,90 @@ def recursive_update(obj: Mapping, upd: Mapping, update_lists: bool=False) -> Ma
         * the given `obj` will be changed in place
         * changing mutable elements in `obj` will also change them in `upd`
     
-    If a key exits in `upd` that does not exist in `obj`, it will be generated.
-    Sequences will also be updated and (if needed) extended.
+    After the update, `obj` holds all entries of `upd` plus those that it did
+    not have in common with `upd`.
+    
+    If recursion is possible is determined by type; it is only done for types
+    mappings (dicts) or lists.
+
+    To indicate that a value in a list should not be updated, an instance of
+    the tools.Skip class, e.g. the tools.SKIP object, can be passed instead.
     
     Args:
-        obj (Mapping): The object to update.
-        upd (Mapping): The object to use for updating.
-        update_lists (bool, optional): If True, lists and list-derived object
-            will also be updated recursively updated.
+        obj (Union[Mapping, List]): The object to update.
+        upd (Union[Mapping, List]): The object to use for updating.
+        try_list_conversion (bool, optional): If true, it is tried to convert
+            an entry in `obj` to a list if it is a list in `upd`
+        no_convert (tuple, optional): For these types conversion is skipped 
+            and an empty list is generated instead
     
     Returns:
-        Mapping: The updated `obj`
+        Union[Mapping, List]: The updated `obj`
     """
-    # Go over the items of the upd object
-    for key, val in upd.items():
-        if isinstance(obj, collections.Mapping):
-            # Already a Mapping
-            if isinstance(val, collections.Mapping):
-                # Already a Mapping, continue recursion
-                obj[key] = recursive_update(obj.get(key, {}), val)
+    # Distinguish the cases where `upd` is a mapping and a list
+    if isinstance(upd, collections.abc.Mapping):
+        # Check if the target object is of the correct type
+        if not isinstance(obj, collections.abc.Mapping):
+            # Discard the old object and use a dict instead
+            obj = dict()
+
+        # Go over the items of `upd` and ensure that they will be set.
+        for key, val in upd.items():
+            # The target object is already a mapping.
+            # Can now either recurse or set the value, depending on val
+            if isinstance(val, (collections.abc.Mapping, list)):
+                obj[key] = recursive_update(obj.get(key, {}), val,
+                                            try_list_conversion=try_list_conversion,
+                                            no_convert=no_convert)
+                # NOTE the .get also creates an empty mapping, if needed
             else:
-                # Not a mapping -> at leaf -> update value
                 obj[key] = val
-        else:
-            # Not a mapping -> create one
-            obj = {key: val}
-    return obj
+        return obj
+
+    elif isinstance(upd, list):
+        # Ensure that the target object is also a list
+        if not isinstance(obj, list):
+            if not try_list_conversion or isinstance(obj, no_convert):
+                # Discard the whole list and start with an empty one
+                obj = list()
+
+            else:
+                # Try conversion, falling back to list if this fails
+                try:
+                    obj = list(obj)
+                except Exception as err:
+                    warnings.warn("Could not convert object of type {} "
+                                  "to a list, got {}:{}.\nUsing empty list "
+                                  "instead.".format(type(obj),
+                                                    err.__class__.__name__,
+                                                    str(err)),
+                                  UserWarning)
+                    # Ditch the list
+                    obj = list()
+
+        # It is now ensured that `obj` is a list
+        # Need to check that there are enough elements in the `obj` list
+        if len(obj) < len(upd):
+            obj += [None for _ in range(len(upd) - len(obj))]
+
+        # Go over the items of `upd` and ensure that they will be set.
+        for idx, val in enumerate(upd):
+            # Option to skip this value
+            if isinstance(val, Skip):
+                continue
+
+            # Determine whether recursion needs to start/continue
+            if isinstance(val, (collections.abc.Mapping, list)):
+                # Continue recursion
+                obj[idx] = recursive_update(obj[idx], val,
+                                            try_list_conversion=try_list_conversion,
+                                            no_convert=no_convert)
+                # NOTE it was ensured above that this element is available
+            else:
+                obj[idx] = val
+        
+        return obj
+    # else: this case is logically impossible
 
 def recursive_setitem(d: dict, *, keys: tuple, val, create_key: bool=False):
     """Recursively goes through dict-like d along the keys in tuple keys and sets the value to the child entry."""
