@@ -51,7 +51,7 @@ class ParamDimBase:
         self._default = default
 
         # Set the values, first via the `values` argument, and check whether there are enough arguments to set the values
-        if values:
+        if values is not None:
             self.values = values
 
         elif not any([k in kwargs for k in ('range', 'linspace', 'logspace')]):
@@ -368,7 +368,7 @@ class CoupledParamDim(ParamDimBase):
     def target_name(self, target_name: Tuple[Hashable]):
         """Sets the target name, ensuring it to be a valid key sequence."""
         if self._target_name is not None:
-            raise RuntimeError("Target name cannot be changed after initialisation!")
+            raise RuntimeError("Target name cannot be changed!")
         # Make sure it is not a string, which is also interpreted as sequence
         if not isinstance(target_name, (tuple, list)):
             raise TypeError("Argument `target_name` should be a tuple or list,"
@@ -386,21 +386,26 @@ class CoupledParamDim(ParamDimBase):
     def target_pdim(self) -> ParamDim:
         """The ParamDim object this CoupledParamDim couples to."""
         if not self._target_pdim:
-            raise ValueError("The coupling target has not been set ")
+            raise ValueError("The coupling target has not been set! Either "
+                             "set the `target_pdim` to a ParamDim object or"
+                             "incorporate this CoupledParamDim into a "
+                             "ParamSpace to resolve its coupling target by"
+                             "the given `target_name` attribute.")
         return self._target_pdim
 
     @target_pdim.setter
     def target_pdim(self, pdim: ParamDim):
         if self._target_pdim is not None:
-            raise ValueError("Cannot change target of CoupledParamDim!")
+            raise RuntimeError("Cannot change target of CoupledParamDim!")
         elif not isinstance(pdim, ParamDim):
             raise TypeError("Target of CoupledParamDim needs to be of type "
                             "ParamDim, was "+str(type(pdim)))
         elif not self.use_coupled_values and len(self) != len(pdim):
-            raise ValueError("The lengths of the value sequences of "
-                             "target ParamDim and this CoupledParamDim "
-                             "need to match, were: {} and {}, "
-                             "respectively.".format(len(pdim), len(self)))
+            if self.enabled:
+                raise ValueError("The lengths of the value sequences of "
+                                 "target ParamDim and this CoupledParamDim "
+                                 "need to match, were: {} and {}, "
+                                 "respectively.".format(len(pdim), len(self)))
 
         self._target_pdim = pdim
         log.debug("Set CoupledParamDim target.")
@@ -418,12 +423,8 @@ class CoupledParamDim(ParamDimBase):
             RuntimeError: If no ParamDim was associated yet
         """
         if self.use_coupled_default:
-            if not self.target_pdim:
-                raise RuntimeError("No target ParamDim was associated yet, "
-                                   "cannot return coupled default!")
             return self.target_pdim.default
-        else:
-            return self._default
+        return self._default
 
     @property
     def values(self) -> tuple:
@@ -443,12 +444,8 @@ class CoupledParamDim(ParamDimBase):
 
         # The regular case, after initialisation finished
         if self.use_coupled_values:
-            if not self.target_pdim:
-                raise RuntimeError("No target ParamDim was associated yet, "
-                                   "cannot return coupled values!")
             return self.target_pdim.values
-        else:
-            return self._vals
+        return self._vals
 
     @values.setter
     def values(self, values: Iterable):
@@ -474,14 +471,8 @@ class CoupledParamDim(ParamDimBase):
             Union[int, None]: The state of the iterator; if it is None, the ParamDim is not inside an iteration.
         """
         if self.enabled:
-            if self.target_pdim:
-                return self.target_pdim.state
-            else:
-                raise RuntimeError("The state of a CoupledParamDim is defined "
-                                   "only by the target ParamDim, but no "
-                                   "target was associated yet!")
-        else:
-            return None
+            return self.target_pdim.state
+        return None
 
     @state.setter
     def state(self, new_state):
@@ -493,5 +484,4 @@ class CoupledParamDim(ParamDimBase):
         """If in an iteration: return the value according to the current state. If not in an iteration and/or disabled, return the default value."""
         if self.enabled and self.state is not None:
             return self.values[self.state]
-        else:
-            return self.default
+        return self.default

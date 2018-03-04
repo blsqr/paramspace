@@ -161,21 +161,66 @@ def test_coupled():
         # Wrong target name type
         CoupledParamDim(target_name="foo")
 
+    with pytest.raises(ValueError):
+        # Not coupled yet
+        CoupledParamDim(target_name=("foo",)).default
+
+    with pytest.warns(UserWarning):
+        CoupledParamDim(target_pdim=ParamDim(default=0, values=[1,2,3]),
+                        target_name=["foo", "bar"])
+
     # Set target
     pd = ParamDim(default=0, values=[1,2,3])
     cpd = CoupledParamDim(target_pdim=pd)
     assert len(pd) == len(cpd)
     assert pd.values == cpd.values
     assert pd.default == cpd.default
+    assert cpd.target_name is None
+
+    # Test if the name behaviour is correct
+    with pytest.warns(UserWarning):
+        cpd.target_name = ("foo",)
+
+    with pytest.raises(RuntimeError):
+        cpd.target_name = ("bar",)
 
     # Iteration
     for pd_val, cpd_val in zip(pd, cpd):
         assert pd_val == cpd_val
-        
+
+    # Accessing coupling target without it having been set
+    cpd = CoupledParamDim(target_name=("foo",))
+    with pytest.raises(ValueError):
+        cpd.target_pdim
+    with pytest.raises(TypeError):
+        cpd.target_pdim = "foo"
+    cpd.target_pdim = pd
+    with pytest.raises(RuntimeError):
+        cpd.target_pdim = pd
+    
+    # Test lengths are matching
+    with pytest.raises(ValueError):
+        cpd = CoupledParamDim(target_pdim=pd, values=[1,2,3,4])
+
+    # Assure values cannot be changed
+    cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4])
+    with pytest.raises(AttributeError):
+        cpd.values = [1,2,3]
+
+    # Test disabled has no state set
+    cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4], enabled=False)
+    assert cpd.state is None
+    assert cpd.current_value is 0 # that of the coupled ParamDim!
+
 
 # Tests still to write --------------------------------------------------------
 
 @pytest.mark.skip("Too early to write test.")
 def test_save_and_restore():
+    """Test whether saving of the current ParamDim state and restoring it works."""
+    pass
+
+@pytest.mark.skip("To do: ensure that it is well-behaving!")
+def test_coupled_disabled():
     """Test whether saving of the current ParamDim state and restoring it works."""
     pass
