@@ -149,7 +149,7 @@ def _pdim_constructor(loader, node) -> ParamDim:
     log.debug("Encountered tag associated with ParamDim.")
 
     if isinstance(node, yaml.nodes.MappingNode):
-        log.debug("Encountered !pspan tag. Constructing mapping ...")
+        log.debug("Constructing mapping ...")
         mapping = loader.construct_mapping(node, deep=True)
         pdim = ParamDim(**mapping)
     else:
@@ -167,12 +167,12 @@ def _coupled_pdim_constructor(loader, node) -> ParamDim:
     log.debug("Encountered tag associated with ParamDim.")
 
     if isinstance(node, yaml.nodes.MappingNode):
-        log.debug("Encountered !pspan tag. Constructing mapping ...")
+        log.debug("Constructing mapping ...")
         mapping = loader.construct_mapping(node, deep=True)
         cpdim = CoupledParamDim(**mapping)
     else:
-        raise TypeError("ParamDim can only be constructed from a mapping node,"
-                        " got node of type {} "
+        raise TypeError("CoupledParamDim can only be constructed from a "
+                        "mapping node, got node of type {} "
                         "with value:\n{}".format(type(node), node))
 
     return cpdim

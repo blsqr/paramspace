@@ -25,8 +25,11 @@ class ParamDimBase:
                 constructors given in the kwargs (like range, linspace, …).
             enabled (bool, optional): Whether this parameter dimension is
                 enabled and should be used in a sweep. Default: True
-            order (float, optional): # TODO
-            name (str, optional): # TODO
+            order (float, optional): If given, this allows to specify an order
+                within a ParamSpace that includes this ParamDim object
+            name (str, optional): If given, this is an *additional* name of
+                this ParamDim object, and can be used by the ParamSpace to
+                access this object.
             **kwargs: Constructors for the `values` argument, valid keys are
                 `range`, `linspace`, and `logspace`; corresponding values are
                 expected to be iterables and are passed to `range(*args)`,
@@ -48,17 +51,23 @@ class ParamDimBase:
         self._default = default
 
         # Set the values, first via the `values` argument, and check whether there are enough arguments to set the values
-        if values is not None:
+        if values:
             self.values = values
 
         elif not any([k in kwargs for k in ('range', 'linspace', 'logspace')]):
-            raise ValueError("No argument `values` or other `**kwargs` was specified, but at least one of these is needed for initialisation.")
+            raise ValueError("No argument `values` or other `**kwargs` was "
+                             "specified, but at least one of these is needed "
+                             "for initialisation.")
 
         # Check again, now including the `kwargs`
-        if kwargs and self.values is None:
+        if kwargs is not None and self.values is None:
             # Need to parse the additional keyword arguments to generate the values attribute from it
             if len(kwargs) > 1:
-                warnings.warn("{}.__init__ was called with multiple additional `**kwargs`; only one of these will be used! The order in which the arguments are used is: `range`, `linspace`, `logspace`.".format(self.__class__.__name__),
+                warnings.warn("{}.__init__ was called with multiple "
+                              "additional `**kwargs`; only one of these will "
+                              "be used! The order in which the arguments are "
+                              "used is: `range`, `linspace`, "
+                              "`logspace`.".format(self.__class__.__name__),
                               UserWarning)
 
             if 'range' in kwargs:
@@ -70,7 +79,11 @@ class ParamDimBase:
             # else: not possible
 
         elif kwargs and self.values is not None:
-            warnings.warn("{}.__init__ was called with both the argument `values` and additional `**kwargs`: {}. With `values` present, the additional keyword arguments are ignored.".format(self.__class__.__name__, kwargs),
+            warnings.warn("{}.__init__ was called with both the argument "
+                          "`values` and additional `**kwargs`: {}. With "
+                          "`values` present, the additional keyword arguments "
+                          "are ignored.".format(self.__class__.__name__,
+                                                kwargs),
                           UserWarning)
             
     # Properties ..............................................................
@@ -135,8 +148,7 @@ class ParamDimBase:
         """If in an iteration: return the value according to the current state. If not in an iteration and/or disabled, return the default value."""
         if self.enabled and self.state is not None:
             return self.values[self.state]
-        else:
-            return self.default
+        return self.default
 
     # Magic methods ...........................................................
 
@@ -147,8 +159,7 @@ class ParamDimBase:
         """
         if self.enabled:
             return len(self.values)
-        else:
-            return 1
+        return 1
 
     def __repr__(self) -> str:
         """
@@ -297,12 +308,17 @@ class CoupledParamDim(ParamDimBase):
         if use_coupled_values is None:
             use_coupled_values = 'values' not in kwargs
 
-        # Set these attributes
+        # Set attributes
+        # property managed
+        self._target_pdim = None  # the object that is coupled to
+        self._target_name = None  # the name of it in a ParamSpace
+
+        # others
+        self._init_finished = False
         self.use_coupled_default = use_coupled_default
         self.use_coupled_values = use_coupled_values
 
-        # Make sure that they are set in the kwargs, such that the __init__ call of the parent class does not get confused
-        # NOTE these will never actually be used!
+        # Warn if there is ambiguity regarding which values will be used
         if self.use_coupled_default is True:
             if 'default' in kwargs:
                 warnings.warn("argument `default` was given despite "
@@ -315,14 +331,11 @@ class CoupledParamDim(ParamDimBase):
                 warnings.warn("argument `values` was given despite "
                               "`use_coupled_values` being set to True. "
                               "Will ignore the given defaults!")
-            kwargs['values'] = []
+            kwargs['values'] = [None]
+        # NOTE the values passed here will never actually be used, just placeholders
 
         # Initialise via parent 
         super().__init__(**kwargs)
-
-        # Set property-managed attributes
-        self._target_pdim = None  # the object that is coupled to
-        self._target_name = None  # the name of it in a ParamSpace
 
         # Carry over further arguments
         if target_pdim:
@@ -337,10 +350,12 @@ class CoupledParamDim(ParamDimBase):
             self.target_name = target_name
 
         else:
-            raise ValueError("Need either argument target_pdim or target_name "
-                             "to ensure coupling, got none of those.")
+            raise ValueError("Need either argument `target_pdim` or "
+                             "`target_name` to ensure coupling, got none of "
+                             "those.")
 
         log.debug("CoupledParamDim initialised.")
+        self._init_finished = True
 
     # Properties that only the CoupledParamDim has ----------------------------
 
@@ -422,6 +437,11 @@ class CoupledParamDim(ParamDimBase):
         Raises:
             RuntimeError: Description
         """
+        # Before initialisation finished, this cannot access target_pdim yet
+        if not self._init_finished:
+            return self._vals
+
+        # The regular case, after initialisation finished
         if self.use_coupled_values:
             if not self.target_pdim:
                 raise RuntimeError("No target ParamDim was associated yet, "

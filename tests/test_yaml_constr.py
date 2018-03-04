@@ -112,11 +112,15 @@ pdims:
    default: 0
     """
 
-    strs['fail_pspace'] = """not_a_mapping_or_sequence: !pspace 1 """
+    strs[('pspace', TypeError)] = """not_a_mapping_or_sequence: !pspace 1 """
 
-    strs['fail_pdim1'] = """not_a_mapping: !pdim 1 """
-    strs['fail_pdim2'] = """not_a_mapping: !pdim [1,2,3] """
-    strs['fail_pdim3'] = """wrong_args: !pdim {foo: bar} """
+    strs[('_pdim1', TypeError)]  = """not_a_mapping: !pdim 1 """
+    strs[('_pdim2', TypeError)]  = """not_a_mapping: !pdim [1,2,3] """
+    strs[('_pdim3', TypeError)]  = """wrong_args: !pdim {foo: bar} """
+
+    strs[('cpdim1', TypeError)] = """not_a_mapping: !coupled-pdim 1 """
+    strs[('cpdim2', TypeError)] = """not_a_mapping: !coupled-pdim [1,2,3] """
+    strs[('cpdim3', ValueError, UserWarning)] = """wrong_args: !coupled-pdim {foo: bar} """
    
     return strs
 
@@ -124,20 +128,22 @@ def test_loading(yamlstrs):
     """Tests whether the constructors loading works."""
     # Test plain loading
     for name, ystr in yamlstrs.items():
-        if name[:5] == "fail_":
-            continue
         print("Name of yamlstr that will be loaded: ", name)
-        yaml.load(ystr)
+        if isinstance(name, tuple):
+            if len(name) == 2:
+                name, exc = name
+                warn = None
+            elif len(name) == 3:
+                name, exc, warn = name
 
-    # Test some where it should be failing
-    with pytest.raises(TypeError):
-        yaml.load(yamlstrs['fail_pspace'])
-    with pytest.raises(TypeError):
-        yaml.load(yamlstrs['fail_pdim1'])
-    with pytest.raises(TypeError):
-        yaml.load(yamlstrs['fail_pdim2'])
-    with pytest.raises(TypeError):
-        yaml.load(yamlstrs['fail_pdim3'])
+            with pytest.raises(exc):
+                if warn:
+                    with pytest.warns(warn):
+                        yaml.load(ystr)
+                else:
+                    yaml.load(ystr)
+        else:
+            yaml.load(ystr)
 
 def test_correctness(yamlstrs):
     """Tests the correctness"""
@@ -145,9 +151,10 @@ def test_correctness(yamlstrs):
 
     # Load the resolved yaml strings
     for name, ystr in yamlstrs.items():
-        if name[:5] == "fail_":
+        print("Name of yamlstr that will be loaded: ", name)
+        if isinstance(name, tuple):
+            # Will fail, don't use
             continue
-        print("Name of yamlstr: ", name)
         res[name] = yaml.load(ystr)
 
     # Test the ParamDim objects
