@@ -3,7 +3,7 @@
 from collections import OrderedDict
 
 import pytest
-from paramspace import ParamSpace, ParamDim
+from paramspace import ParamSpace, ParamDim, CoupledParamDim
 
 # Setup methods ---------------------------------------------------------------
 
@@ -48,10 +48,10 @@ def adv_psp(request):
 def psp_with_coupled(request):
     """Used to setup a pspace object with coupled param dims"""
     d = dict(a=ParamDim(default=0, values=[1,2,3], order=0),
-             c1=CoupledParamDim(target_name=('a')),
+             c1=CoupledParamDim(target_name=('a',)),
              d=dict(aa=ParamDim(default=0, values=[1,2,3], order=-1),
-                    cc1=CoupledParamDim(),
-                    cc2=CoupledParamDim())
+                    cc1=CoupledParamDim(target_name=('d', 'aa')),
+                    cc2=CoupledParamDim(target_name=('a',)))
              )
    
     return ParamSpace(d)
@@ -200,3 +200,15 @@ def test_inverse_mapping(basic_psp, adv_psp):
 def test_subspace():
     """Test whether the subspace retrieval is correct."""
     pass
+
+@pytest.mark.skip("Not implemented yet.")
+def test_coupled(psp_with_coupled): # TODO
+    """Test parameter spaces with CoupledParamDims in them"""
+    return
+    
+def test_strings(basic_psp, adv_psp): # TODO include coupled
+    """Test whether the string generation works correctly."""
+    for psp in [basic_psp, adv_psp]:
+        str(psp)
+        repr(psp)
+        psp.get_info_str()

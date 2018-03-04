@@ -67,7 +67,8 @@ class ParamSpace:
         pdims = recursive_collect(self._dict,
                                   select_func=lambda p: isinstance(p,ParamDim),
                                   prepend_info=('info_func', 'keys'),
-                                  info_func=lambda ps: ps.order)
+                                  info_func=lambda p: p.order,
+                                  stop_recursion_types=(ParamDimBase,))
 
         # Sort them -- very important for consistency!
         # This looks at the info first, which is the order entry, and then at the keys. If a ParamDim does not provide an order, it has entry np.inf there, such that those without order get sorted by the key.
@@ -83,7 +84,8 @@ class ParamSpace:
         cpdims = recursive_collect(self._dict,
                                    select_func=lambda p: isinstance(p, CoupledParamDim),
                                    prepend_info=('info_func', 'keys'),
-                                   info_func=lambda ps: ps.order)
+                                   info_func=lambda p: p.order,
+                                   stop_recursion_types=(ParamDimBase,))
         cpdims.sort() # same sorting rules as above, but not as crucial here because they do not change the iteration order through state space
         self._cdims = OrderedDict([tpl[1:] for tpl in cpdims])
 
@@ -100,7 +102,7 @@ class ParamSpace:
             # Set attribute of the coupled ParamDim
             cpdim.target_pdim = c_target
 
-            # And inform the target ParamDim about it being the target of the coupled param span, if it is not already included there
+            # And inform the target ParamDim about it being the target of the coupled param dim, if it is not already included there
             if cpdim not in c_target.target_of:
                 c_target.target_of.append(cpdim)
             
@@ -190,16 +192,48 @@ class ParamSpace:
     # Magic methods ...........................................................
 
     def __repr__(self) -> str:
-        """ """
-        raise NotImplementedError
+        """Returns the raw string representation of the ParamSpace."""
+        return "<ParamSpace object at {}, with __dict__: {}>".format(id(self), str(self.__dict__))
 
     def __str__(self) -> str:
+        """Returns a parsed, human-readable information string"""
+        return self.get_info_str()
+
+    def __format__(self, fstr: str) -> str:
         """ """
         raise NotImplementedError
 
-    def __format__(self) -> str:
-        """ """
-        raise NotImplementedError
+    def get_info_str(self) -> str:
+        """Returns a string that gives information about shape and size of this ParamSpace."""
+        # Gather lines in a list
+        l = ["ParamSpace Information"]
+
+        # General information about the Parameter Space
+        l.append("  Dimensions:  {}".format(self.num_dims))
+        l.append("  Volume:      {}".format(self.volume))
+        l.append("  Coupled:     {}".format(self.num_coupled_dims))
+
+        # ParamDim information
+        l += ["", "Parameter Dimensions"]
+        l += ["  (First mentioned are iterated over most often)", ""]
+
+        for name, pdim in self.dims.items():
+            l.append("  * {}".format(" -> ".join([str(e) for e in name])))
+            l.append("      {}".format(pdim.values))
+            l.append("")
+
+        # CoupledParamDim information
+        if self.num_coupled_dims:
+            l += ["", "Coupled Parameter Dimensions"]
+            l += ["  (Move alongside the state of the coupled ParamDim)", ""]
+
+            for name, cpdim in self.coupled_dims.items():
+                l.append("  * {}".format(" -> ".join([str(e) for e in name])))
+                l.append("      Coupled to:  {}".format(cpdim.target_name))
+                l.append("      Values:      {}".format(cpdim.values))
+                l.append("")
+
+        return "\n".join(l)
 
     # Iterator functionality ..................................................
 
@@ -265,12 +299,12 @@ class ParamSpace:
                 pdim.iterate_state()
 
             except StopIteration:
-                # Went through all states of this span -> go to next dimension and start iterating that (similar to the carry bit in addition)
+                # Went through all states of this dim -> go to next dimension and start iterating that (similar to the carry bit in addition)
                 # Important: prepare pdim such that it is at state zero again
                 pdim.enter_iteration()
                 continue
             else:
-                # Iterated to next step without reaching the last span item
+                # Iterated to next step without reaching the last dim item
                 break
         else:
             # Loop went through -> all states visited
@@ -335,9 +369,122 @@ class ParamSpace:
 
     # Non-public API ..........................................................
 
+    def _dim_no_by_name(self, name: str, include_coupled: bool=False) -> int:
+        """Tries to find a ParamDim by its name and returns the number it corresponds to in the list of ordered 
+        
+        Args:
+            name (str): the name of the dim, which can be a tuple of strings
+                or a string. If name is a tuple of strings, the exact tuple is
+                required to find the dim by its dim_name. If name is a
+                string, only the last element of the dim_name is considered.
+            include_coupled (bool, optional): Whether to include
+                CoupledParamDim objects into the search (NotImplemented)
+        
+        Returns:
+            int: the number of the dimension
+        
+        Raises:
+            KeyError: If the ParamDim could not be found
+            NotImplementedError: Argument `include_coupled`
+            ValueError: If argument name was only a string, there can be
+                duplicates. In the case of duplicate entries, a ValueError is
+                raised.
+        
+        """
+        if include_coupled:
+            raise NotImplementedError("include_coupled")
+
+        dim_no = None
+
+        if isinstance(name, str):
+            for n, dim_name in enumerate(self.dims.keys()):
+                if dim_name[-1] == name:
+                    if dim_no is not None:
+                        # Was already set -> there was a duplicate
+                        raise ValueError("Duplicate dim name {} encountered "
+                                         "during access via the last key of "
+                                         "the dim name. To not get an "
+                                         "ambiguous result, pass the full dim "
+                                         "name as a tuple.".format(name))
+                    dim_no = n
+
+        else:
+            for n, dim_name in enumerate(self.dims.keys()):
+                if dim_name[-len(name):] == name:
+                    # The last part of the sequence matches the given name
+                    if dim_no is not None:
+                        # Was already set -> there was a duplicate
+                        raise ValueError("Access via '{}' was ambiguous. Give "
+                                         "the full sequence of strings as a "
+                                         "dim name to be sure to access the "
+                                         "right element.".format(name))
+                    dim_no = n
+
+        if dim_no is None:
+            raise KeyError("A ParamDim with name {} was not "
+                           "found in this ParamSpace.".format(name))
+
+        return dim_no
+
+
     def _dim_by_name(self, name: str, include_coupled: bool=False) -> ParamDimBase:
-        """Get the ParamDim object with the given name"""
-        raise NotImplementedError
+        """Get the ParamDim object with the given name
+        
+        Args:
+            name (str): the name of the dim, which can be a tuple of strings
+                or a string. If name is a tuple of strings, the exact tuple is
+                required to find the dim by its dim_name. If name is a
+                string, only the last element of the dim_name is considered.
+            include_coupled (bool, optional): Whether to include
+                CoupledParamDim objects into the search (NotImplemented)
+        
+        Returns:
+            int: the number of the dimension
+        
+        Raises:
+            KeyError: If the ParamDim could not be found
+            NotImplementedError: Argument `include_coupled`
+            ValueError: If argument name was only a string, there can be
+                duplicates. In the case of duplicate entries, a ValueError is
+                raised.
+        
+        """
+        if include_coupled:
+            raise NotImplementedError("include_coupled")
+
+        pdim = None
+
+        if isinstance(name, str):
+            for dim_name, _pdim in self.dims.items():
+                if dim_name[-1] == name:
+                    if pdim is not None:
+                        # Was already set -> there was a duplicate
+                        raise ValueError("Duplicate dim name {} encountered "
+                                         "during access via the last key of "
+                                         "the dim name. To not get an "
+                                         "ambiguous result, pass the full dim "
+                                         "name as a tuple.".format(name))
+                    # Found one, save it
+                    pdim = _pdim
+
+        else:
+            for dim_name, _pdim in self.dims.items():
+                if dim_name[-len(name):] == name:
+                    # The last part of the sequence matches the given name
+                    if pdim is not None:
+                        # Was already set -> there was a duplicate
+                        raise ValueError("Access via '{}' was ambiguous. Give "
+                                         "the full sequence of strings as a "
+                                         "dim name to be sure to access the "
+                                         "right element.".format(name))
+                    # Found one, save it
+                    pdim = _pdim
+
+        if pdim is None:
+            raise KeyError("A ParamDim with name {} was not "
+                           "found in this ParamSpace.".format(name))
+
+        return pdim
 
     def _dim_no_by_name(self, name: str, include_coupled: bool=False) -> int:
         """Returns the number of the dimension object with that name."""

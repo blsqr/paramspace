@@ -184,7 +184,7 @@ def recursive_setitem(d: dict, *, keys: tuple, val, create_key: bool=False):
         # reached the end of the recursion
         d[keys[0]] = val
 
-def recursive_collect(obj: Union[Mapping, Sequence], *, select_func: Callable, prepend_info: Sequence=None, info_func: Callable=None, _parent_keys: tuple=None) -> list:
+def recursive_collect(obj: Union[Mapping, Sequence], *, select_func: Callable, prepend_info: Sequence=None, info_func: Callable=None, stop_recursion_types: tuple=(), _parent_keys: tuple=None) -> list:
     """Go recursively through a mapping or sequence and collect selected elements.
     
     The `select_func` is called on each values. If the return value is True, that value will be collected to a list, which is returned at the end.
@@ -250,12 +250,13 @@ def recursive_collect(obj: Union[Mapping, Sequence], *, select_func: Callable, p
             # Add it to the return list
             coll.append(entry)
 
-        elif is_iterable(val):
+        elif is_iterable(val) and not isinstance(val, stop_recursion_types):
             # Not the desired element, but recursion possible ...
             coll += recursive_collect(val,
                                       select_func=select_func,
                                       prepend_info=prepend_info,
                                       info_func=info_func,
+                                      stop_recursion_types=stop_recursion_types,
                                       _parent_keys=these_keys)
 
         # else: is something that cannot be selected and cannot be further recursed ...

@@ -302,6 +302,8 @@ class CoupledParamDim(ParamDimBase):
             ValueError: If neither target_pdim nor target_name were given
         """
 
+        warnings.warn("Careful: CoupledParamDim is no yet fully tested!")
+
         # Determine whether the coupled values will be used or not
         if use_coupled_default is None:
             use_coupled_default = 'default' not in kwargs
@@ -357,6 +359,21 @@ class CoupledParamDim(ParamDimBase):
         log.debug("CoupledParamDim initialised.")
         self._init_finished = True
 
+    # Public API ..............................................................
+    # These are needed by the ParamSpace class to more controllably iterate
+
+    def iterate_state(self) -> None:
+        """Does nothing, as state has no effect for CoupledParamDim"""
+        pass
+
+    def enter_iteration(self) -> None:
+        """Does nothing, as state has no effect for CoupledParamDim"""
+        pass
+
+    def reset(self) -> None:
+        """Does nothing, as state has no effect for CoupledParamDim"""
+        pass
+
     # Properties that only the CoupledParamDim has ----------------------------
 
     @property
@@ -387,7 +404,7 @@ class CoupledParamDim(ParamDimBase):
         """The ParamDim object this CoupledParamDim couples to."""
         if not self._target_pdim:
             raise ValueError("The coupling target has not been set! Either "
-                             "set the `target_pdim` to a ParamDim object or"
+                             "set the `target_pdim` to a ParamDim object or "
                              "incorporate this CoupledParamDim into a "
                              "ParamSpace to resolve its coupling target by"
                              "the given `target_name` attribute.")
