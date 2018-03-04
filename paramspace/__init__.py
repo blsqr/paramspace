@@ -1,4 +1,4 @@
-__version__ = "1.0a"
+__version__ = "1.0b"
 
 from paramspace.paramspace import ParamSpace
 from paramspace.paramdim import ParamDim, CoupledParamDim

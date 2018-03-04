@@ -8,7 +8,7 @@ test_deps    = ['pytest>=3.4.0', 'pytest-cov>=2.5.1']
 
 
 setup(name='ParamSpace',
-      version='1.0a',
+      version='1.0b',
       description='Multidimensional parameter space with dictionaries at each point.',
       long_description='Classes that allow easy iteration over a multidimensional parameter space, generating dictionaries at each point in this parameter space.',
       author='Yunus Sevinchan',
