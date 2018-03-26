@@ -1,16 +1,14 @@
 #!/usr/bin/env python
 
-import paramspace
-
 from setuptools import setup
 
 setup(name='ParamSpace',
-      version=paramspace.__version__,
+      version='0.9.9',
       description='Multidimensional parameter space with dictionaries at each point.',
       long_description='Classes that allow easy iteration over a multidimensional parameter space, generating dictionaries at each point in this parameter space.',
       author='Yunus Sevinchan',
       author_email='Yunus.Sevinchan@iup.uni-heidelberg.de',
-      url='https://zwackelmann.iup.uni-heidelberg.de:10443/yunus/paramspace',
+      url='https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace',
       licence='MIT',
       classifiers=[
           'Development Status :: 5 - Production/Stable',
