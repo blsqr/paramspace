@@ -1,8 +1,5 @@
 # The `paramspace` package
 
-[![pipeline status](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/badges/master/pipeline.svg)](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/commits/master)
-[![coverage report](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/badges/master/coverage.svg)](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/commits/master)
-
 The `paramspace` package supplies classes that make it easy to iterate over a multi-dimensional parameter space.
 
 A parameter space is an $`n`$-dimensional space, where each dimension corresponds to one of $`n`$ parameters and each point in this space represents a certain combination of parameter values.  
