@@ -184,7 +184,7 @@ def recursive_setitem(d: dict, *, keys: tuple, val, create_key: bool=False):
         # reached the end of the recursion
         d[keys[0]] = val
 
-def recursive_collect(obj: Union[Mapping, Sequence], *, select_func: Callable, prepend_info: Sequence=None, info_func: Callable=None, stop_recursion_types: tuple=(), _parent_keys: tuple=None) -> list:
+def recursive_collect(obj: Union[Mapping, Sequence], *, select_func: Callable, prepend_info: Sequence=None, info_func: Callable=None, stop_recursion_types: tuple=None, _parent_keys: tuple=None) -> list:
     """Go recursively through a mapping or sequence and collect selected elements.
     
     The `select_func` is called on each values. If the return value is True, that value will be collected to a list, which is returned at the end.
@@ -197,8 +197,7 @@ def recursive_collect(obj: Union[Mapping, Sequence], *, select_func: Callable, p
     The resulting return value is then a list of tuples (in that order).
     
     Args:
-        cont (Union[Mapping, Sequence]): The mapping or sequence to
-            recursively search through
+        obj (Union[Mapping, Sequence]): The object to recursively search
         select_func (Callable): Each element is passed to this function; if
             True is returned, the element is collected and search ends here.
         prepend_info (Sequence, optional): If given, additional info about the
@@ -207,6 +206,9 @@ def recursive_collect(obj: Union[Mapping, Sequence], *, select_func: Callable, p
             `info_func`, the `info_func` function is called on the argument
             and that value is added to the tuple.
         info_func (Callable, optional): The function used to prepend info
+        stop_recursion_types (tuple, optional): Can specify types here that
+            will not be further searched through.
+            NOTE: strings are never iterated through further
         _parent_keys (tuple, optional): Used to track the keys; not public!
     
     Returns:
@@ -221,6 +223,15 @@ def recursive_collect(obj: Union[Mapping, Sequence], *, select_func: Callable, p
 
     # Return value list
     coll = []
+
+    # Compile the list of types that should not be recursed further
+    if not stop_recursion_types:
+        # Specify the types that should never be further recursed
+        stop_recursion_types = (str, )
+    else:
+        # Assure that strings are never recursed further
+        if str not in stop_recursion_types:
+            stop_recursion_types += (str,)
 
     # Now go through all values
     for key, val in get_key_val_iter(obj):
@@ -295,7 +306,7 @@ def recursive_replace(obj: Union[Mapping, Sequence], *, select_func: Callable, r
             replace(obj, key=key,
                     replace_by=replace_func(val))
 
-        elif is_iterable(val):
+        elif is_iterable(val) and not isinstance(val, str):
             # Not the desired element, but recursion possible ...
             replace(obj, key=key,
                     replace_by=recursive_replace(val,
@@ -307,6 +318,7 @@ def recursive_replace(obj: Union[Mapping, Sequence], *, select_func: Callable, r
     return obj
 
 # Helpers ---------------------------------------------------------------------
+
 def is_iterable(obj) -> bool:
     """Tests if the given object is iterable or not
     
