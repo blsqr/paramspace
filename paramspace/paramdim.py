@@ -386,6 +386,7 @@ class CoupledParamDim(ParamDimBase):
         """Sets the target name, ensuring it to be a valid key sequence."""
         if self._target_name is not None:
             raise RuntimeError("Target name cannot be changed!")
+
         # Make sure it is not a string, which is also interpreted as sequence
         if not isinstance(target_name, (tuple, list)):
             raise TypeError("Argument `target_name` should be a tuple or list,"
@@ -408,15 +409,18 @@ class CoupledParamDim(ParamDimBase):
                              "incorporate this CoupledParamDim into a "
                              "ParamSpace to resolve its coupling target by"
                              "the given `target_name` attribute.")
+
         return self._target_pdim
 
     @target_pdim.setter
     def target_pdim(self, pdim: ParamDim):
         if self._target_pdim is not None:
             raise RuntimeError("Cannot change target of CoupledParamDim!")
+
         elif not isinstance(pdim, ParamDim):
             raise TypeError("Target of CoupledParamDim needs to be of type "
                             "ParamDim, was "+str(type(pdim)))
+            
         elif not self.use_coupled_values and len(self) != len(pdim):
             if self.enabled:
                 raise ValueError("The lengths of the value sequences of "
