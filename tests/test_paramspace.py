@@ -215,12 +215,21 @@ def test_coupled(psp_with_coupled):
     assert_coupling(('d', 'cc3'), ('d', 'aa'))
 
     # Check default is correct
-    # TODO
+    default = psp.default
+
+    assert default['c1']       == default['a']
+    assert default['d']['cc1'] == default['d']['aa']
+    assert default['d']['cc2'] == default['a']
+    assert default['d']['cc3'] == default['d']['aa']
 
     # Iterate over the paramspace and check correctness
     for pt in psp:
         print("Point: ", pt)
-        # TODO do more stuff here
+        
+        assert pt['c1']       == pt['a']
+        assert pt['d']['cc1'] == pt['d']['aa']
+        assert pt['d']['cc2'] == pt['a']
+        assert pt['d']['cc3'] == pt['d']['aa']
     
 def test_strings(basic_psp, adv_psp, psp_with_coupled):
     """Test whether the string generation works correctly."""
