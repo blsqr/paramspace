@@ -201,11 +201,20 @@ def test_inverse_mapping(basic_psp, adv_psp):
 def test_coupled(psp_with_coupled):
     """Test parameter spaces with CoupledParamDims in them"""
     psp = psp_with_coupled
+    print("ParamSpace with CoupledParamDim:\n", psp)
+
+    def assert_coupling(src: tuple, target: tuple):
+        """Asserts that the CoupledParamDim at keyseq src is coupled to the target ParamDim at keyseq target."""
+        assert psp.coupled_dims[src].target_pdim == psp.dims[target]
+
+    # Assert correct coupling
+    assert_coupling(('c1',), ('a',))
+    assert_coupling(('d', 'cc1'), ('d', 'aa'))
+    assert_coupling(('d', 'cc2'), ('a',))
 
     # Iterate over the paramspace
     for pt in psp:
-        print(pt)
-        # TODO assert that the correct targets were found
+        print("Point: ", pt)
     
 def test_strings(basic_psp, adv_psp, psp_with_coupled):
     """Test whether the string generation works correctly."""
