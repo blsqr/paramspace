@@ -51,7 +51,8 @@ def psp_with_coupled(request):
              c1=CoupledParamDim(target_name=('a',)),
              d=dict(aa=ParamDim(default=0, values=[1,2,3], order=-1),
                     cc1=CoupledParamDim(target_name=('d', 'aa')),
-                    cc2=CoupledParamDim(target_name=('a',)))
+                    cc2=CoupledParamDim(target_name=('a',)),
+                    cc3=CoupledParamDim(target_name='aa')),
              )
    
     return ParamSpace(d)
@@ -68,17 +69,19 @@ def test_init(basic_psp, adv_psp):
     ParamSpace(list(range(10)))
 
     # These should create a warning (not mutable)
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="Got unusual type <class 'tuple'>"):
         ParamSpace(tuple(range(10)))
-    with pytest.warns(UserWarning):
+
+    with pytest.warns(UserWarning, match="Got unusual type <class 'set'>"):
         ParamSpace(set(range(10)))
 
     # These should warn and fail (not iterable)
-    with pytest.raises(TypeError):
-        with pytest.warns(UserWarning):
+    with pytest.raises(TypeError, match="'int' object is not iterable"):
+        with pytest.warns(UserWarning, match="Got unusual type"):
             ParamSpace(1)
-    with pytest.raises(TypeError):
-        with pytest.warns(UserWarning):
+
+    with pytest.raises(TypeError, match="'function' object is not iterable"):
+        with pytest.warns(UserWarning, match="Got unusual type"):
             ParamSpace(lambda x: None)
 
 def test_default(basic_psp, adv_psp):
@@ -175,14 +178,14 @@ def test_iteration(basic_psp, adv_psp):
                  (basic_psp.volume, adv_psp.volume))
 
     # Also test all information tuples
-    info = ("state_no","state_vec","progress")
+    info = ("state_no", "state_vec", "progress")
     check_counts((basic_psp.all_points(with_info=info),
                   adv_psp.all_points(with_info=info)),
                  (basic_psp.volume, adv_psp.volume))
 
     # and whether invalid values lead to failure
     with pytest.raises(ValueError):
-        info = ("state_no","foo bar")
+        info = ("state_no", "foo bar")
         check_counts((basic_psp.all_points(with_info=info),
                       adv_psp.all_points(with_info=info)),
                      (basic_psp.volume, adv_psp.volume))        
@@ -196,19 +199,46 @@ def test_inverse_mapping(basic_psp, adv_psp):
     basic_psp.inverse_mapping()
     adv_psp.inverse_mapping()
 
-@pytest.mark.skip("Not implemented yet.")
-def test_subspace():
-    """Test whether the subspace retrieval is correct."""
-    pass
-
-@pytest.mark.skip("Not implemented yet.")
-def test_coupled(psp_with_coupled): # TODO
+def test_coupled(psp_with_coupled):
     """Test parameter spaces with CoupledParamDims in them"""
-    return
+    psp = psp_with_coupled
+    print("ParamSpace with CoupledParamDim:\n", psp)
+
+    def assert_coupling(src: tuple, target: tuple):
+        """Asserts that the CoupledParamDim at keyseq src is coupled to the target ParamDim at keyseq target."""
+        assert psp.coupled_dims[src].target_pdim == psp.dims[target]
+
+    # Assert correct coupling
+    assert_coupling(('c1',), ('a',))
+    assert_coupling(('d', 'cc1'), ('d', 'aa'))
+    assert_coupling(('d', 'cc2'), ('a',))
+    assert_coupling(('d', 'cc3'), ('d', 'aa'))
+
+    # Check default is correct
+    default = psp.default
+
+    assert default['c1']       == default['a']
+    assert default['d']['cc1'] == default['d']['aa']
+    assert default['d']['cc2'] == default['a']
+    assert default['d']['cc3'] == default['d']['aa']
+
+    # Iterate over the paramspace and check correctness
+    for pt in psp:
+        print("Point: ", pt)
+        
+        assert pt['c1']       == pt['a']
+        assert pt['d']['cc1'] == pt['d']['aa']
+        assert pt['d']['cc2'] == pt['a']
+        assert pt['d']['cc3'] == pt['d']['aa']
     
-def test_strings(basic_psp, adv_psp): # TODO include coupled
+def test_strings(basic_psp, adv_psp, psp_with_coupled):
     """Test whether the string generation works correctly."""
-    for psp in [basic_psp, adv_psp]:
+    for psp in [basic_psp, adv_psp, psp_with_coupled]:
         str(psp)
         repr(psp)
         psp.get_info_str()
+
+@pytest.mark.skip("Feature is not implemented yet.")
+def test_subspace():
+    """Test whether the subspace retrieval is correct."""
+    pass

@@ -7,7 +7,7 @@ import pprint
 from itertools import chain
 import collections
 from collections import OrderedDict
-from typing import Union, Sequence, Tuple, Generator, MutableMapping, MutableSequence
+from typing import Union, Sequence, Tuple, Generator, MutableMapping, MutableSequence, Dict
 
 import numpy as np
 
@@ -90,14 +90,18 @@ class ParamSpace:
         self._cdims = OrderedDict([tpl[1:] for tpl in cpdims])
 
         # Now resolve the coupling targets and add them to CoupledParamDim instances. Also, let the target ParamDim objects know which CoupledParamDim couples to them
-        for cpdim in self.coupled_dims.values():
+        for cpdim_key, cpdim in self.coupled_dims.items():
             # Try to get the coupling target by name
             try:
                 c_target = self._dim_by_name(cpdim.target_name)
-            except NameError as err:
-                # Could not resolve it
-                # TODO informative error message here
-                raise
+            
+            except (KeyError, ValueError) as err:
+                # Could not find that name
+                raise ValueError("Could not resolve the coupling target for "
+                                 "CoupledParamDim at {}. Check the "
+                                 "`target_name` specification of that entry "
+                                 "and the full traceback of this error."
+                                 "".format(cpdim_key)) from err
 
             # Set attribute of the coupled ParamDim
             cpdim.target_pdim = c_target
@@ -118,7 +122,9 @@ class ParamSpace:
     @property
     def default(self) -> dict:
         """Returns the dictionary with all parameter dimensions resolved to their default values."""
-        return recursive_replace(copy.deepcopy(self._dict),
+        dd = copy.deepcopy(self._dict)
+        print(dd)
+        return recursive_replace(dd,
                                  select_func=lambda v: isinstance(v, ParamDimBase),
                                  replace_func=lambda pdim: pdim.default)
 
@@ -180,24 +186,33 @@ class ParamSpace:
         return len(self.coupled_dims)
 
     @property
-    def dims(self) -> Sequence[ParamDim]:
-        """ """
+    def dims(self) -> Dict[Tuple[str], ParamDim]:
+        """Returns the ParamDim objects found in this ParamSpace"""
         return self._dims
 
     @property
-    def coupled_dims(self) -> Sequence[CoupledParamDim]:
-        """ """
+    def coupled_dims(self) -> Dict[Tuple[str], CoupledParamDim]:
+        """Returns the CoupledParamDim objects found in this ParamSpace"""
         return self._cdims
 
     # Magic methods ...........................................................
 
-    def __repr__(self) -> str:
-        """Returns the raw string representation of the ParamSpace."""
-        return "<ParamSpace object at {}, with __dict__: {}>".format(id(self), str(self.__dict__))
-
     def __str__(self) -> str:
         """Returns a parsed, human-readable information string"""
         return self.get_info_str()
+
+    def __repr__(self) -> str:
+        """Returns the raw string representation of the ParamSpace."""
+        # TODO should actually be a string from which to re-create the object
+        return ("<{} object at {} with {}>"
+                "".format(self.__class__.__name__, id(self),
+                          repr(dict(volume=self.volume,
+                                    shape=self.shape,
+                                    dims=self.dims,
+                                    coupled_dims=self.coupled_dims
+                                    ))
+                          )
+                )
 
     def __format__(self, fstr: str) -> str:
         """ """
@@ -209,18 +224,22 @@ class ParamSpace:
         l = ["ParamSpace Information"]
 
         # General information about the Parameter Space
-        l.append("  Dimensions:  {}".format(self.num_dims))
-        l.append("  Volume:      {}".format(self.volume))
-        l.append("  Coupled:     {}".format(self.num_coupled_dims))
+        l += ["  Dimensions:  {}".format(self.num_dims)]
+        l += ["  Volume:      {}".format(self.volume)]
+        l += ["  Coupled:     {}".format(self.num_coupled_dims)]
 
         # ParamDim information
         l += ["", "Parameter Dimensions"]
         l += ["  (First mentioned are iterated over most often)", ""]
 
         for name, pdim in self.dims.items():
-            l.append("  * {}".format(" -> ".join([str(e) for e in name])))
-            l.append("      {}".format(pdim.values))
-            l.append("")
+            l += ["  * {}".format(" -> ".join([str(e) for e in name]))]
+            l += ["      {}".format(pdim.values)]
+
+            if pdim.order < np.inf:
+                l += ["      Order: {}".format(pdim.order)]
+
+            l += [""]
 
         # CoupledParamDim information
         if self.num_coupled_dims:
@@ -228,10 +247,24 @@ class ParamSpace:
             l += ["  (Move alongside the state of the coupled ParamDim)", ""]
 
             for name, cpdim in self.coupled_dims.items():
-                l.append("  * {}".format(" -> ".join([str(e) for e in name])))
-                l.append("      Coupled to:  {}".format(cpdim.target_name))
-                l.append("      Values:      {}".format(cpdim.values))
-                l.append("")
+                l += ["  * {}".format(" -> ".join([str(e) for e in name]))]
+                l += ["      Coupled to:  {}".format(cpdim.target_name)]
+
+                # Add resolved target name, if it differs
+                for pdim_name, pdim in self.dims.items():
+                    if pdim is cpdim.target_pdim:
+                        # Found the coupling target object; get the full name
+                        resolved_target_name = pdim_name
+                        break
+                else:
+                    raise RuntimeError("Could not find coupling target; this "
+                                       "should not have happened!")
+
+                if resolved_target_name != cpdim.target_name:
+                    l[-1] += "  [resolves to: {}]".format(resolved_target_name)
+
+                l += ["      Values:      {}".format(cpdim.values)]
+                l += [""]
 
         return "\n".join(l)
 

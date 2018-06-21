@@ -141,31 +141,28 @@ def test_str_methods(various_pdims):
         str(pd)
         repr(pd)
 
-def test_coupled():
+def test_coupled_init():
     """Test whether initialisation of CoupledParamDim works"""
     # These should work
     CoupledParamDim(target_name=("foo",))
     CoupledParamDim(target_name=("foo",), default=0)
     CoupledParamDim(target_name=("foo",), values=[1,2,3])
+    CoupledParamDim(target_name="foo")
 
     # These should fail
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="missing 1 required"):
         # No default given
         CoupledParamDim(target_name=("foo",), use_coupled_default=False)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="No argument `values` or other"):
         # No values given
         CoupledParamDim(target_name=("foo",), use_coupled_values=False)
 
-    with pytest.raises(TypeError):
-        # Wrong target name type
-        CoupledParamDim(target_name="foo")
-
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="The coupling target has not been"):
         # Not coupled yet
         CoupledParamDim(target_name=("foo",)).default
 
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="Got both `target_pdim` and"):
         CoupledParamDim(target_pdim=ParamDim(default=0, values=[1,2,3]),
                         target_name=["foo", "bar"])
 
@@ -178,39 +175,52 @@ def test_coupled():
     assert cpd.target_name is None
 
     # Test if the name behaviour is correct
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="A target ParamDim was already set;"):
         cpd.target_name = ("foo",)
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match="Target name cannot be changed"):
         cpd.target_name = ("bar",)
 
-    # Iteration
-    for pd_val, cpd_val in zip(pd, cpd):
-        assert pd_val == cpd_val
-
-    # Accessing coupling target without it having been set
+    # Accessing coupling target without it having been set should raise errors
     cpd = CoupledParamDim(target_name=("foo",))
-    with pytest.raises(ValueError):
+
+    with pytest.raises(ValueError, match="The coupling target has not been"):
         cpd.target_pdim
-    with pytest.raises(TypeError):
+
+    with pytest.raises(TypeError, match="Target of CoupledParamDim needs to"):
         cpd.target_pdim = "foo"
+
     cpd.target_pdim = pd
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match="Cannot change target of"):
         cpd.target_pdim = pd
     
     # Test lengths are matching
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="The lengths of the value sequences"):
         cpd = CoupledParamDim(target_pdim=pd, values=[1,2,3,4])
 
     # Assure values cannot be changed
     cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4])
-    with pytest.raises(AttributeError):
+    with pytest.raises(AttributeError, match="Values are already set and "):
         cpd.values = [1,2,3]
 
     # Test disabled has no state set
     cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4], enabled=False)
     assert cpd.state is None
     assert cpd.current_value is 0 # that of the coupled ParamDim!
+
+def test_coupled_iteration():
+    """Tests iteration of CoupledParamDim"""
+    # ParamDim to couple to for testing
+    pd = ParamDim(default=0, values=[1,2,3])
+
+    # Simplest case: cpd follows pd
+    for pval, cpval in zip(pd, CoupledParamDim(target_pdim=pd)):
+        assert pval == cpval
+
+    # With custom cpd values
+    for pval, cpval in zip(pd, CoupledParamDim(target_pdim=pd,
+                                               values=[2,3,4])):
+        assert pval + 1 == cpval
 
 
 # Tests still to write --------------------------------------------------------
