@@ -109,6 +109,36 @@ def test_replace():
                 replace_func=lambda *args: 0)
 
 
+def test_setitem():
+    """Tests the recursive_setitem function"""
+    setitem = t.recursive_setitem
+
+    # Create a dict to fill
+    d = dict(a=1,
+             b=[1,2,3],
+             c=("foo",),
+             d=dict(aa=1.23, bb=2.34, cc=dict(aa=4.56)))
+
+    # top level
+    setitem(d, keys=('a',), val=2)
+    assert d['a'] == 2
+
+    # lower level
+    setitem(d, keys=('d', 'aa'), val=-1.23)
+    assert d['d']['aa'] == -1.23
+    
+    setitem(d, keys=('d', 'cc', 'aa'), val=-4.56)
+    assert d['d']['cc']['aa'] == -4.56
+
+    # non-existing key on the way
+    with pytest.raises(KeyError, match="No key 'dd' found in dict"):
+        setitem(d, keys=('d', 'dd', 'dd'), val=3.45, create_key=False)
+    
+    setitem(d, keys=('d', 'dd', 'ddd'), val=3.45, create_key=True)
+    assert d['d']['dd']['ddd'] == 3.45
+
+
+
 def test_update():
     """Tests the recursive_update function"""
     d = dict(a=1, b=2,
