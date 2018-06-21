@@ -51,7 +51,8 @@ def psp_with_coupled(request):
              c1=CoupledParamDim(target_name=('a',)),
              d=dict(aa=ParamDim(default=0, values=[1,2,3], order=-1),
                     cc1=CoupledParamDim(target_name=('d', 'aa')),
-                    cc2=CoupledParamDim(target_name=('a',)))
+                    cc2=CoupledParamDim(target_name=('a',)),
+                    cc3=CoupledParamDim(target_name='aa')),
              )
    
     return ParamSpace(d)
@@ -211,6 +212,7 @@ def test_coupled(psp_with_coupled):
     assert_coupling(('c1',), ('a',))
     assert_coupling(('d', 'cc1'), ('d', 'aa'))
     assert_coupling(('d', 'cc2'), ('a',))
+    assert_coupling(('d', 'cc3'), ('d', 'aa'))
 
     # Iterate over the paramspace
     for pt in psp:

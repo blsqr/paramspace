@@ -283,12 +283,14 @@ class ParamDim(ParamDimBase):
 class CoupledParamDim(ParamDimBase):
     """A CoupledParamDim object is recognized by the ParamSpace and its state moves alongside with another ParamDim's state."""
 
-    def __init__(self, *, target_pdim: ParamDim=None, target_name: Sequence[str]=None, use_coupled_default: bool=None, use_coupled_values: bool=None, **kwargs):
+    def __init__(self, *, target_pdim: ParamDim=None, target_name: Union[str, Sequence[str]]=None, use_coupled_default: bool=None, use_coupled_values: bool=None, **kwargs):
         """
         Args:
             target_pdim (ParamDim, optional): The ParamDim object to couple to
-            target_name (Sequence[str], optional): The *name* of the ParamDim
-                object to couple to; needs to be within the same ParamSpace!
+            target_name (Union[str, Sequence[str]], optional): The *name* of
+                the ParamDim object to couple to; needs to be within the same
+                ParamSpace and the ParamSpace needs to be able to resolve it
+                using this name.
             use_coupled_default (bool, optional): Whether to use the default
                 value of the coupled ParamDim; need not be given: if it is not
                 set it is determined by looking at whether argument `default`
@@ -306,6 +308,7 @@ class CoupledParamDim(ParamDimBase):
         # Determine whether the coupled values will be used or not
         if use_coupled_default is None:
             use_coupled_default = 'default' not in kwargs
+
         if use_coupled_values is None:
             use_coupled_values = 'values' not in kwargs
 
@@ -347,7 +350,7 @@ class CoupledParamDim(ParamDimBase):
                               "arguments; will ignore the latter.",
                               UserWarning)
         elif target_name:
-            # save the name of the object to couple to, later resolved by ParamSpace
+            # Save name of the object to couple to. Resolved by ParamSpace
             self.target_name = target_name
 
         else:
@@ -379,28 +382,31 @@ class CoupledParamDim(ParamDimBase):
     # Properties that only the CoupledParamDim has ----------------------------
 
     @property
-    def target_name(self) -> Tuple[Hashable]:
+    def target_name(self) -> Union[str, Sequence[str]]:
         """The ParamDim object this CoupledParamDim couples to."""
         return self._target_name
 
     @target_name.setter
-    def target_name(self, target_name: Tuple[Hashable]):
+    def target_name(self, target_name: Union[str, Sequence[str]]):
         """Sets the target name, ensuring it to be a valid key sequence."""
         if self._target_name is not None:
             raise RuntimeError("Target name cannot be changed!")
 
-        # Make sure it is not a string, which is also interpreted as sequence
-        if not isinstance(target_name, (tuple, list)):
-            raise TypeError("Argument `target_name` should be a tuple or list,"
-                            " i.e. a key sequence, "
-                            "was of type: "+str(type(target_name)))
+        # Make sure it is of valid type
+        if not isinstance(target_name, (tuple, list, str)):
+            raise TypeError("Argument `target_name` should be a tuple or list "
+                            "(i.e.: a key sequence) or a string! "
+                            "Was of type: "+str(type(target_name)))
+
+        elif isinstance(target_name, list):
+            target_name = tuple(target_name)
 
         # Check if a pdim is already set
         if self._target_pdim is not None:
             warnings.warn("A target ParamDim was already set; setting the "
                           "target_name will have no effect.", UserWarning)
 
-        self._target_name = tuple(target_name)
+        self._target_name = target_name
 
     @property
     def target_pdim(self) -> ParamDim:

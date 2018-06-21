@@ -147,6 +147,7 @@ def test_coupled_init():
     CoupledParamDim(target_name=("foo",))
     CoupledParamDim(target_name=("foo",), default=0)
     CoupledParamDim(target_name=("foo",), values=[1,2,3])
+    CoupledParamDim(target_name="foo")
 
     # These should fail
     with pytest.raises(TypeError, match="missing 1 required"):
@@ -156,10 +157,6 @@ def test_coupled_init():
     with pytest.raises(ValueError, match="No argument `values` or other"):
         # No values given
         CoupledParamDim(target_name=("foo",), use_coupled_values=False)
-
-    with pytest.raises(TypeError, match="Argument `target_name` should be"):
-        # Wrong target name type
-        CoupledParamDim(target_name="foo")
 
     with pytest.raises(ValueError, match="The coupling target has not been"):
         # Not coupled yet
