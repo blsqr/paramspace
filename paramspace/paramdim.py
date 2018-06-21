@@ -207,7 +207,8 @@ class ParamDimBase:
 
 
     # Public API ..............................................................
-    # These are needed by the ParamSpace class to more controllably iterate
+    # These are needed by the ParamSpace class to have more control over the
+    # iteration.
 
     def iterate_state(self) -> None:
         """Iterates the state of the parameter dimension.
@@ -360,7 +361,10 @@ class CoupledParamDim(ParamDimBase):
         self._init_finished = True
 
     # Public API ..............................................................
-    # These are needed by the ParamSpace class to more controllably iterate
+    # These are needed by the ParamSpace class to have more control over the
+    # iteration. Here, the parent class' behaviour is overwritten as the
+    # CoupledParamDim's state and iteration should depend completely on that of
+    # the target ParamDim...
 
     def iterate_state(self) -> None:
         """Does nothing, as state has no effect for CoupledParamDim"""
@@ -420,7 +424,7 @@ class CoupledParamDim(ParamDimBase):
         elif not isinstance(pdim, ParamDim):
             raise TypeError("Target of CoupledParamDim needs to be of type "
                             "ParamDim, was "+str(type(pdim)))
-            
+
         elif not self.use_coupled_values and len(self) != len(pdim):
             if self.enabled:
                 raise ValueError("The lengths of the value sequences of "

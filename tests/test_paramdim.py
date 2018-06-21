@@ -213,13 +213,17 @@ def test_coupled_init():
 
 def test_coupled_iteration():
     """Tests iteration of CoupledParamDim"""
-
+    # ParamDim to couple to for testing
     pd = ParamDim(default=0, values=[1,2,3])
-    cpd = CoupledParamDim(target_pdim=pd)
-    
-    # Iteration
-    for pd_val, cpd_val in zip(pd, cpd):
-        assert pd_val == cpd_val
+
+    # Simplest case: cpd follows pd
+    for pval, cpval in zip(pd, CoupledParamDim(target_pdim=pd)):
+        assert pval == cpval
+
+    # With custom cpd values
+    for pval, cpval in zip(pd, CoupledParamDim(target_pdim=pd,
+                                               values=[2,3,4])):
+        assert pval + 1 == cpval
 
 
 # Tests still to write --------------------------------------------------------
