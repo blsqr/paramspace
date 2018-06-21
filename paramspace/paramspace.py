@@ -122,7 +122,9 @@ class ParamSpace:
     @property
     def default(self) -> dict:
         """Returns the dictionary with all parameter dimensions resolved to their default values."""
-        return recursive_replace(copy.deepcopy(self._dict),
+        dd = copy.deepcopy(self._dict)
+        print(dd)
+        return recursive_replace(dd,
                                  select_func=lambda v: isinstance(v, ParamDimBase),
                                  replace_func=lambda pdim: pdim.default)
 
@@ -195,14 +197,22 @@ class ParamSpace:
 
     # Magic methods ...........................................................
 
-    def __repr__(self) -> str:
-        """Returns the raw string representation of the ParamSpace."""
-        return ("<ParamSpace object at {}, with __dict__: {}>"
-                "".format(id(self), str(self.__dict__)))
-
     def __str__(self) -> str:
         """Returns a parsed, human-readable information string"""
         return self.get_info_str()
+
+    def __repr__(self) -> str:
+        """Returns the raw string representation of the ParamSpace."""
+        # TODO should actually be a string from which to re-create the object
+        return ("<{} object at {} with {}>"
+                "".format(self.__class__.__name__, id(self),
+                          repr(dict(volume=self.volume,
+                                    shape=self.shape,
+                                    dims=self.dims,
+                                    coupled_dims=self.coupled_dims
+                                    ))
+                          )
+                )
 
     def __format__(self, fstr: str) -> str:
         """ """

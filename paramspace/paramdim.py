@@ -166,12 +166,14 @@ class ParamDimBase:
         Returns:
             str: Returns the string representation of the ParamDimBase-derived object
         """
-        return "{}({})".format(self.__class__.__name__,
-                               repr(dict(default=self.default,
-                                         order=self.order,
-                                         values=self.values,
-                                         enabled=self.enabled,
-                                         name=self.name)))
+        # TODO should actually be a string from which to re-create the object
+        return ("<{} object at {} with {}>"
+                "".format(self.__class__.__name__, id(self),
+                          repr(dict(default=self.default,
+                                    order=self.order,
+                                    values=self.values,
+                                    enabled=self.enabled,
+                                    name=self.name))))
 
     def __str__(self) -> str:
         """
@@ -411,11 +413,11 @@ class CoupledParamDim(ParamDimBase):
     @property
     def target_pdim(self) -> ParamDim:
         """The ParamDim object this CoupledParamDim couples to."""
-        if not self._target_pdim:
+        if self._target_pdim is None:
             raise ValueError("The coupling target has not been set! Either "
                              "set the `target_pdim` to a ParamDim object or "
                              "incorporate this CoupledParamDim into a "
-                             "ParamSpace to resolve its coupling target by"
+                             "ParamSpace to resolve its coupling target using "
                              "the given `target_name` attribute.")
 
         return self._target_pdim
