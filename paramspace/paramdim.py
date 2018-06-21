@@ -303,8 +303,6 @@ class CoupledParamDim(ParamDimBase):
             ValueError: If neither target_pdim nor target_name were given
         """
 
-        warnings.warn("Careful: CoupledParamDim is no yet fully tested!")
-
         # Determine whether the coupled values will be used or not
         if use_coupled_default is None:
             use_coupled_default = 'default' not in kwargs
