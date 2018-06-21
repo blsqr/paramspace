@@ -228,7 +228,7 @@ class ParamSpace:
             l += ["  (Move alongside the state of the coupled ParamDim)", ""]
 
             for name, cpdim in self.coupled_dims.items():
-                l.append("  * {}".format(" -> ".join([str(e) for e in name])))
+                l.append("  * {}".format(" . ".join([str(e) for e in name])))
                 l.append("      Coupled to:  {}".format(cpdim.target_name))
                 l.append("      Values:      {}".format(cpdim.values))
                 l.append("")
