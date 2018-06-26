@@ -122,9 +122,7 @@ class ParamSpace:
     @property
     def default(self) -> dict:
         """Returns the dictionary with all parameter dimensions resolved to their default values."""
-        dd = copy.deepcopy(self._dict)
-        print(dd)
-        return recursive_replace(dd,
+        return recursive_replace(copy.deepcopy(self._dict),
                                  select_func=lambda v: isinstance(v, ParamDimBase),
                                  replace_func=lambda pdim: pdim.default)
 
