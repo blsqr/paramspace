@@ -266,6 +266,28 @@ class ParamSpace:
 
         return "\n".join(l)
 
+    # Item access .............................................................
+    # This is a restricted interface for accessing items
+    # It ensures that the ParamSpace remains in a valid state: items are only
+    # returned by copy or, if popping them, it is ensured that the item was not
+    # a parameter dimension.
+    
+    # FIXME Resolve misconception: storing key sequences as tuples, but a
+    #       tuple could be a key itself as it is hashable...
+
+    def get(self, key, default=None):
+        """Returns a _copy_ of the item in the underlying dict"""
+        return copy.deepcopy(self._dict.get(key, default))
+
+    def pop(self, key, default=None):
+        """Pops an item from the underlying dict, if it is not a ParamDim"""
+        item = self._dict.get(key, None)
+        if item in self.dims.values() or item in self.coupled_dims.values():
+            raise KeyError("Cannot remove item with key '{}' as it is part of "
+                           "a parameter dimension.".format(key))
+
+        return self._dict.pop(key, default)
+
     # Iterator functionality ..................................................
 
     def __iter__(self) -> PStype:

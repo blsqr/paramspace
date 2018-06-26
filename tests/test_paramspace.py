@@ -10,7 +10,7 @@ from paramspace import ParamSpace, ParamDim, CoupledParamDim
 @pytest.fixture(scope='module')
 def basic_psp(request):
     """Used to setup a basic pspace object to be tested on."""
-    d = dict(a=1, b=2,
+    d = dict(a=1, b=2, foo="bar", spam="eggs", mutable=[0, 0, 0],
              p1=ParamDim(default=0, values=[1,2,3]),
              p2=ParamDim(default=0, values=[1,2,3]),
              d=dict(aa=1, bb=2,
@@ -28,7 +28,7 @@ def basic_psp(request):
 @pytest.fixture(scope='module')
 def adv_psp(request):
     """Used to setup a more elaborate pspace object to be tested on. Includes name clashes, manually set names, order, ..."""
-    d = dict(a=1, b=2,
+    d = dict(a=1, b=2, foo="bar", spam="eggs", mutable=[0, 0, 0],
              p1=ParamDim(default=0, values=[1,2,3], order=0),
              p2=ParamDim(default=0, values=[1,2,3], order=1),
              d=dict(a=1, b=2,
@@ -53,6 +53,7 @@ def psp_with_coupled(request):
                     cc1=CoupledParamDim(target_name=('d', 'aa')),
                     cc2=CoupledParamDim(target_name=('a',)),
                     cc3=CoupledParamDim(target_name='aa')),
+             foo="bar", spam="eggs", mutable=[0, 0, 0],
              )
    
     return ParamSpace(d)
@@ -237,6 +238,29 @@ def test_strings(basic_psp, adv_psp, psp_with_coupled):
         str(psp)
         repr(psp)
         psp.get_info_str()
+
+def test_item_access(psp_with_coupled):
+    """Assert that item access is working and safe"""
+    psp = psp_with_coupled
+    
+    # get method - should be a deepcopy
+    assert psp.get("foo") == "bar"
+    assert psp.get("mutable") == [0, 0, 0]
+    assert psp.get("mutable") is not psp._dict["mutable"]
+
+    # pop method - should not work for parameter dimensions
+    assert psp.pop("foo") == "bar"
+    assert psp.pop("foo", "baz") == "baz"
+    assert "foo" not in psp._dict
+
+    assert psp.pop("spam") == "eggs"
+    assert "spam" not in psp._dict
+    
+    with pytest.raises(KeyError, match="Cannot remove item with key"):
+        psp.pop("a")
+
+    with pytest.raises(KeyError, match="Cannot remove item with key"):
+        psp.pop("c1")
 
 @pytest.mark.skip("Feature is not implemented yet.")
 def test_subspace():
