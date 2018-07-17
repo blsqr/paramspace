@@ -1,42 +1,22 @@
-image: python:3.6-slim
+# CI/CD based on tox and pytest
+image: python
 
 stages:
-  - setup
   - test
 
+before_script:
+  - pip install tox
+
 # -----------------------------------------------------------------------------
-setup:py:
-  stage: setup
-  script:
-    - python3 setup.py test
-    - python3 setup.py install
 
-setup:pip:
-  stage: setup
-  script:
-    - pip3 install .
-
-setup:venv:
-  # NOTE This step is required for the next stages to have all dependencies:
-  stage: setup
-  before_script:
-    - pip3 install virtualenv       # not included in 3.6-slim
-  script:
-    - python3 -m virtualenv env     # creates it in the current directory
-    - source ./env/bin/activate     # enter virtual environment
-    - pip3 install .[test_deps]     # installation including test dependencies
-  artifacts:
-    paths:
-      - env/                        # to pass the environment to the next stage
-    expire_in: 10min                # to not let them persist on the server
-    # NOTE keep track of a feature to expire at end of pipeline
-    # https://gitlab.com/gitlab-org/gitlab-ce/issues/19505
-
-
-test:all:
+test:py36:
+  image: python:3.6
   stage: test
-  dependencies:
-    - setup:venv
   script:
-    - source ./env/bin/activate     # is passed over from last stage
-    - python3 -m pytest -v --cov=paramspace tests/
+    - tox -e py36
+
+test:py37:
+  image: python:3.7
+  stage: test
+  script:
+    - tox -e py37
