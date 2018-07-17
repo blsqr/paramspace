@@ -4,6 +4,7 @@ import warnings
 import pytest
 
 import numpy as np
+import yaml
 
 from paramspace import ParamDim, CoupledParamDim
 from paramspace.paramdim import ParamDimBase
@@ -222,6 +223,26 @@ def test_coupled_iteration():
                                                values=[2,3,4])):
         assert pval + 1 == cpval
 
+
+# YAML Dumping ----------------------------------------------------------------
+
+def test_dumping(various_pdims, tmpdir):
+    """Tests that YAML dumping and reloading works"""
+    d_out = various_pdims
+    path = tmpdir.join("out.yml")
+    
+    # Dump it
+    with open(path, "x") as out_file:
+        yaml.dump(d_out, stream=out_file)
+
+    # Read it in again
+    with open(path, "r") as in_file:
+        d_in = yaml.load(in_file)
+
+    # Check that the contents are equivalent
+    for k_out, v_out in d_out.items():
+        assert k_out in d_in
+        assert v_out == d_in[k_out]
 
 # Tests still to write --------------------------------------------------------
 
