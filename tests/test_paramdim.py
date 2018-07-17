@@ -1,8 +1,8 @@
 """Tests for the ParamDim classes"""
 
 import warnings
-import pytest
 
+import pytest
 import numpy as np
 import yaml
 

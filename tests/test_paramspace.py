@@ -3,6 +3,8 @@
 from collections import OrderedDict
 
 import pytest
+import yaml
+
 from paramspace import ParamSpace, ParamDim, CoupledParamDim
 
 # Setup methods ---------------------------------------------------------------
@@ -266,3 +268,23 @@ def test_item_access(psp_with_coupled):
 def test_subspace():
     """Test whether the subspace retrieval is correct."""
     pass
+
+
+# YAML Dumping ----------------------------------------------------------------
+
+def test_dumping(basic_psp, tmpdir):
+    """Tests that YAML dumping and reloading works"""
+    psp_out = basic_psp
+    path = tmpdir.join("out.yml")
+    
+    # Dump it
+    with open(path, "x") as out_file:
+        yaml.dump(psp_out, stream=out_file)
+
+    # Read it in again
+    with open(path, "r") as in_file:
+        psp_in = yaml.load(in_file)
+
+    # Check that the contents are equivalent
+    # TODO recursively?!
+    assert psp_in == psp_out
