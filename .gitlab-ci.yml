@@ -5,7 +5,7 @@ stages:
   - test
 
 before_script:
-  - pip install tox
+  - pip install .[test_deps]
 
 # -----------------------------------------------------------------------------
 
@@ -13,16 +13,16 @@ test:py35:
   image: python:3.5
   stage: test
   script:
-    - tox -v py35
+    - tox -e py35
 
 test:py36:
   image: python:3.6
   stage: test
   script:
-    - tox -v py36
+    - tox -e py36
 
 test:py37:
   image: python:3.7
   stage: test
   script:
-    - tox -v py37
+    - tox -e py37
