@@ -5,13 +5,14 @@ stages:
   - test
 
 before_script:
-  - pip install .[test_deps]
+  - pip install tox
 
 # -----------------------------------------------------------------------------
 
 test:py35:
   image: python:3.5
   stage: test
+  allow_failure: true
   script:
     - tox -e py35
 
