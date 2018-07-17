@@ -182,6 +182,19 @@ class ParamDimBase:
         """
         return repr(self)
 
+    def __eq__(self, other) -> bool:
+        """Check for equality between self and other
+        
+        Args:
+            other (ParamDimBase): the other ParamDim
+        """
+        if not isinstance(other, ParamDimBase):
+            return False
+
+        # Check equality of __dict__
+        return (self.__dict__ == other.__dict__)
+
+
     # Iterator functionality ..................................................
 
     def __iter__(self):
