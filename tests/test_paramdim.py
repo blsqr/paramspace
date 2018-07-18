@@ -244,6 +244,25 @@ def test_dumping(various_pdims, tmpdir):
         assert k_out in d_in
         assert v_out == d_in[k_out]
 
+@pytest.mark.skip("FIXME")
+def test_safe_dumping(various_pdims, tmpdir):
+    """Tests that safe-dumping and loading also works"""
+    d_out = various_pdims
+    path = tmpdir.join("out.yml")
+    
+    # Dump it
+    with open(path, "x") as out_file:
+        yaml.safe_dump(d_out, stream=out_file)
+
+    # Read it in again
+    with open(path, "r") as in_file:
+        d_in = yaml.safe_load(in_file)
+
+    # Check that the contents are equivalent
+    for k_out, v_out in d_out.items():
+        assert k_out in d_in
+        assert v_out == d_in[k_out]
+
 # Tests still to write --------------------------------------------------------
 
 @pytest.mark.skip("Too early to write test.")

@@ -200,8 +200,13 @@ class ParamSpace:
         if not isinstance(other, ParamSpace):
             return False
 
-        # Check for equality of the two objects' underlying __dict__s
-        return (self.__dict__ == other.__dict__)
+        # Check for equality of the two objects' underlying __dict__s content,
+        # skipping the caching attributes _imap and _iter
+        # NOTE it is ok to not check these, because equality of the other
+        #      content asserts that the _imap attributes will be equal, too.
+        return all([self.__dict__[k] == other.__dict__[k]
+                    for k in self.__dict__.keys()
+                    if k not in ['_imap', '_iter']])
 
     def __str__(self) -> str:
         """Returns a parsed, human-readable information string"""
