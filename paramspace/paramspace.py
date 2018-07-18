@@ -195,6 +195,14 @@ class ParamSpace:
 
     # Magic methods ...........................................................
 
+    def __eq__(self, other) -> bool:
+        """Tests the equality of two ParamSpace objects."""
+        if not isinstance(other, ParamSpace):
+            return False
+
+        # Check for equality of the two objects' underlying __dict__s
+        return (self.__dict__ == other.__dict__)
+
     def __str__(self) -> str:
         """Returns a parsed, human-readable information string"""
         return self.get_info_str()

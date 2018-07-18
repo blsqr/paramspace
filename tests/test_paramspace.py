@@ -286,5 +286,4 @@ def test_dumping(basic_psp, tmpdir):
         psp_in = yaml.load(in_file)
 
     # Check that the contents are equivalent
-    # TODO recursively?!
     assert psp_in == psp_out
