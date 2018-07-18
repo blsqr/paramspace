@@ -25,21 +25,22 @@ Further features of the `paramspace` package:
 
 **Repository avatar:** The avatar of this repository shows a 2d representation of a 6-dimensional hybercube (see [Wikipedia](https://en.wikipedia.org/wiki/Hypercube), image in public domain).
 
-## Install
 
-For installation, it is best to use `pip` and pass the directory of the cloned repository to it. This will automatically install `paramspace` and its requirements and makes it very easy to uninstall or upgrade later.
+## Install
+The `paramspace` package is tested for Python 3.6 and 3.7.
+
+For installation, it is best to use `pip` and pass the URL to this repository to it. This will automatically install `paramspace` and its requirements and makes it very easy to uninstall or upgrade later.
 
 ```bash
 $ pip3 install git+ssh://git@ts-gitlab.iup.uni-heidelberg.de:10022/yunus/paramspace.git
 ```
 
-Requirements for the installation are Python 3. Note that the package was tested only with Python 3.6. All further requirements will be downloaded automatically by `pip`.
-
-If you would like access to the repository as well, you can also clone this repository and install from the local directory:
+You can also clone this repository and install from the local directory:
 ```bash
 $ git clone ssh://git@ts-gitlab.iup.uni-heidelberg.de:10022/yunus/paramspace.git
 $ pip3 install paramspace/
 ```
+
 
 ## Usage
 
@@ -51,14 +52,23 @@ cylinders = dict(pi=3.14159,
                  r=ParamDim(default=1, values=[1, 2, 3, 5, 10]),
                  h=ParamDim(default=1, linspace=[0, 10, 11]))
 
+# Define the volume calculation function
+def calc_cylinder_vol(*, pi, r, h):
+    return pi * (r**2) * h 
+
 # Initialise the parameter space
 pspace = ParamSpace(cylinders)
 
 # Iterate over it, using the parameters to calculate the cylinder's volume
 for params in pspace:
     print("Height: {},   Radius: {}".format(params['h'], params['r']))
-    vol = params['pi'] * params['r']**2 * params['h']
+    vol = calc_cylinder_vol(**params)  # Really handy way of passing params :)
     print("  --> Volume: {}".format(vol))
 ```
 
 Please refer to the docstrings for more information on how the `paramspace` package can be used.
+
+
+## Known issues
+* It is currently not possible to use `yaml.safe_dump` and `yaml.safe_load` with `ParamSpace` and `ParamDim`. This is also why the version requirement for `pyyaml` is so strict: as early as [v4.2](https://github.com/yaml/pyyaml/issues/193), safe loading and dumping might become the default.
+* Inconsistency: while a `yaml_constructor` module exists, there are no representer functions available that could create a reasonable serialisation of `paramspace` classes.

@@ -3,6 +3,8 @@
 from collections import OrderedDict
 
 import pytest
+import yaml
+
 from paramspace import ParamSpace, ParamDim, CoupledParamDim
 
 # Setup methods ---------------------------------------------------------------
@@ -266,3 +268,66 @@ def test_item_access(psp_with_coupled):
 def test_subspace():
     """Test whether the subspace retrieval is correct."""
     pass
+
+
+# YAML Dumping ----------------------------------------------------------------
+
+def test_yaml_unsafe_dump_and_load(basic_psp, adv_psp, psp_with_coupled, tmpdir):
+    """Tests that YAML dumping and reloading works"""
+    for i, psp_out in enumerate([basic_psp, adv_psp, psp_with_coupled]):
+        psp_out = basic_psp
+        path = tmpdir.join("out_{}.yml".format(i))
+        
+        # Dump it
+        with open(path, "x") as out_file:
+            yaml.dump(psp_out, stream=out_file)
+
+        # Read it in again
+        with open(path, "r") as in_file:
+            psp_in = yaml.load(in_file)
+
+        # Check that the contents are equivalent
+        assert psp_in == psp_out
+
+@pytest.mark.skip("Not yet working!")
+def test_yaml_safe_dump_and_load(basic_psp, tmpdir):
+    """Tests that YAML dumping and reloading works with both default dump and
+    load methods as well as with the safe versions.
+    """
+    def dump_load_assert_equal(d_out: dict, *, path, dump_func, load_func):
+        """Helper method for dumping, loading, and asserting equality"""
+        # Dump it
+        with open(path, "x") as out_file:
+            dump_func(d_out, stream=out_file)
+
+        # Read it in again
+        with open(path, "r") as in_file:
+            d_in = load_func(in_file)
+
+        # Check that the contents are equivalent
+        for k_out, v_out in d_out.items():
+            assert k_out in d_in
+            assert v_out == d_in[k_out]
+
+    # Use the dict of ParamDim objects for testing
+    d_out = basic_psp
+
+    # Test all possible combinations of dump and load methods
+    methods = [(yaml.dump, yaml.load),
+               (yaml.dump, yaml.safe_load),
+               (yaml.safe_dump, yaml.load),
+               (yaml.safe_dump, yaml.safe_load)]
+
+    for dump_func, load_func in methods:
+        # Generate file name and some output to know what went wrong ...
+        fname = "{}--{}.yml".format(dump_func.__name__, load_func.__name__)
+        path = tmpdir.join(fname)
+
+        print("Now testing combination:  {} + {}  ... "
+              "".format(dump_func.__name__, load_func.__name__), end="")
+
+        # Call the test function
+        dump_load_assert_equal(d_out, path=path,
+                               dump_func=dump_func, load_func=load_func)
+
+        print("Works!")

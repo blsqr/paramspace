@@ -152,10 +152,27 @@ class ParamDimBase:
 
     # Magic methods ...........................................................
 
-    def __len__(self) -> int:
-        """
+    def __eq__(self, other) -> bool:
+        """Check for equality between self and other
+        
+        Args:
+            other (ParamDimBase): the other ParamDim
+        
         Returns:
-            int: The length of the associated values list; if not enabled, returns 1.
+            bool: Whether the two parameter dimensions have the same content
+        """
+        if not isinstance(other, ParamDimBase):
+            return False
+
+        # Check equality of the objects' __dict__s
+        return (self.__dict__ == other.__dict__)
+
+    def __len__(self) -> int:
+        """Returns the length of the parameter dimension.
+        
+        Returns:
+            int: The length of the associated values list. If the parameter
+                dimension is not enabled, the length is 1.
         """
         if self.enabled:
             return len(self.values)
@@ -181,6 +198,7 @@ class ParamDimBase:
             str: Returns the string representation of the ParamDimBase-derived object
         """
         return repr(self)
+
 
     # Iterator functionality ..................................................
 
