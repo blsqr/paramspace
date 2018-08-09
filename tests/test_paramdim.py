@@ -201,7 +201,7 @@ def test_coupled_init():
 
     # Assure values cannot be changed
     cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4])
-    with pytest.raises(AttributeError, match="Values are already set and "):
+    with pytest.raises(AttributeError, match="Values already set; cannot be"):
         cpd.values = [1,2,3]
 
     # Test disabled has no state set

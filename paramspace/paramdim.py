@@ -98,25 +98,24 @@ class ParamDimBase:
         """The values that are iterated over.
         
         Returns:
-            tuple: the values this parameter dimension can take. If None, the values are not yet set.
+            tuple: the values this parameter dimension can take. If None, the
+                values are not yet set.
         """
         return self._vals
 
     @values.setter
     def values(self, values: Iterable):
-        """Set the possible parameter values. Can only be done once and converts the given Iterable to an immutable.
+        """Set the possible parameter values. Can only be done once and
+            converts the given Iterable to an immutable, i.e.: a tuple.
         
         Args:
             values (Iterable): Which values to set. Will be converted to tuple.
         
         Raises:
             RuntimeError: Raised when a span value was already set before
-            ValueError: Raised when the given iterable was not at least of length 1
+            ValueError: Raised when the given iterable was too short
         """
-        if self._vals is None:
-            self._vals = tuple(values)
-        else:
-            raise AttributeError("Values are already set and cannot be set again.")
+        self._set_vals(values)
 
     @property
     def state(self) -> Union[int, None]:
@@ -132,6 +131,7 @@ class ParamDimBase:
         """Sets the current iterator state."""
         if new_state is None:
             self._state = None
+
         elif isinstance(new_state, int):
             if new_state < 0 or new_state >= len(self):
                 raise ValueError("New state needs to be positive and cannot "
@@ -139,8 +139,9 @@ class ParamDimBase:
                                  "container ({}), "
                                  "was {}.".format(len(self)-1, new_state))
             self._state = new_state
+
         else:
-            raise TypeError("new state can only be of type int or None, "
+            raise TypeError("New state can only be of type int or None, "
                             "was "+str(type(new_state)))
 
     @property
@@ -148,6 +149,7 @@ class ParamDimBase:
         """If in an iteration: return the value according to the current state. If not in an iteration and/or disabled, return the default value."""
         if self.enabled and self.state is not None:
             return self.values[self.state]
+
         return self.default
 
     # Magic methods ...........................................................
@@ -258,6 +260,32 @@ class ParamDimBase:
         self.state = None
 
     # Non-public API ..........................................................
+    
+    def _set_vals(self, values: Iterable):
+        """This function sets the values attribute; it is needed for the
+        values setter function that is overwritten when changing the property
+        in a derived class.
+        
+        Args:
+            values (Iterable): The iterable to set the values with
+        
+        Raises:
+            AttributeError: If the attribute is already set
+            ValueError: If the iterator is invalid
+        """
+        if self._vals is not None:
+            # Was already set
+            raise AttributeError("Values already set; cannot be set again!")
+
+        elif not len(values):
+            raise ValueError("Argument `values` needs to be an iterable "
+                             "of at least length 1, was " + str(values))
+        
+        # Resolve iterator as tuple and store as attribute
+        self._vals = tuple(values)
+
+
+# -----------------------------------------------------------------------------
 
 class ParamDim(ParamDimBase):
     """The ParamDim class."""
@@ -266,39 +294,15 @@ class ParamDim(ParamDimBase):
         super().__init__(**kwargs)
 
         # Additional attributes, needed for coupling.
-        self._target_of = []
-
-    # Changes to the properties
-
-    @property
-    def values(self):
-        return super().values
-
-    @values.setter
-    def values(self, values: Iterable):
-        """Set the possible parameter values. Can only be done once and converts the given Iterable to an immutable.
-        
-        Args:
-            values (Iterable): Which values to set. Will be converted to tuple.
-        
-        Raises:
-            RuntimeError: Raised when a span value was already set before
-            ValueError: Raised when the given iterable was not at least of length 1
-        """
-        if self._vals is None:
-            if not len(values):
-                raise ValueError("Argument `values` needs to be an iterable of at least length 1, was " + str(values))
-
-            self._vals = tuple(values)
-
-        else:
-            raise AttributeError("Span is already set and cannot be set again.")
+        self._target_of = []        
 
     @property
     def target_of(self):
         """Returns the list that holds all the CoupledParamDim objects that point to this instance of ParamDim."""
         return self._target_of
 
+
+# -----------------------------------------------------------------------------
 
 class CoupledParamDim(ParamDimBase):
     """A CoupledParamDim object is recognized by the ParamSpace and its state moves alongside with another ParamDim's state."""
@@ -473,6 +477,7 @@ class CoupledParamDim(ParamDimBase):
         """
         if self.use_coupled_default:
             return self.target_pdim.default
+
         return self._default
 
     @property
@@ -494,23 +499,24 @@ class CoupledParamDim(ParamDimBase):
         # The regular case, after initialisation finished
         if self.use_coupled_values:
             return self.target_pdim.values
+
         return self._vals
 
     @values.setter
     def values(self, values: Iterable):
-        """Set the possible parameter values. Can only be done once and converts the given Iterable to an immutable.
+        """Set the possible parameter values. Can only be done once and 
+        converts the given Iterable to an immutable.
         
         Args:
             values (Iterable): Which values to set. Will be converted to tuple.
         
         Raises:
             RuntimeError: Raised when a span value was already set before
-            ValueError: Raised when the given iterable was not at least of length 1
+            ValueError: Raised when the given iterable was invalid
         """
-        if self._vals is None:
-            self._vals = tuple(values)
-        else:
-            raise AttributeError("Values are already set and cannot be set again.")
+        # NOTE: Need to define this property because the definition of the
+        #       getter property overwrites the inherited method
+        self._set_vals(values)
 
     @property
     def state(self) -> Union[int, None]:
@@ -533,4 +539,5 @@ class CoupledParamDim(ParamDimBase):
         """If in an iteration: return the value according to the current state. If not in an iteration and/or disabled, return the default value."""
         if self.enabled and self.state is not None:
             return self.values[self.state]
+
         return self.default
