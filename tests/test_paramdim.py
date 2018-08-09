@@ -142,6 +142,20 @@ def test_str_methods(various_pdims):
         str(pd)
         repr(pd)
 
+def test_np_methods_return_floats():
+    """Assert that when using linspace or logspace, the values are floats and
+    _not_ numpy scalar types.
+    """
+    pds = [
+        ParamDim(default=0, linspace=[0, 10, 11]),
+        ParamDim(default=0, logspace=[0, 10, 11])
+    ]
+
+    for pd in pds:
+        types = [type(v) for v in pd.values]
+        print("Types: " + str(types))
+        assert all([t is float for t in types])
+
 def test_coupled_init():
     """Test whether initialisation of CoupledParamDim works"""
     # These should work
