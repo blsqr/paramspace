@@ -52,7 +52,7 @@ class ParamDimBase:
 
         # Set the values, first via the `values` argument, and check whether there are enough arguments to set the values
         if values is not None:
-            self.values = values
+            self._set_values(values)
 
         elif not any([k in kwargs for k in ('range', 'linspace', 'logspace')]):
             raise ValueError("No argument `values` or other `**kwargs` was "
@@ -70,13 +70,18 @@ class ParamDimBase:
                               "`logspace`.".format(self.__class__.__name__),
                               UserWarning)
 
+            # Set the values
             if 'range' in kwargs:
-                self.values = range(*kwargs.get('range'))
+                self._set_values(range(*kwargs.get('range')))
+
             elif 'linspace' in kwargs:
-                self.values = np.linspace(*kwargs.get('linspace'))
+                self._set_values(np.linspace(*kwargs.get('linspace')),
+                                 as_float=True)
+
             elif 'logspace' in kwargs:
-                self.values = np.logspace(*kwargs.get('logspace'))
-            # else: not possible
+                self._set_values(np.logspace(*kwargs.get('logspace')),
+                                 as_float=True)
+            # else: not possible, was checked above
 
         elif kwargs and self.values is not None:
             warnings.warn("{}.__init__ was called with both the argument "
@@ -102,20 +107,6 @@ class ParamDimBase:
                 values are not yet set.
         """
         return self._vals
-
-    @values.setter
-    def values(self, values: Iterable):
-        """Set the possible parameter values. Can only be done once and
-            converts the given Iterable to an immutable, i.e.: a tuple.
-        
-        Args:
-            values (Iterable): Which values to set. Will be converted to tuple.
-        
-        Raises:
-            RuntimeError: Raised when a span value was already set before
-            ValueError: Raised when the given iterable was too short
-        """
-        self._set_vals(values)
 
     @property
     def state(self) -> Union[int, None]:
@@ -261,13 +252,15 @@ class ParamDimBase:
 
     # Non-public API ..........................................................
     
-    def _set_vals(self, values: Iterable):
+    def _set_values(self, values: Iterable, as_float: bool=False):
         """This function sets the values attribute; it is needed for the
         values setter function that is overwritten when changing the property
         in a derived class.
         
         Args:
             values (Iterable): The iterable to set the values with
+            as_float (bool, optional): If given, makes sure that values are
+                of type float; this is needed for the numpy initializers
         
         Raises:
             AttributeError: If the attribute is already set
@@ -281,8 +274,15 @@ class ParamDimBase:
             raise ValueError("Argument `values` needs to be an iterable "
                              "of at least length 1, was " + str(values))
         
-        # Resolve iterator as tuple and store as attribute
-        self._vals = tuple(values)
+        # Resolve iterator as tuple, optionally ensuring it is a float
+        if as_float:
+            values = tuple([float(v) for v in values])
+
+        else:
+            values = tuple(values)
+
+        # Now store as attribute
+        self._vals = values
 
 
 # -----------------------------------------------------------------------------
@@ -501,22 +501,6 @@ class CoupledParamDim(ParamDimBase):
             return self.target_pdim.values
 
         return self._vals
-
-    @values.setter
-    def values(self, values: Iterable):
-        """Set the possible parameter values. Can only be done once and 
-        converts the given Iterable to an immutable.
-        
-        Args:
-            values (Iterable): Which values to set. Will be converted to tuple.
-        
-        Raises:
-            RuntimeError: Raised when a span value was already set before
-            ValueError: Raised when the given iterable was invalid
-        """
-        # NOTE: Need to define this property because the definition of the
-        #       getter property overwrites the inherited method
-        self._set_vals(values)
 
     @property
     def state(self) -> Union[int, None]:
