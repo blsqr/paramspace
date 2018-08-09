@@ -72,30 +72,30 @@ def test_properties(various_pdims):
     vpd = various_pdims
 
     # Whether the values are write-protected
-    with pytest.raises(AttributeError):
+    with pytest.raises(AttributeError, match="can't set attribute"):
         vpd['one'].values = 0
     
-    with pytest.raises(AttributeError):
+    with pytest.raises(AttributeError, match="can't set attribute"):
         vpd['two'].values = [1,2,3]
 
-    with pytest.raises(AttributeError):
+    with pytest.raises(AttributeError, match="can't set attribute"):
         vpd['base'].values = "baz"
 
     # Assert immutability of values
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="does not support item assignment"):
         vpd['one'].values[0] = "foo"
     
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="does not support item assignment"):
         vpd['two'].values[1] = "bar"
 
     # Whether the state is restricted to the value bounds
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="needs to be positive"):
         vpd['one'].state = -1
     
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="cannot exceed the highest index"):
         vpd['two'].state = 4
 
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="can only be of type int or None"):
         vpd['two'].state = "foo"
 
     # Misc
@@ -216,7 +216,7 @@ def test_coupled_init():
     # Assure values cannot be changed
     cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4])
     with pytest.raises(AttributeError, match="Values already set; cannot be"):
-        cpd.values = [1,2,3]
+        cpd._set_values([1,2,3])
 
     # Test disabled has no state set
     cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4], enabled=False)
