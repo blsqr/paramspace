@@ -8,7 +8,7 @@ test_deps    = ['tox>=3.1.2', 'pytest>=3.4.0', 'pytest-cov>=2.5.1']
 
 
 setup(name='ParamSpace',
-      version='1.1.0-pre.2',  # NOTE: also change this in __init__.py
+      version='1.1.0',  # NOTE: also change this in __init__.py
       description='Multidimensional parameter space with dictionaries at each point.',
       long_description='Classes that allow easy iteration over a multidimensional parameter space, generating dictionaries at each point in this parameter space.',
       author='Yunus Sevinchan',
@@ -29,4 +29,4 @@ setup(name='ParamSpace',
       tests_require=test_deps,
       test_suite='tox',
       extras_require=dict(test_deps=test_deps)
-      )
+  
