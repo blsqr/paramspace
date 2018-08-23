@@ -29,4 +29,4 @@ setup(name='ParamSpace',
       tests_require=test_deps,
       test_suite='tox',
       extras_require=dict(test_deps=test_deps)
-  
+  )
