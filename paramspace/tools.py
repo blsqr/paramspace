@@ -324,7 +324,8 @@ def recursive_replace(obj: Union[Mapping, Sequence], *, select_func: Callable, r
             replace(obj, key=key,
                     replace_by=recursive_replace(val,
                                                  select_func=select_func,
-                                                 replace_func=replace_func))
+                                                 replace_func=replace_func,
+                                                 stop_recursion_types=stop_recursion_types))
 
         # else: was not selected and cannot be further recursed, thus: stays the same
 
