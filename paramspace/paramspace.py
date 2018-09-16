@@ -124,14 +124,16 @@ class ParamSpace:
         """Returns the dictionary with all parameter dimensions resolved to their default values."""
         return recursive_replace(copy.deepcopy(self._dict),
                                  select_func=lambda v: isinstance(v, ParamDimBase),
-                                 replace_func=lambda pdim: pdim.default)
+                                 replace_func=lambda pdim: pdim.default,
+                                 stop_recursion_types=(ParamSpace,))
 
     @property
     def current_point(self) -> dict:
         """Returns the dictionary with all parameter dimensions resolved to the values, depending on the point in parameter space at which the iteration is."""
         return recursive_replace(copy.deepcopy(self._dict),
                                  select_func=lambda v: isinstance(v, ParamDimBase),
-                                 replace_func=lambda pdim: pdim.current_value)
+                                 replace_func=lambda pdim: pdim.current_value,
+                                 stop_recursion_types=(ParamSpace,))
 
     @property
     def volume(self) -> int:
