@@ -45,7 +45,6 @@ def adv_psp(request):
    
     return ParamSpace(d)
 
-
 @pytest.fixture(scope='module')
 def psp_with_coupled(request):
     """Used to setup a pspace object with coupled param dims"""
@@ -59,6 +58,12 @@ def psp_with_coupled(request):
              )
    
     return ParamSpace(d)
+
+@pytest.fixture(scope='module')
+def psp_nested(request, adv_psp, basic_psp):
+	"""Creates two ParamSpaces nested within another ParamSpace"""
+	return ParamSpace(dict(foo="bar", adv=adv_psp, basic=basic_psp))
+
 
 # Tests -----------------------------------------------------------------------
 
@@ -234,6 +239,13 @@ def test_coupled(psp_with_coupled):
         assert pt['d']['cc2'] == pt['a']
         assert pt['d']['cc3'] == pt['d']['aa']
     
+def test_nested(psp_nested, basic_psp):
+	"""Tests whether nested ParamSpaces behave as desired"""
+	default = psp_nested.default
+
+	assert default['foo'] == "bar"
+	assert default['basic'] == basic_psp
+
 def test_strings(basic_psp, adv_psp, psp_with_coupled):
     """Test whether the string generation works correctly."""
     for psp in [basic_psp, adv_psp, psp_with_coupled]:
