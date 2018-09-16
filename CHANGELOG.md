@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v1.1.1
+- #17: Fix a bug that prohibited using nested `ParamSpace` objects
+
 ## v1.1
 - #10: CI expanded to test for multiple Python versions
 - #6, #9: Use semantic versioning; clean up tags and branches; add issue and MR templates
