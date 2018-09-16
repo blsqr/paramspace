@@ -227,7 +227,7 @@ def recursive_collect(obj: Union[Mapping, Sequence], *, select_func: Callable, p
     # Compile the list of types that should not be recursed further
     if not stop_recursion_types:
         # Specify the types that should never be further recursed
-        stop_recursion_types = (str, )
+        stop_recursion_types = (str,)
     else:
         # Assure that strings are never recursed further
         if str not in stop_recursion_types:
@@ -274,7 +274,7 @@ def recursive_collect(obj: Union[Mapping, Sequence], *, select_func: Callable, p
 
     return coll
 
-def recursive_replace(obj: Union[Mapping, Sequence], *, select_func: Callable, replace_func: Callable) -> Union[Mapping, Sequence]:
+def recursive_replace(obj: Union[Mapping, Sequence], *, select_func: Callable, replace_func: Callable, stop_recursion_types: tuple=None) -> Union[Mapping, Sequence]:
     """Go recursively through a mapping or sequence and call a replace function on each element that the select function returned true on.
     
     For passing arguments to any of the two, use lambda functions.    
@@ -285,6 +285,9 @@ def recursive_replace(obj: Union[Mapping, Sequence], *, select_func: Callable, r
         select_func (Callable): The function that each value is passed to
         replace_func (Callable): The replacement function, called if the
             selection function returned True on an element of the mapping
+		stop_recursion_types (tuple, optional): Can specify types here that
+            will not be further searched through.
+            NOTE: strings are never iterated through further
     
     Returns:
         Union[Mapping, Sequence]: The updated mapping where each element that was selected was replaced by the return value of the replacement function.
@@ -299,6 +302,16 @@ def recursive_replace(obj: Union[Mapping, Sequence], *, select_func: Callable, r
         except TypeError as err:
             raise TypeError("Failed to replace element via item assignment; probably because given container type ({}) was not mutable for key '{}'.".format(type(ms), key)) from err
 
+
+    # Compile the list of types that should not be recursed further
+    if not stop_recursion_types:
+        # Specify the types that should never be further recursed
+        stop_recursion_types = (str,)
+    else:
+        # Assure that strings are never recursed further
+        if str not in stop_recursion_types:
+            stop_recursion_types += (str,)
+
     # Go through all items
     for key, val in get_key_val_iter(obj):
         if select_func(val):
@@ -306,7 +319,7 @@ def recursive_replace(obj: Union[Mapping, Sequence], *, select_func: Callable, r
             replace(obj, key=key,
                     replace_by=replace_func(val))
 
-        elif is_iterable(val) and not isinstance(val, str):
+        elif is_iterable(val) and not isinstance(val, stop_recursion_types):
             # Not the desired element, but recursion possible ...
             replace(obj, key=key,
                     replace_by=recursive_replace(val,
