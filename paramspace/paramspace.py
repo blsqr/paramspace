@@ -159,6 +159,16 @@ class ParamSpace:
                                  stop_recursion_types=(ParamSpace,))
 
     @property
+    def dims(self) -> Dict[Tuple[str], ParamDim]:
+        """Returns the ParamDim objects found in this ParamSpace"""
+        return self._dims
+
+    @property
+    def coupled_dims(self) -> Dict[Tuple[str], CoupledParamDim]:
+        """Returns the CoupledParamDim objects found in this ParamSpace"""
+        return self._cdims
+        
+    @property
     def volume(self) -> int:
         """Returns the volume of the parameter space, not counting coupled
         parameter dimensions.
@@ -185,49 +195,10 @@ class ParamSpace:
     def shape(self) -> Tuple[int]:
         """Returns the shape of the parameter space"""
         return tuple([len(pd) for pd in self.dims.values()])
-
-    @property
-    def state_no(self) -> Union[int, None]:
-        """Returns the current state number by visiting the active parameter
-        dimensions and querying their state numbers.
-        """
-        log.debug("Calculating state number ...")
-
-        # Go over all parameter dimensions and extract the state values
-        states = [pdim.state for pdim in self.dims.values()]
-        log.debug("  states:       %s", states)
-
-        # First check if any of the states were None. If yes, that means that
-        # the parameter space is not within an iteration currently, thus the
-        # state also needs to be None
-        if None in states:
-            log.debug("At least one parameter dimension state was None, thus "
-                      "the ParamSpace state is not within an iteration and "
-                      "the state is also None.")
-            return None
-        # NOTE can now be sure that all values are integer states, no Nones
-
-        # Now need the lengths; they will be in the same order
-        lengths = [len(pdim) for pdim in self.dims.values()]
-        log.debug("  lengths:      %s", lengths)
-
-        # The lengths will now be used to calculate the multipliers, starting
-        # with 1 for the 0th pdim.
-        # For example, given lengths [10, 10,  20,    5], the corresponding
-        # multipliers are:           [ 1, 10, 100, 2000]
-        mults = [reduce(lambda x, y: x*y, lengths[:i], 1)
-                 for i in range(self.num_dims)]
-        log.debug("  multipliers:  %s", mults)
-
-        # Now, calculate the state number
-        state_no = sum([(s * m) for s, m in zip(states, mults)])
-        log.debug("  state no:     %s", state_no)
-
-        return state_no
     
     @property
     def state_vector(self) -> Tuple[int]:
-        """Returns the state vector of all detected parameter dimensions."""
+        """Returns a tuple of all current parameter dimension states"""
         return tuple([s.state for s in self.dims.values()])
 
     @property
@@ -251,14 +222,43 @@ class ParamSpace:
         return len(self.coupled_dims)
 
     @property
-    def dims(self) -> Dict[Tuple[str], ParamDim]:
-        """Returns the ParamDim objects found in this ParamSpace"""
-        return self._dims
+    def state_no(self) -> Union[int, None]:
+        """Returns the current state number by visiting the active parameter
+        dimensions and querying their state numbers.
+        """
+        log.debug("Calculating state number ...")
 
-    @property
-    def coupled_dims(self) -> Dict[Tuple[str], CoupledParamDim]:
-        """Returns the CoupledParamDim objects found in this ParamSpace"""
-        return self._cdims
+        # Go over all parameter dimensions and extract the state values
+        states = self.state_vector
+        log.debug("  states:       %s", states)
+
+        # First check if any of the states were None. If yes, that means that
+        # the parameter space is not within an iteration currently, thus the
+        # state also needs to be None
+        if None in states:
+            log.debug("At least one parameter dimension state was None, thus "
+                      "the ParamSpace state is not within an iteration and "
+                      "the state is also None.")
+            return None
+        # NOTE can now be sure that all values are integer states, no Nones
+
+        # Now need the lengths, i.e. the shape of the parameter space
+        shape = self.shape
+        log.debug("  shape:       %s", shape)
+
+        # The lengths will now be used to calculate the multipliers, starting
+        # with 1 for the 0th pdim.
+        # For example, given lengths [10, 10,  20,    5], the corresponding
+        # multipliers are:           [ 1, 10, 100, 2000]
+        mults = [reduce(lambda x, y: x*y, shape[:i], 1)
+                 for i in range(self.num_dims)]
+        log.debug("  multipliers:  %s", mults)
+
+        # Now, calculate the state number
+        state_no = sum([(s * m) for s, m in zip(states, mults)])
+        log.debug("  state no:     %s", state_no)
+
+        return state_no
 
     # Magic methods ...........................................................
 
@@ -501,7 +501,7 @@ class ParamSpace:
             self._imap = imap
 
         return self._imap
-        
+
 
     # Non-public API ..........................................................
 
