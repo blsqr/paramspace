@@ -4,12 +4,13 @@ from collections import OrderedDict
 
 import pytest
 import yaml
+import numpy as np
 
 from paramspace import ParamSpace, ParamDim, CoupledParamDim
 
 # Setup methods ---------------------------------------------------------------
 
-@pytest.fixture(scope='module')
+@pytest.fixture()
 def basic_psp(request):
     """Used to setup a basic pspace object to be tested on."""
     d = dict(a=1, b=2, foo="bar", spam="eggs", mutable=[0, 0, 0],
@@ -27,7 +28,7 @@ def basic_psp(request):
    
     return ParamSpace(d)
 
-@pytest.fixture(scope='module')
+@pytest.fixture()
 def adv_psp(request):
     """Used to setup a more elaborate pspace object to be tested on. Includes name clashes, manually set names, order, ..."""
     d = dict(a=1, b=2, foo="bar", spam="eggs", mutable=[0, 0, 0],
@@ -45,7 +46,7 @@ def adv_psp(request):
    
     return ParamSpace(d)
 
-@pytest.fixture(scope='module')
+@pytest.fixture()
 def psp_with_coupled(request):
     """Used to setup a pspace object with coupled param dims"""
     d = dict(a=ParamDim(default=0, values=[1,2,3], order=0),
@@ -59,7 +60,7 @@ def psp_with_coupled(request):
    
     return ParamSpace(d)
 
-@pytest.fixture(scope='module')
+@pytest.fixture()
 def psp_nested(request, basic_psp):
 	"""Creates two ParamSpaces nested within another ParamSpace"""
 	return ParamSpace(dict(foo="bar", basic=basic_psp,
@@ -199,12 +200,38 @@ def test_iteration(basic_psp, adv_psp):
                       adv_psp.all_points(with_info=info)),
                      (basic_psp.volume, adv_psp.volume))        
 
+def test_state_no(basic_psp, adv_psp, psp_with_coupled):
+    """Test that state number calculation is correct"""    
+    def test_state_nos(psp):
+        # Check that the state number is None outside an iteration
+        assert psp.state_no is None
+        
+        # Get all points, then check them
+        nos = [n for _, n in psp.all_points(with_info=("state_no",))]
+
+        # Interval is correct
+        assert nos[0] == 0
+        assert len(nos) == psp.volume
+        assert nos[-1] == max(nos) == psp.volume - 1
+        
+        # Increment is always 1
+        d = np.diff(nos)
+        assert max(d) == min(d) == 1
+
+        # All ok
+        return True
+
+    # Call the test function on the given parameter spaces
+    assert test_state_nos(basic_psp)
+    assert test_state_nos(adv_psp)
+    assert test_state_nos(psp_with_coupled)
+
 def test_inverse_mapping(basic_psp, adv_psp):
     """Test whether the state mapping is correct."""
     basic_psp.inverse_mapping()
     adv_psp.inverse_mapping()
 
-    # Test caching
+    # Test caching branch
     basic_psp.inverse_mapping()
     adv_psp.inverse_mapping()
 
