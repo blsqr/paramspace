@@ -1,12 +1,12 @@
-"""The ParamSpace class is an extension of a dict, which can be used to iterate over a paramter space."""
+"""Implementation of the ParamSpace class"""
 
 import copy
 import logging
 import warnings
-import pprint
-from itertools import chain
 import collections
 from collections import OrderedDict
+from itertools import chain
+from functools import reduce
 from typing import Union, Sequence, Tuple, Generator, MutableMapping, MutableSequence, Dict
 
 import numpy as np
@@ -23,6 +23,14 @@ PStype = Union[MutableMapping, MutableSequence]
 # -----------------------------------------------------------------------------
 
 class ParamSpace:
+    """The ParamSpace class holds dict-like data in which some entries are
+    ParamDim objects. These objects each define one parameter dimension.
+
+    The ParamSpace class then allows to iterate over the space that is created
+    by the parameter dimensions: at each point of the space (created by the
+    cartesian product of all dimensions), one manifestation of the underlying
+    dict-like data is returned.
+    """
 
     def __init__(self, d: PStype):
         """Initialize a ParamSpace object from a given mapping or sequence.
@@ -41,29 +49,31 @@ class ParamSpace:
                           " somewhere unexpected.".format(type(d)),
                           UserWarning)
 
-        # Save a deep copy of the base dictionary. This dictionary will never be changed.
+        # Save a deep copy of the base dictionary. This dictionary will never
+        # be changed.
         self._init_dict = copy.deepcopy(d)
 
-        # Initialize a working copy. The parameter dimensions embedded in this copy will change their values
+        # Initialize a working copy. The parameter dimensions embedded in this
+        # copy will change their values
         self._dict = copy.deepcopy(self._init_dict)
 
-        # Initialize attributes that will be used to gather parameter dimensions and coupled parameter dimensions, and call the function that gathers these objects
+        # Initialize attributes that will be used to gather parameter
+        # dimensions and coupled parameter dimensions, and call the function
+        # that gathers these objects
         self._dims = None
         self._cdims = None
         self._gather_paramdims() # NOTE attributes set within this method
-
-        # Initialize state attributes
-        self._state_no = None
 
         # Initialize caching attributes
         self._imap = None
         self._iter = None
 
     def _gather_paramdims(self):
-        """Gathers the ParamDim objects by recursively going through the dictionary."""
+        """Gathers ParamDim objects by recursively going through the dict"""
         log.debug("Gathering ParamDim objects ...")
 
-        # Traverse the dict and look for ParamDim objects; collect them as (order, key, value) tuples
+        # Traverse the dict and look for ParamDim objects; collect them as
+        # (order, key, value) tuples
         pdims = recursive_collect(self._dict,
                                   select_func=lambda p: isinstance(p,ParamDim),
                                   prepend_info=('info_func', 'keys'),
@@ -71,25 +81,32 @@ class ParamSpace:
                                   stop_recursion_types=(ParamDimBase,))
 
         # Sort them -- very important for consistency!
-        # This looks at the info first, which is the order entry, and then at the keys. If a ParamDim does not provide an order, it has entry np.inf there, such that those without order get sorted by the key.
+        # This looks at the info first, which is the order entry, and then at
+        # the keys. If a ParamDim does not provide an order, it has entry
+        # np.inf there, such that those without order get sorted by the key.
         pdims.sort()
 
-        # Now need to reduce the list items to 2-tuples, ditching the order, to allow to initialise the OrderedDict
+        # Now need to reduce the list items to 2-tuples, ditching the order,
+        # to allow to initialise the OrderedDict
         self._dims = OrderedDict([tpl[1:] for tpl in pdims])
         log.debug("Found %d ParamDim objects.", self.num_dims)
 
 
         log.debug("Gathering CoupledParamDim objects ...")
-        # Also collect the coupled ParamDims and continue with the same procedure
+        # Also collect the coupled ParamDims; continue with the same procedure
         cpdims = recursive_collect(self._dict,
                                    select_func=lambda p: isinstance(p, CoupledParamDim),
                                    prepend_info=('info_func', 'keys'),
                                    info_func=lambda p: p.order,
                                    stop_recursion_types=(ParamDimBase,))
-        cpdims.sort() # same sorting rules as above, but not as crucial here because they do not change the iteration order through state space
+        cpdims.sort()
+        # same sorting rules as above, but not as crucial here because they do
+        # not change the iteration order through state space
         self._cdims = OrderedDict([tpl[1:] for tpl in cpdims])
 
-        # Now resolve the coupling targets and add them to CoupledParamDim instances. Also, let the target ParamDim objects know which CoupledParamDim couples to them
+        # Now resolve the coupling targets and add them to CoupledParamDim
+        # instances. Also, let the target ParamDim objects know which
+        # CoupledParamDim couples to them
         for cpdim_key, cpdim in self.coupled_dims.items():
             # Try to get the coupling target by name
             try:
@@ -106,7 +123,8 @@ class ParamSpace:
             # Set attribute of the coupled ParamDim
             cpdim.target_pdim = c_target
 
-            # And inform the target ParamDim about it being the target of the coupled param dim, if it is not already included there
+            # And inform the target ParamDim about it being the target of the
+            # coupled param dim, if it is not already included there
             if cpdim not in c_target.target_of:
                 c_target.target_of.append(cpdim)
             
@@ -121,7 +139,9 @@ class ParamSpace:
 
     @property
     def default(self) -> dict:
-        """Returns the dictionary with all parameter dimensions resolved to their default values."""
+        """Returns the dictionary with all parameter dimensions resolved to
+        their default values.
+        """
         return recursive_replace(copy.deepcopy(self._dict),
                                  select_func=lambda v: isinstance(v, ParamDimBase),
                                  replace_func=lambda pdim: pdim.default,
@@ -129,61 +149,14 @@ class ParamSpace:
 
     @property
     def current_point(self) -> dict:
-        """Returns the dictionary with all parameter dimensions resolved to the values, depending on the point in parameter space at which the iteration is."""
+        """Returns the dictionary with all parameter dimensions resolved to
+        the values, depending on the point in parameter space at which the
+        iteration is.
+        """
         return recursive_replace(copy.deepcopy(self._dict),
                                  select_func=lambda v: isinstance(v, ParamDimBase),
                                  replace_func=lambda pdim: pdim.current_value,
                                  stop_recursion_types=(ParamSpace,))
-
-    @property
-    def volume(self) -> int:
-        """Returns the volume of the parameter space, not counting coupled parameter dimensions."""
-        if self.num_dims == 0:
-            return 0
-
-        vol = 1
-        for pdim in self.dims.values():
-            vol *= len(pdim)
-        return vol
-
-    @property
-    def full_volume(self) -> int:
-        """Returns the full volume of the parameter space, including coupled parameter dimensions."""
-        vol = 1
-        for pdim in chain(self.dims.values(), self.coupled_dims.values()):
-            vol *= len(pdim)
-        return vol
-
-    @property
-    def shape(self) -> Tuple[int]:
-        """Returns the shape of the parameter space"""
-        return tuple([len(pd) for pd in self.dims.values()])
-
-    @property
-    def state_no(self) -> int:
-        """Returns the current state number."""
-        return self._state_no
-    
-    @property
-    def state_vector(self) -> Tuple[int]:
-        """Returns the state vector of all detected parameter dimensions."""
-        return tuple([s.state for s in self.dims.values()])
-
-    @property
-    def full_state_vector(self) -> OrderedDict:
-        """Returns an OrderedDict of all parameter space dimensions, including coupled ones."""
-        return OrderedDict((k, v) for k, v in chain(self.dims.items(),
-                                                    self.coupled_dims.items()))
-
-    @property
-    def num_dims(self) -> int:
-        """Returns the number of parameter space dimensions. Coupled dimensions are not counted here!"""
-        return len(self.dims)
-
-    @property
-    def num_coupled_dims(self) -> int:
-        """Returns the number of coupled parameter space dimensions."""
-        return len(self.coupled_dims)
 
     @property
     def dims(self) -> Dict[Tuple[str], ParamDim]:
@@ -194,6 +167,98 @@ class ParamSpace:
     def coupled_dims(self) -> Dict[Tuple[str], CoupledParamDim]:
         """Returns the CoupledParamDim objects found in this ParamSpace"""
         return self._cdims
+        
+    @property
+    def volume(self) -> int:
+        """Returns the volume of the parameter space, not counting coupled
+        parameter dimensions.
+        """
+        if self.num_dims == 0:
+            return 0
+
+        vol = 1
+        for pdim in self.dims.values():
+            vol *= len(pdim)
+        return vol
+
+    @property
+    def full_volume(self) -> int:
+        """Returns the full volume of the parameter space, including coupled
+        parameter dimensions.
+        """
+        vol = 1
+        for pdim in chain(self.dims.values(), self.coupled_dims.values()):
+            vol *= len(pdim)
+        return vol
+
+    @property
+    def shape(self) -> Tuple[int]:
+        """Returns the shape of the parameter space"""
+        return tuple([len(pd) for pd in self.dims.values()])
+    
+    @property
+    def state_vector(self) -> Tuple[int]:
+        """Returns a tuple of all current parameter dimension states"""
+        return tuple([s.state for s in self.dims.values()])
+
+    @property
+    def full_state_vector(self) -> OrderedDict:
+        """Returns an OrderedDict of all parameter space dimensions, including
+        coupled ones.
+        """
+        return OrderedDict((k, v) for k, v in chain(self.dims.items(),
+                                                    self.coupled_dims.items()))
+
+    @property
+    def num_dims(self) -> int:
+        """Returns the number of parameter space dimensions. Coupled
+        dimensions are not counted here!
+        """
+        return len(self.dims)
+
+    @property
+    def num_coupled_dims(self) -> int:
+        """Returns the number of coupled parameter space dimensions."""
+        return len(self.coupled_dims)
+
+    @property
+    def state_no(self) -> Union[int, None]:
+        """Returns the current state number by visiting the active parameter
+        dimensions and querying their state numbers.
+        """
+        log.debug("Calculating state number ...")
+
+        # Go over all parameter dimensions and extract the state values
+        states = self.state_vector
+        log.debug("  states:       %s", states)
+
+        # First check if any of the states were None. If yes, that means that
+        # the parameter space is not within an iteration currently, thus the
+        # state also needs to be None
+        if None in states:
+            log.debug("At least one parameter dimension state was None, thus "
+                      "the ParamSpace state is not within an iteration and "
+                      "the state is also None.")
+            return None
+        # NOTE can now be sure that all values are integer states, no Nones
+
+        # Now need the lengths, i.e. the shape of the parameter space
+        shape = self.shape
+        log.debug("  shape:       %s", shape)
+
+        # The lengths will now be used to calculate the multipliers, starting
+        # with 1 for the 0th pdim.
+        # For example, given lengths [10, 10,  20,    5], the corresponding
+        # multipliers are:           [ 1, 10, 100, 2000]
+        mults = [reduce(lambda x, y: x*y, shape[:i], 1)
+                 for i in range(self.num_dims)]
+        log.debug("  multipliers:  %s", mults)
+
+        # Now, calculate the state number
+        state_no = sum([(s * m) for s, m in zip(states, mults)])
+        log.debug("  state no:     %s", state_no)
+
+        return state_no
 
     # Magic methods ...........................................................
 
@@ -227,12 +292,12 @@ class ParamSpace:
                           )
                 )
 
-    def __format__(self, fstr: str) -> str:
-        """ """
-        raise NotImplementedError
+    # TODO implement __format__
 
     def get_info_str(self) -> str:
-        """Returns a string that gives information about shape and size of this ParamSpace."""
+        """Returns a string that gives information about shape and size of
+        this ParamSpace.
+        """
         # Gather lines in a list
         l = ["ParamSpace Information"]
 
@@ -306,7 +371,8 @@ class ParamSpace:
     # Iterator functionality ..................................................
 
     def __iter__(self) -> PStype:
-        """Move to the next valid point in parameter space and return the corresponding dictionary.
+        """Move to the next valid point in parameter space and return the
+        corresponding dictionary.
         
         Returns:
             The current value of the iteration
@@ -322,7 +388,6 @@ class ParamSpace:
         return self._iter()
         # NOTE the generator will also raise StopIteration once it ended
         
-
     def all_points(self, with_info: Sequence=None) -> Generator[PStype, None, None]:
         """Returns a generator yielding all points of the parameter space."""
 
@@ -336,9 +401,6 @@ class ParamSpace:
         for pdim in self.dims.values():
             pdim.enter_iteration()
 
-        # This corresponds to ParamSpace's state 0
-        self._state_no = 0
-
         # Yield the first state
         yield self._gen_info_tuple(self.current_point, with_info=with_info)
 
@@ -349,13 +411,14 @@ class ParamSpace:
         else:
             log.debug("Visited every point in ParamSpace.")
             self._reset()
-            log.debug("Reset ParamSpace and ParamDims.")
             return
 
     def _next_state(self) -> bool:
-        """Iterates the state of the parameter dimensions managed by this ParamSpace.
+        """Iterates the state of the parameter dimensions managed by this
+        ParamSpace.
 
-        Important: this assumes that the parameter dimensions already have been prepared for an iteration and that self.state_no == 0.
+        Important: this assumes that the parameter dimensions already have
+        been prepared for an iteration and that self.state_no == 0.
         
         Returns:
             bool: Returns False when iteration finishes
@@ -367,32 +430,39 @@ class ParamSpace:
                 pdim.iterate_state()
 
             except StopIteration:
-                # Went through all states of this dim -> go to next dimension and start iterating that (similar to the carry bit in addition)
+                # Went through all states of this dim -> go to next dimension
+                # and start iterating that (similar to the carry bit in
+                # addition)
                 # Important: prepare pdim such that it is at state zero again
                 pdim.enter_iteration()
                 continue
+            
             else:
                 # Iterated to next step without reaching the last dim item
                 break
         else:
-            # Loop went through -> all states visited
-            self._reset()            
+            # Loop went through
+            # -> All states visited.
+            #    Now need to reset and communicate that iteration is finished;
+            #    do so by returning false, which is more convenient than
+            #    raising StopIteration; the iteration is handled by the
+            #    all_points method anyway.
+            self._reset()
             return False
 
-        # Broke out of loop -> Got the next state and not at the end yet
-        # Increment state number
-        self._state_no += 1
-
-        # Have not reached the end yet; communicate that
+        # If this point is reached: broke out of loop
+        # -> The next state was reached and we are not at the end yet.
+        #    Communicate that by returning True.
         return True
 
     def _reset(self) -> None:
-        """Resets the paramter space and all of its dimensions to the initial state, i.e. where all states are None.
+        """Resets the paramter space and all of its dimensions to the initial
+        state, i.e. where all states are None.
         """
         for pdim in self.dims.values():
             pdim.reset()
 
-        self._state_no = None
+        log.debug("Reset ParamSpace and ParamDims.")
 
     # Public API ..............................................................
 
@@ -420,25 +490,24 @@ class ParamSpace:
                 imap[tuple(s)] = state_no
 
             except IndexError as err:
-                fstr = ("Creating inverse mapping failed, probably due to a "
-                        "change in the parameter dimensions sizes."
-                        " Selector: {} -- imap shape: {}")
-                raise RuntimeError(fstr.format(s, imap.shape)) from err
+                raise RuntimeError("Creating inverse mapping failed, probably "
+                                   "due to a change in the parameter "
+                                   "dimensions sizes.  "
+                                   "Selector: {} -- imap shape: {}"
+                                   "".format(s, imap.shape)
+                                   ) from err
         else:
             log.debug("Finished creating inverse mapping. Caching it...")
             self._imap = imap
 
         return self._imap
 
-    def get_subspace(self, **slices):
-        """Returns a subspace of this parameter space."""
-        # TODO find a way to preserve the state numbers from the parent
-        raise NotImplementedError
 
     # Non-public API ..........................................................
 
     def _dim_no_by_name(self, name: str, include_coupled: bool=False) -> int:
-        """Tries to find a ParamDim by its name and returns the number it corresponds to in the list of ordered 
+        """Tries to find a ParamDim by its name and returns the number it
+        corresponds to in the list of ordered 
         
         Args:
             name (str): the name of the dim, which can be a tuple of strings
@@ -493,7 +562,6 @@ class ParamSpace:
                            "found in this ParamSpace.".format(name))
 
         return dim_no
-
 
     def _dim_by_name(self, name: str, include_coupled: bool=False) -> ParamDimBase:
         """Get the ParamDim object with the given name
@@ -554,12 +622,10 @@ class ParamSpace:
 
         return pdim
 
-    def _dim_no_by_name(self, name: str, include_coupled: bool=False) -> int:
-        """Returns the number of the dimension object with that name."""
-        raise NotImplementedError
-
     def _gen_info_tuple(self, pt, *, with_info: Sequence) -> tuple:
-        """Is used during iteration to add additional information to the return tuple."""
+        """Is used during iteration to add additional information to the
+        return tuple.
+        """
         if not with_info:
             return pt
 
@@ -574,7 +640,8 @@ class ParamSpace:
                 info_tup += ((self.state_no+1)/self.volume,)
             else:
                 raise ValueError("No such information '{}' available. "
-                                 "Check the `with_info` argument!".format(info))
+                                 "Check the `with_info` argument!"
+                                 "".format(info))
 
         # Concatenate and return
         return (pt,) + info_tup

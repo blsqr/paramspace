@@ -23,7 +23,6 @@ def various_pdims(request):
     pds['logspace']  = ParamDim(default=0, logspace=[-1, 1, 11])
     pds['named']     = ParamDim(default=0, values=[1,2,3], name="named_span")
     pds['with_order']= ParamDim(default=0, values=[1,2,3], order=42)
-    pds['disabled']  = ParamDim(default=0, values=[1,2,3], enabled=False)
 
     # coupled
     pds['coupled1']  = CoupledParamDim(target_pdim=pds['one'])
@@ -124,12 +123,6 @@ def test_iteration(various_pdims):
 
     # State should be None now
     assert pd.state is None
-
-    # For disabled ParamDim
-    assert various_pdims['disabled'].current_value == 0
-    assert len(various_pdims['disabled']) == 1
-    with pytest.raises(StopIteration):
-        various_pdims['disabled'].__next__()
 
     # And as a loop
     for _ in pd:

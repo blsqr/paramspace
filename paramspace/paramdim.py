@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 class ParamDimBase:
     """The ParamDim base class."""
 
-    def __init__(self, *, default, values: Iterable=None, enabled: bool=True, order: float=np.inf, name: str=None, **kwargs) -> None:
+    def __init__(self, *, default, values: Iterable=None, order: float=np.inf, name: str=None, **kwargs) -> None:
         """Initialise a parameter dimension object.
         
         Args:
@@ -23,8 +23,6 @@ class ParamDimBase:
             values (Iterable, optional): Which discrete values this parameter
                 dimension can take. This argument takes precedence over any
                 constructors given in the kwargs (like range, linspace, …).
-            enabled (bool, optional): Whether this parameter dimension is
-                enabled and should be used in a sweep. Default: True
             order (float, optional): If given, this allows to specify an order
                 within a ParamSpace that includes this ParamDim object
             name (str, optional): If given, this is an *additional* name of
@@ -41,7 +39,6 @@ class ParamDimBase:
         # Initialize attributes that are not managed
         self.name = name
         self.order = order
-        self.enabled = enabled
         
         # Initialize attributes that are managed by properties or methods
         self._vals = None
@@ -50,7 +47,8 @@ class ParamDimBase:
         # Carry over arguments
         self._default = default
 
-        # Set the values, first via the `values` argument, and check whether there are enough arguments to set the values
+        # Set the values, first via the `values` argument, and check whether
+        # there are enough arguments to set the values
         if values is not None:
             self._set_values(values)
 
@@ -61,7 +59,8 @@ class ParamDimBase:
 
         # Check again, now including the `kwargs`
         if kwargs is not None and self.values is None:
-            # Need to parse the additional keyword arguments to generate the values attribute from it
+            # Need to parse the additional keyword arguments to generate the
+            # values attribute from it
             if len(kwargs) > 1:
                 warnings.warn("{}.__init__ was called with multiple "
                               "additional `**kwargs`; only one of these will "
@@ -113,7 +112,8 @@ class ParamDimBase:
         """The current iterator state
         
         Returns:
-            Union[int, None]: The state of the iterator; if it is None, the ParamDim is not inside an iteration.
+            Union[int, None]: The state of the iterator; if it is None, the
+                ParamDim is not inside an iteration.
         """
         return self._state
 
@@ -137,11 +137,13 @@ class ParamDimBase:
 
     @property
     def current_value(self):
-        """If in an iteration: return the value according to the current state. If not in an iteration and/or disabled, return the default value."""
-        if self.enabled and self.state is not None:
-            return self.values[self.state]
+        """If in an iteration: return the value according to the current
+        state. If not in an iteration, return the default value.
+        """
+        if self.state is None:
+            return self.default
+        return self.values[self.state]
 
-        return self.default
 
     # Magic methods ...........................................................
 
@@ -167,14 +169,13 @@ class ParamDimBase:
             int: The length of the associated values list. If the parameter
                 dimension is not enabled, the length is 1.
         """
-        if self.enabled:
-            return len(self.values)
-        return 1
+        return len(self.values)
 
     def __repr__(self) -> str:
         """
         Returns:
-            str: Returns the string representation of the ParamDimBase-derived object
+            str: Returns the string representation of the ParamDimBase-derived
+                object
         """
         # TODO should actually be a string from which to re-create the object
         return ("<{} object at {} with {}>"
@@ -182,13 +183,13 @@ class ParamDimBase:
                           repr(dict(default=self.default,
                                     order=self.order,
                                     values=self.values,
-                                    enabled=self.enabled,
                                     name=self.name))))
 
     def __str__(self) -> str:
         """
         Returns:
-            str: Returns the string representation of the ParamDimBase-derived object
+            str: Returns the string representation of the ParamDimBase-derived
+                object
         """
         return repr(self)
 
@@ -199,22 +200,15 @@ class ParamDimBase:
         return self
 
     def __next__(self):
-        """Move to the next valid state and return the corresponding parameter value.
+        """Move to the next valid state and return the corresponding parameter
+        value.
         
         Returns:
             The current value of the iteration
-        
-        Raises:
-            StopIteration: When the iteration has finished
         """
-
-        if not self.enabled:
-            log.debug("__next__ called on disabled ParamDim")
-            raise StopIteration
-
         log.debug("__next__ called")
 
-        # Iterate the state and return the
+        # Iterate state and return the new value (i.e., the new current value)
         self.iterate_state()
         return self.current_value
 
@@ -229,16 +223,21 @@ class ParamDimBase:
         Raises:
             StopIteration: Upon end of iteration
         """
-        # Set to zero or increment, depending on whether inside or outside of an iteration
+        # Set to zero or increment, depending on whether inside or outside of
+        # an iteration
         if self.state is None:
             self.enter_iteration()
-            # NOTE This is always possible, as the length of the values is ensured to be at least 1
+            # NOTE This is always possible, as the length of the values is
+            # ensured to be at least 1
+            
         else:
             try:
                 self.state += 1
+
             except ValueError:
                 # Reached end of possible state values
-                # Reset the state, allowing to reuse the object (unlike with other Python iterators)
+                # Reset the state, allowing to reuse the object (unlike with
+                # other Python iterators)
                 self.reset()
                 raise StopIteration
 
@@ -249,6 +248,7 @@ class ParamDimBase:
     def reset(self) -> None:
         """Resets the state to None, called after the end of an iteration."""
         self.state = None
+
 
     # Non-public API ..........................................................
     
@@ -298,14 +298,18 @@ class ParamDim(ParamDimBase):
 
     @property
     def target_of(self):
-        """Returns the list that holds all the CoupledParamDim objects that point to this instance of ParamDim."""
+        """Returns the list that holds all the CoupledParamDim objects that
+        point to this instance of ParamDim.
+        """
         return self._target_of
 
 
 # -----------------------------------------------------------------------------
 
 class CoupledParamDim(ParamDimBase):
-    """A CoupledParamDim object is recognized by the ParamSpace and its state moves alongside with another ParamDim's state."""
+    """A CoupledParamDim object is recognized by the ParamSpace and its state
+    moves alongside with another ParamDim's state.
+    """
 
     def __init__(self, *, target_pdim: ParamDim=None, target_name: Union[str, Sequence[str]]=None, use_coupled_default: bool=None, use_coupled_values: bool=None, **kwargs):
         """
@@ -360,7 +364,8 @@ class CoupledParamDim(ParamDimBase):
                               "`use_coupled_values` being set to True. "
                               "Will ignore the given defaults!")
             kwargs['values'] = [None]
-        # NOTE the values passed here will never actually be used, just placeholders
+        # NOTE the values passed here will never actually be used and are just
+        # placeholders
 
         # Initialise via parent 
         super().__init__(**kwargs)
@@ -454,11 +459,10 @@ class CoupledParamDim(ParamDimBase):
                             "ParamDim, was "+str(type(pdim)))
 
         elif not self.use_coupled_values and len(self) != len(pdim):
-            if self.enabled:
-                raise ValueError("The lengths of the value sequences of "
-                                 "target ParamDim and this CoupledParamDim "
-                                 "need to match, were: {} and {}, "
-                                 "respectively.".format(len(pdim), len(self)))
+            raise ValueError("The lengths of the value sequences of target "
+                             "ParamDim and this CoupledParamDim need to "
+                             "match, were: {} and {}, respectively."
+                             "".format(len(pdim), len(self)))
 
         self._target_pdim = pdim
         log.debug("Set CoupledParamDim target.")
@@ -488,9 +492,6 @@ class CoupledParamDim(ParamDimBase):
         
         Returns:
             tuple: The values of this CoupledParamDim or the target ParamDim
-        
-        Raises:
-            RuntimeError: Description
         """
         # Before initialisation finished, this cannot access target_pdim yet
         if not self._init_finished:
@@ -507,21 +508,23 @@ class CoupledParamDim(ParamDimBase):
         """The current iterator state of the target ParamDim
         
         Returns:
-            Union[int, None]: The state of the iterator; if it is None, the ParamDim is not inside an iteration.
+            Union[int, None]: The state of the iterator; if it is None, the
+                ParamDim is not inside an iteration.
         """
-        if self.enabled:
-            return self.target_pdim.state
-        return None
+        return self.target_pdim.state
 
     @state.setter
     def state(self, new_state):
-        """The state of a coupled ParamDim is of no importance; don't change it."""
+        """The state of a coupled ParamDim is of no importance; don't change
+        it.
+        """
         pass
 
     @property
     def current_value(self):
-        """If in an iteration: return the value according to the current state. If not in an iteration and/or disabled, return the default value."""
-        if self.enabled and self.state is not None:
-            return self.values[self.state]
-
-        return self.default
+        """If in an iteration: return the value according to the current
+        state. If not in an iteration, return the default value.
+        """
+        if self.state is None:
+            return self.default
+        return self.values[self.state]

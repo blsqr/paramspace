@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v1.2
+- #18: Calculate the `ParamSpace.state_no` instead of incrementing; this leads to higher reliability and allows more flexible iteration schemes.
+
 ## v1.1.1
 - #17: Fix a bug that prohibited using nested `ParamSpace` objects
 

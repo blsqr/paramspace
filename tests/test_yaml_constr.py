@@ -13,21 +13,13 @@ yaml.add_constructor(u'!pspace-sorted', yaml_constructors.pspace_sorted)
 
 yaml.add_constructor(u'!pdim',
                      yaml_constructors.pdim)
-yaml.add_constructor(u'!pdim-if-enabled',
-                     yaml_constructors.pdim_enabled_only)
 yaml.add_constructor(u'!pdim-default',
                      yaml_constructors.pdim_get_default)
-yaml.add_constructor(u'!pdim-disabled',
-                     yaml_constructors.pdim_always_disable)
 
 yaml.add_constructor(u'!coupled-pdim',
                      yaml_constructors.coupled_pdim)
-yaml.add_constructor(u'!coupled-pdim-if-enabled',
-                     yaml_constructors.coupled_pdim_enabled_only)
 yaml.add_constructor(u'!coupled-pdim-default',
                      yaml_constructors.coupled_pdim_get_default)
-yaml.add_constructor(u'!coupled-pdim-disabled',
-                     yaml_constructors.coupled_pdim_always_disable)
 
 
 # Fixtures --------------------------------------------------------------------
@@ -76,16 +68,6 @@ pdims:
  - !pdim
    default: 0
    logspace: [1,2,3]
- - !pdim-if-enabled
-   default: 0
-   values: [1,2,3]
- - !pdim-if-enabled
-   default: 0
-   values: [1,2,3]
-   enabled: False
- - !pdim-disabled
-   default: 0
-   values: [1,2,3]
  - !pdim-default
    default: 0
    values: [1,2,3]
@@ -100,14 +82,6 @@ pdims:
  - !coupled-pdim
    target_name: [foo, bar]
  - !coupled-pdim
-   target_name: [foo, bar]
- - !coupled-pdim-if-enabled
-   target_name: [foo, bar]
- - !coupled-pdim-if-enabled
-   target_name: [foo, bar]
-   default: 0
-   enabled: False
- - !coupled-pdim-disabled
    target_name: [foo, bar]
  - !coupled-pdim-default
    target_name: [foo, bar]
@@ -165,7 +139,7 @@ def test_loading(yamlstrs):
             yaml.load(ystr)
 
 def test_correctness(yamlstrs):
-    """Tests the correctness"""
+    """Tests the correctness of the constructors"""
     res = {}
 
     # Load the resolved yaml strings
@@ -191,14 +165,7 @@ def test_correctness(yamlstrs):
     assert pdims[3].default == 0
     assert pdims[3].values == tuple(np.logspace(1,2,3))
 
-    assert pdims[4].default == 0
-    assert pdims[4].values == (1,2,3)
-
-    assert pdims[5] == 0
-
-    assert pdims[6].enabled is False
-
-    assert pdims[7] == 0
+    assert pdims[4] == 0
 
     # Test the ParamSpace's
     for psp in res['pspace_only'].values():

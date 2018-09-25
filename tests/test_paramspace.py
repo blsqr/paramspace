@@ -4,12 +4,13 @@ from collections import OrderedDict
 
 import pytest
 import yaml
+import numpy as np
 
 from paramspace import ParamSpace, ParamDim, CoupledParamDim
 
 # Setup methods ---------------------------------------------------------------
 
-@pytest.fixture(scope='module')
+@pytest.fixture()
 def basic_psp(request):
     """Used to setup a basic pspace object to be tested on."""
     d = dict(a=1, b=2, foo="bar", spam="eggs", mutable=[0, 0, 0],
@@ -27,7 +28,7 @@ def basic_psp(request):
    
     return ParamSpace(d)
 
-@pytest.fixture(scope='module')
+@pytest.fixture()
 def adv_psp(request):
     """Used to setup a more elaborate pspace object to be tested on. Includes name clashes, manually set names, order, ..."""
     d = dict(a=1, b=2, foo="bar", spam="eggs", mutable=[0, 0, 0],
@@ -45,7 +46,7 @@ def adv_psp(request):
    
     return ParamSpace(d)
 
-@pytest.fixture(scope='module')
+@pytest.fixture()
 def psp_with_coupled(request):
     """Used to setup a pspace object with coupled param dims"""
     d = dict(a=ParamDim(default=0, values=[1,2,3], order=0),
@@ -59,7 +60,7 @@ def psp_with_coupled(request):
    
     return ParamSpace(d)
 
-@pytest.fixture(scope='module')
+@pytest.fixture()
 def psp_nested(request, basic_psp):
 	"""Creates two ParamSpaces nested within another ParamSpace"""
 	return ParamSpace(dict(foo="bar", basic=basic_psp,
@@ -121,8 +122,8 @@ def test_volume(basic_psp, adv_psp):
     p = ParamSpace(dict(a=ParamDim(default=0, values=[1]), # 1
                         b=ParamDim(default=0, range=[0,10,2]), # 5
                         c=ParamDim(default=0, linspace=[1,2,20]), # 20
-                        d=ParamDim(default=0, logspace=[1,2,12,1]), # 12
-                        e=ParamDim(default=0, values=[1,2], enabled=False))) 
+                        d=ParamDim(default=0, logspace=[1,2,12,1]) # 12
+                        ))
     assert p.volume == 1*5*20*12
     assert p.volume == p.full_volume
 
@@ -137,14 +138,14 @@ def test_shape(basic_psp, adv_psp):
     p = ParamSpace(dict(a=ParamDim(default=0, values=[1]), # 1
                         b=ParamDim(default=0, range=[0,10,2]), # 5
                         c=ParamDim(default=0, linspace=[1,2,20]), # 20
-                        d=ParamDim(default=0, logspace=[1,2,12,1]), # 12
-                        e=ParamDim(default=0, values=[1,2], enabled=False))) 
-    assert p.shape == (1,5,20,12,1) # disabled dimensions still count here
+                        d=ParamDim(default=0, logspace=[1,2,12,1]) # 12
+                        ))
+    assert p.shape == (1, 5, 20, 12)
 
     # Also test the number of dimensions
     assert basic_psp.num_dims == 6
     assert adv_psp.num_dims == 6
-    assert p.num_dims == 5
+    assert p.num_dims == 4
 
 def test_dim_order(basic_psp, adv_psp):
     """Tests whether the dimension order is correct."""
@@ -199,12 +200,38 @@ def test_iteration(basic_psp, adv_psp):
                       adv_psp.all_points(with_info=info)),
                      (basic_psp.volume, adv_psp.volume))        
 
+def test_state_no(basic_psp, adv_psp, psp_with_coupled):
+    """Test that state number calculation is correct"""    
+    def test_state_nos(psp):
+        # Check that the state number is None outside an iteration
+        assert psp.state_no is None
+        
+        # Get all points, then check them
+        nos = [n for _, n in psp.all_points(with_info=("state_no",))]
+
+        # Interval is correct
+        assert nos[0] == 0
+        assert len(nos) == psp.volume
+        assert nos[-1] == max(nos) == psp.volume - 1
+        
+        # Increment is always 1
+        d = np.diff(nos)
+        assert max(d) == min(d) == 1
+
+        # All ok
+        return True
+
+    # Call the test function on the given parameter spaces
+    assert test_state_nos(basic_psp)
+    assert test_state_nos(adv_psp)
+    assert test_state_nos(psp_with_coupled)
+
 def test_inverse_mapping(basic_psp, adv_psp):
     """Test whether the state mapping is correct."""
     basic_psp.inverse_mapping()
     adv_psp.inverse_mapping()
 
-    # Test caching
+    # Test caching branch
     basic_psp.inverse_mapping()
     adv_psp.inverse_mapping()
 
@@ -254,6 +281,15 @@ def test_strings(basic_psp, adv_psp, psp_with_coupled):
         str(psp)
         repr(psp)
         psp.get_info_str()
+
+def test_eq(adv_psp):
+    """Test that __eq__ works"""
+    psp = adv_psp
+    
+    assert (psp == "foo") is False      # Type does not match
+    assert (psp == psp._dict) is False  # Not equivalent to the whole object
+    assert (psp == psp) is True
+
 
 def test_item_access(psp_with_coupled):
     """Assert that item access is working and safe"""
