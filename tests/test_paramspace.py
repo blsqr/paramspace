@@ -121,8 +121,8 @@ def test_volume(basic_psp, adv_psp):
     p = ParamSpace(dict(a=ParamDim(default=0, values=[1]), # 1
                         b=ParamDim(default=0, range=[0,10,2]), # 5
                         c=ParamDim(default=0, linspace=[1,2,20]), # 20
-                        d=ParamDim(default=0, logspace=[1,2,12,1]), # 12
-                        e=ParamDim(default=0, values=[1,2], enabled=False))) 
+                        d=ParamDim(default=0, logspace=[1,2,12,1]) # 12
+                        ))
     assert p.volume == 1*5*20*12
     assert p.volume == p.full_volume
 
@@ -137,14 +137,14 @@ def test_shape(basic_psp, adv_psp):
     p = ParamSpace(dict(a=ParamDim(default=0, values=[1]), # 1
                         b=ParamDim(default=0, range=[0,10,2]), # 5
                         c=ParamDim(default=0, linspace=[1,2,20]), # 20
-                        d=ParamDim(default=0, logspace=[1,2,12,1]), # 12
-                        e=ParamDim(default=0, values=[1,2], enabled=False))) 
-    assert p.shape == (1,5,20,12,1) # disabled dimensions still count here
+                        d=ParamDim(default=0, logspace=[1,2,12,1]) # 12
+                        ))
+    assert p.shape == (1, 5, 20, 12)
 
     # Also test the number of dimensions
     assert basic_psp.num_dims == 6
     assert adv_psp.num_dims == 6
-    assert p.num_dims == 5
+    assert p.num_dims == 4
 
 def test_dim_order(basic_psp, adv_psp):
     """Tests whether the dimension order is correct."""

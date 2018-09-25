@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 class ParamDimBase:
     """The ParamDim base class."""
 
-    def __init__(self, *, default, values: Iterable=None, enabled: bool=True, order: float=np.inf, name: str=None, **kwargs) -> None:
+    def __init__(self, *, default, values: Iterable=None, order: float=np.inf, name: str=None, **kwargs) -> None:
         """Initialise a parameter dimension object.
         
         Args:
@@ -23,8 +23,6 @@ class ParamDimBase:
             values (Iterable, optional): Which discrete values this parameter
                 dimension can take. This argument takes precedence over any
                 constructors given in the kwargs (like range, linspace, …).
-            enabled (bool, optional): Whether this parameter dimension is
-                enabled and should be used in a sweep. Default: True
             order (float, optional): If given, this allows to specify an order
                 within a ParamSpace that includes this ParamDim object
             name (str, optional): If given, this is an *additional* name of
@@ -41,7 +39,6 @@ class ParamDimBase:
         # Initialize attributes that are not managed
         self.name = name
         self.order = order
-        self.enabled = enabled
         
         # Initialize attributes that are managed by properties or methods
         self._vals = None
@@ -141,13 +138,12 @@ class ParamDimBase:
     @property
     def current_value(self):
         """If in an iteration: return the value according to the current
-        state. If not in an iteration and/or disabled, return the default
-        value.
+        state. If not in an iteration, return the default value.
         """
-        if self.enabled and self.state is not None:
-            return self.values[self.state]
+        if self.state is None:
+            return self.default
+        return self.values[self.state]
 
-        return self.default
 
     # Magic methods ...........................................................
 
@@ -173,9 +169,7 @@ class ParamDimBase:
             int: The length of the associated values list. If the parameter
                 dimension is not enabled, the length is 1.
         """
-        if self.enabled:
-            return len(self.values)
-        return 1
+        return len(self.values)
 
     def __repr__(self) -> str:
         """
@@ -189,7 +183,6 @@ class ParamDimBase:
                           repr(dict(default=self.default,
                                     order=self.order,
                                     values=self.values,
-                                    enabled=self.enabled,
                                     name=self.name))))
 
     def __str__(self) -> str:
@@ -212,18 +205,10 @@ class ParamDimBase:
         
         Returns:
             The current value of the iteration
-        
-        Raises:
-            StopIteration: When the iteration has finished
         """
-
-        if not self.enabled:
-            log.debug("__next__ called on disabled ParamDim")
-            raise StopIteration
-
         log.debug("__next__ called")
 
-        # Iterate the state and return the
+        # Iterate state and return the new value (i.e., the new current value)
         self.iterate_state()
         return self.current_value
 
@@ -261,6 +246,7 @@ class ParamDimBase:
     def reset(self) -> None:
         """Resets the state to None, called after the end of an iteration."""
         self.state = None
+
 
     # Non-public API ..........................................................
     
@@ -471,11 +457,10 @@ class CoupledParamDim(ParamDimBase):
                             "ParamDim, was "+str(type(pdim)))
 
         elif not self.use_coupled_values and len(self) != len(pdim):
-            if self.enabled:
-                raise ValueError("The lengths of the value sequences of "
-                                 "target ParamDim and this CoupledParamDim "
-                                 "need to match, were: {} and {}, "
-                                 "respectively.".format(len(pdim), len(self)))
+            raise ValueError("The lengths of the value sequences of target "
+                             "ParamDim and this CoupledParamDim need to "
+                             "match, were: {} and {}, respectively."
+                             "".format(len(pdim), len(self)))
 
         self._target_pdim = pdim
         log.debug("Set CoupledParamDim target.")
@@ -524,9 +509,7 @@ class CoupledParamDim(ParamDimBase):
             Union[int, None]: The state of the iterator; if it is None, the
                 ParamDim is not inside an iteration.
         """
-        if self.enabled:
-            return self.target_pdim.state
-        return None
+        return self.target_pdim.state
 
     @state.setter
     def state(self, new_state):
@@ -538,10 +521,8 @@ class CoupledParamDim(ParamDimBase):
     @property
     def current_value(self):
         """If in an iteration: return the value according to the current
-        state. If not in an iteration and/or disabled, return the default
-        value.
+        state. If not in an iteration, return the default value.
         """
-        if self.enabled and self.state is not None:
-            return self.values[self.state]
-
-        return self.default
+        if self.state is None:
+            return self.default
+        return self.values[self.state]

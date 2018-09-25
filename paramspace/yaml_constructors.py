@@ -38,21 +38,6 @@ def pdim(loader, node) -> ParamDim:
     """
     return _pdim_constructor(loader, node)
 
-def pdim_enabled_only(loader, node) -> ParamDim:
-    """constructor for creating a ParamDim object from a mapping
-
-    If the ParamDim would not be enabled, the default value is returned.
-
-    Suggested tag: !pdim
-    """
-    pdim = _pdim_constructor(loader, node)
-
-    if pdim.enabled:
-        return pdim
-    
-    log.debug("ParamDim was disabled; returning default.")
-    return pdim.default
-
 def pdim_get_default(loader, node) -> ParamDim:
     """constructor for creating a ParamDim object from a mapping, but only return the default value.
 
@@ -62,37 +47,12 @@ def pdim_get_default(loader, node) -> ParamDim:
     log.debug("Returning default value of constructed ParamDim.")
     return pdim.default
 
-def pdim_always_disable(loader, node) -> ParamDim:
-    """constructor for creating a ParamDim object from a mapping, but always disabling it.
-
-    Suggested tag: !disabled-pdim
-    """
-    pdim = _pdim_constructor(loader, node)
-    log.debug("Disabling constructed ParamDim.")
-    pdim.enabled = False
-    return pdim
-
 def coupled_pdim(loader, node) -> CoupledParamDim:
     """constructor for creating a CoupledParamDim object from a mapping
 
     Suggested tag: !coupled-pdim
     """
     return _coupled_pdim_constructor(loader, node)
-
-def coupled_pdim_enabled_only(loader, node) -> CoupledParamDim:
-    """constructor for creating a CoupledParamDim object from a mapping
-
-    If the ParamDim would not be enabled, the default value is returned.
-
-    Suggested tag: !coupled-pdim
-    """
-    cpdim = _coupled_pdim_constructor(loader, node)
-
-    if cpdim.enabled:
-        return cpdim
-    
-    log.debug("ParamDim was disabled; returning default.")
-    return cpdim.default
 
 def coupled_pdim_get_default(loader, node) -> CoupledParamDim:
     """constructor for creating a CoupledParamDim object from a mapping, but only return the default value.
@@ -102,16 +62,6 @@ def coupled_pdim_get_default(loader, node) -> CoupledParamDim:
     cpdim = _coupled_pdim_constructor(loader, node)
     log.debug("Returning default value of constructed ParamDim.")
     return cpdim.default
-
-def coupled_pdim_always_disable(loader, node) -> CoupledParamDim:
-    """constructor for creating a CoupledParamDim object from a mapping, but always disabling it
-
-    Suggested tag: !disabled-coupled-pdim
-    """
-    cpdim = _coupled_pdim_constructor(loader, node)
-    log.debug("Disabling constructed ParamDim.")
-    cpdim.enabled = False
-    return cpdim
 
 # -----------------------------------------------------------------------------
 
@@ -152,6 +102,7 @@ def _pdim_constructor(loader, node) -> ParamDim:
         log.debug("Constructing mapping ...")
         mapping = loader.construct_mapping(node, deep=True)
         pdim = ParamDim(**mapping)
+
     else:
         raise TypeError("ParamDim can only be constructed from a mapping node,"
                         " got node of type {} "
@@ -170,6 +121,7 @@ def _coupled_pdim_constructor(loader, node) -> ParamDim:
         log.debug("Constructing mapping ...")
         mapping = loader.construct_mapping(node, deep=True)
         cpdim = CoupledParamDim(**mapping)
+
     else:
         raise TypeError("CoupledParamDim can only be constructed from a "
                         "mapping node, got node of type {} "
