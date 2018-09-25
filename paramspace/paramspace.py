@@ -3,10 +3,10 @@
 import copy
 import logging
 import warnings
-import pprint
-from itertools import chain
 import collections
 from collections import OrderedDict
+from itertools import chain
+from functools import reduce
 from typing import Union, Sequence, Tuple, Generator, MutableMapping, MutableSequence, Dict
 
 import numpy as np
@@ -63,9 +63,6 @@ class ParamSpace:
         self._dims = None
         self._cdims = None
         self._gather_paramdims() # NOTE attributes set within this method
-
-        # Initialize state attributes
-        self._state_no = None
 
         # Initialize caching attributes
         self._imap = None
@@ -190,9 +187,43 @@ class ParamSpace:
         return tuple([len(pd) for pd in self.dims.values()])
 
     @property
-    def state_no(self) -> int:
-        """Returns the current state number."""
-        return self._state_no
+    def state_no(self) -> Union[int, None]:
+        """Returns the current state number by visiting the active parameter
+        dimensions and querying their state numbers.
+        """
+        log.debug("Calculating state number ...")
+
+        # Go over all parameter dimensions and extract the state values
+        states = [pdim.state for pdim in self.dims.values()]
+        log.debug("  states:       %s", states)
+
+        # First check if any of the states were None. If yes, that means that
+        # the parameter space is not within an iteration currently, thus the
+        # state also needs to be None
+        if None in states:
+            log.debug("At least one parameter dimension state was None, thus "
+                      "the ParamSpace state is not within an iteration and "
+                      "the state is also None.")
+            return None
+        # NOTE can now be sure that all values are integer states, no Nones
+
+        # Now need the lengths; they will be in the same order
+        lengths = [len(pdim) for pdim in self.dims.values()]
+        log.debug("  lengths:      %s", lengths)
+
+        # The lengths will now be used to calculate the multipliers, starting
+        # with 1 for the 0th pdim.
+        # For example, given lengths [10, 10,  20,    5], the corresponding
+        # multipliers are:           [ 1, 10, 100, 2000]
+        mults = [reduce(lambda x, y: x*y, lengths[:i], 1)
+                 for i in range(self.num_dims)]
+        log.debug("  multipliers:  %s", mults)
+
+        # Now, calculate the state number
+        state_no = sum([(s * m) for s, m in zip(states, mults)])
+        log.debug("  state no:     %s", state_no)
+
+        return state_no
     
     @property
     def state_vector(self) -> Tuple[int]:
@@ -359,7 +390,6 @@ class ParamSpace:
         return self._iter()
         # NOTE the generator will also raise StopIteration once it ended
         
-
     def all_points(self, with_info: Sequence=None) -> Generator[PStype, None, None]:
         """Returns a generator yielding all points of the parameter space."""
 
@@ -373,9 +403,6 @@ class ParamSpace:
         for pdim in self.dims.values():
             pdim.enter_iteration()
 
-        # This corresponds to ParamSpace's state 0
-        self._state_no = 0
-
         # Yield the first state
         yield self._gen_info_tuple(self.current_point, with_info=with_info)
 
@@ -386,7 +413,6 @@ class ParamSpace:
         else:
             log.debug("Visited every point in ParamSpace.")
             self._reset()
-            log.debug("Reset ParamSpace and ParamDims.")
             return
 
     def _next_state(self) -> bool:
@@ -417,15 +443,18 @@ class ParamSpace:
                 # Iterated to next step without reaching the last dim item
                 break
         else:
-            # Loop went through -> all states visited
-            self._reset()            
+            # Loop went through
+            # -> All states visited.
+            #    Now need to reset and communicate that iteration is finished;
+            #    do so by returning false, which is more convenient than
+            #    raising StopIteration; the iteration is handled by the
+            #    all_points method anyway.
+            self._reset()
             return False
 
-        # Broke out of loop -> Got the next state and not at the end yet
-        # Increment state number
-        self._state_no += 1
-
-        # Have not reached the end yet; communicate that
+        # If this point is reached: broke out of loop
+        # -> The next state was reached and we are not at the end yet.
+        #    Communicate that by returning True.
         return True
 
     def _reset(self) -> None:
@@ -435,7 +464,7 @@ class ParamSpace:
         for pdim in self.dims.values():
             pdim.reset()
 
-        self._state_no = None
+        log.debug("Reset ParamSpace and ParamDims.")
 
     # Public API ..............................................................
 

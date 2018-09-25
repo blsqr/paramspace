@@ -229,9 +229,11 @@ class ParamDimBase:
             self.enter_iteration()
             # NOTE This is always possible, as the length of the values is
             # ensured to be at least 1
+            
         else:
             try:
                 self.state += 1
+
             except ValueError:
                 # Reached end of possible state values
                 # Reset the state, allowing to reuse the object (unlike with
