@@ -282,6 +282,15 @@ def test_strings(basic_psp, adv_psp, psp_with_coupled):
         repr(psp)
         psp.get_info_str()
 
+def test_eq(adv_psp):
+    """Test that __eq__ works"""
+    psp = adv_psp
+    
+    assert (psp == "foo") is False      # Type does not match
+    assert (psp == psp._dict) is False  # Not equivalent to the whole object
+    assert (psp == psp) is True
+
+
 def test_item_access(psp_with_coupled):
     """Assert that item access is working and safe"""
     psp = psp_with_coupled

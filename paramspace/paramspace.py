@@ -292,9 +292,7 @@ class ParamSpace:
                           )
                 )
 
-    def __format__(self, fstr: str) -> str:
-        """ """
-        raise NotImplementedError
+    # TODO implement __format__
 
     def get_info_str(self) -> str:
         """Returns a string that gives information about shape and size of
@@ -492,20 +490,18 @@ class ParamSpace:
                 imap[tuple(s)] = state_no
 
             except IndexError as err:
-                fstr = ("Creating inverse mapping failed, probably due to a "
-                        "change in the parameter dimensions sizes."
-                        " Selector: {} -- imap shape: {}")
-                raise RuntimeError(fstr.format(s, imap.shape)) from err
+                raise RuntimeError("Creating inverse mapping failed, probably "
+                                   "due to a change in the parameter "
+                                   "dimensions sizes.  "
+                                   "Selector: {} -- imap shape: {}"
+                                   "".format(s, imap.shape)
+                                   ) from err
         else:
             log.debug("Finished creating inverse mapping. Caching it...")
             self._imap = imap
 
         return self._imap
-
-    def get_subspace(self, **slices):
-        """Returns a subspace of this parameter space."""
-        # TODO find a way to preserve the state numbers from the parent
-        raise NotImplementedError
+        
 
     # Non-public API ..........................................................
 
