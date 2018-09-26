@@ -152,7 +152,7 @@ def test_np_methods_return_floats():
 def test_mask():
     """Test that masking works"""
     # Test initialization, property getter and setter, and type
-    pd = ParamDim(default=0, values=[0,1,2], mask=False)
+    pd = ParamDim(default=0, values=[0, 1, 2, 3], mask=False)
     assert pd.mask is False
     # NOTE not trivial to test because the .mask getter _computes_ the value
     assert not any([isinstance(v, Masked) for v in pd.values])
@@ -166,19 +166,32 @@ def test_mask():
     assert str(pd).find("with masked value") > -1
 
     # Now to a more complex mask
-    pd.mask = (True, False, True)
-    assert pd.mask == (True, False, True)
+    pd.mask = (True, False, True, False)
+    assert pd.mask == (True, False, True, False)
 
     # Check that length remains the same
-    assert len(pd) == 3
+    assert len(pd) == 4
 
     # Check that iteration starts at first unmasked state
     pd.enter_iteration()
     assert pd.state == 1
+    assert pd.current_value == 1
+
+    # Iterate one step, this should jump to index and value 3
+    assert pd.__next__() == 3
+    assert pd.state == 3
 
     # No further iteration should be possible for this one
     with pytest.raises(StopIteration):
         pd.iterate_state()
+    assert pd.state is None
+
+    # Check iteration again
+    assert list(pd) == [1, 3]
+
+    # Same for fully masked
+    pd.mask = True
+    assert list(pd) == []
 
 
 # CoupledParamDim -------------------------------------------------------------

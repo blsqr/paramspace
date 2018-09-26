@@ -146,22 +146,17 @@ class ParamDimBase:
     def mask(self) -> Union[bool, Tuple[bool]]:
         """Returns False if no value is masked or a tuple of booleans that
         represents the mask
-        """
-        if self._mask_cache is None:
-            # Compute the return value
-            m = self._mask_tuple()
-
-            if not any(m): # No entry masked
-                m = False
-
-            elif all(m): # All entries masked
-                m = True
-            
-            # else: there is at least one masked value, leave as tuple
-            # Store in cache
-            self._mask_cache = m
+        """        
+        m = self._mask_tuple()  # uses a cached value, if available
         
-        return self._mask_cache
+        if not any(m):  # no entry masked
+            return False
+
+        elif all(m):  # all entries masked
+            return True
+
+        # leave it as a tuple
+        return m
 
     @mask.setter
     def mask(self, mask: Union[bool, Tuple[bool]]):
@@ -343,19 +338,27 @@ class ParamDimBase:
             return
             
         # Else: within iteration
-        try:
-            self.state += 1
+        # Look for further possible states in the shortened mask tuple
+        sub_mask = self._mask_tuple()[self.state + 1:]
 
-        except ValueError:
-            # Reached end of possible state values
+        if False in sub_mask:
+            # There is another possible state, find it via index
+            self.state += (sub_mask.index(False) + 1)
+
+        else:
+            # No more possible state values
             # Reset the state, allowing to reuse the object (unlike with
-            # other Python iterators)
+            # other Python iterators). Then communicate: iteration should stop.
             self.reset()
             raise StopIteration
 
     def enter_iteration(self) -> None:
         """Sets the state to the first possible one, symbolising that an
         iteration has started.
+        
+        Raises:
+            StopIteration: If no iteration is possible because all values are
+                masked.
         """
         # Need to distinguish mask states
         if self.mask is False:
@@ -408,7 +411,10 @@ class ParamDimBase:
 
     def _mask_tuple(self) -> Tuple[bool]:
         """Returns a tuple representation of the current mask"""
-        return tuple([isinstance(v, Masked) for v in self.values])
+        if self._mask_cache is None:
+            self._mask_cache = tuple([isinstance(v, Masked)
+                                      for v in self.values])
+        return self._mask_cache
 
 
 # -----------------------------------------------------------------------------
