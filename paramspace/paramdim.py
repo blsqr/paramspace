@@ -11,11 +11,31 @@ import numpy as np
 log = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
+# Small helper classes
+
+class Masked:
+    """To indicate a masked value in a ParamDim"""
+    def __init__(self, value):
+        """Initialize a Masked object that is a placeholder for the given value
+        Args:
+            value: The value to mask
+        """
+        self._val = value
+
+    @property
+    def value(self):
+        return self._val
+
+    def __str__(self) -> str:
+        return "{} (masked)".format(self.value)
+
+
+# -----------------------------------------------------------------------------
 
 class ParamDimBase:
     """The ParamDim base class."""
 
-    def __init__(self, *, default, values: Iterable=None, order: float=np.inf, name: str=None, **kwargs) -> None:
+    def __init__(self, *, default, values: Iterable=None, order: float=np.inf, name: str=None, mask: Union[bool, Tuple[bool]]=False, **kwargs) -> None:
         """Initialise a parameter dimension object.
         
         Args:
@@ -28,6 +48,9 @@ class ParamDimBase:
             name (str, optional): If given, this is an *additional* name of
                 this ParamDim object, and can be used by the ParamSpace to
                 access this object.
+            mask (Union[bool, Tuple[bool]], optional): Which values of the
+                dimension to mask, i.e.: skip in iteration. Note that masked
+                values still count to the length of the parameter dimension!
             **kwargs: Constructors for the `values` argument, valid keys are
                 `range`, `linspace`, and `logspace`; corresponding values are
                 expected to be iterables and are passed to `range(*args)`,
@@ -89,6 +112,11 @@ class ParamDimBase:
                           "are ignored.".format(self.__class__.__name__,
                                                 kwargs),
                           UserWarning)
+
+        # Can now set the mask
+        self.mask = mask
+
+        # Done.
             
     # Properties ..............................................................
 
@@ -106,6 +134,62 @@ class ParamDimBase:
                 values are not yet set.
         """
         return self._vals
+
+    @property
+    def mask(self) -> Union[bool, Tuple[bool]]:
+        """Returns False if no value is masked or a tuple of booleans that
+        represents the mask
+        """
+        m = [isinstance(v, Masked) for v in self.values]
+
+        if not any(m):
+            # No entry masked
+            return False
+
+        elif all(m):
+            # All entries masked
+            return True
+
+        # There is at least one mask, return the tuple
+        return tuple(m)
+
+    @mask.setter
+    def mask(self, mask: Union[bool, Tuple[bool]]):
+        """Sets the mask
+        
+        Args:
+            mask (Union[bool, Tuple[bool]]): A bool or an iterable of booleans
+        
+        Raises:
+            ValueError: If the length of the iterable does not match that of
+                this parameter dimension
+        """
+        # Helper function for setting a mask value
+        def set_val(mask: bool, val):
+            if mask and not isinstance(val, Masked):
+                # Should be masked but is not
+                return Masked(val)
+
+            elif isinstance(val, Masked) and not mask:
+                # Is masked but shouldn't be
+                return val.value
+
+            # Already the desired status
+            return val
+
+        # Resolve boolean values
+        if isinstance(mask, bool):
+            mask = [mask] * len(self)
+
+        # Should be a container now. Assert correct length.
+        if len(mask) != len(self.values):
+            raise ValueError("Given mask needs to be a boolean or a container "
+                             "of same length as the values container ({}), "
+                             "was:  {}"
+                             "".format(len(self), mask))
+
+        # Now build a new values container and store as attributes
+        self._vals = tuple([set_val(m, v) for m, v in zip(mask, self.values)])
 
     @property
     def state(self) -> Union[int, None]:
@@ -276,13 +360,10 @@ class ParamDimBase:
         
         # Resolve iterator as tuple, optionally ensuring it is a float
         if as_float:
-            values = tuple([float(v) for v in values])
+            values = [float(v) for v in values]
 
-        else:
-            values = tuple(values)
-
-        # Now store as attribute
-        self._vals = values
+        # Now store it as tuple attribute
+        self._vals = tuple(values)
 
 
 # -----------------------------------------------------------------------------

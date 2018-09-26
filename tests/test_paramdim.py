@@ -7,7 +7,7 @@ import numpy as np
 import yaml
 
 from paramspace import ParamDim, CoupledParamDim
-from paramspace.paramdim import ParamDimBase
+from paramspace.paramdim import ParamDimBase, Masked
 
 # Setup methods ---------------------------------------------------------------
 
@@ -149,6 +149,27 @@ def test_np_methods_return_floats():
         print("Types: " + str(types))
         assert all([t is float for t in types])
 
+def test_mask():
+    """Test that masking works"""
+    # Test initialization, property getter and setter, and type
+    pd = ParamDim(default=0, values=[0,1,2], mask=False)
+    assert pd.mask is False
+    # NOTE not trivial to test because the .mask getter _computes_ the value
+    assert not any([isinstance(v, Masked) for v in pd.values])
+
+    pd.mask = (True, False, True)
+    assert pd.mask == (True, False, True)
+
+    pd.mask = True
+    assert pd.mask is True
+    assert all([isinstance(v, Masked) for v in pd.values])
+
+    # Check that length remains the same
+    assert len(pd) == 3
+
+
+# CoupledParamDim -------------------------------------------------------------
+
 def test_coupled_init():
     """Test whether initialisation of CoupledParamDim works"""
     # These should work
@@ -212,7 +233,7 @@ def test_coupled_init():
         cpd._set_values([1,2,3])
 
     # Test disabled has no state set
-    cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4], enabled=False)
+    cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4])
     assert cpd.state is None
     assert cpd.current_value is 0 # that of the coupled ParamDim!
 
