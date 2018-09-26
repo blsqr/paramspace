@@ -66,6 +66,7 @@ class ParamDimBase:
         # Initialize attributes that are managed by properties or methods
         self._vals = None
         self._state = None
+        self._mask_cache = None
 
         # Carry over arguments
         self._default = default
@@ -140,18 +141,21 @@ class ParamDimBase:
         """Returns False if no value is masked or a tuple of booleans that
         represents the mask
         """
-        m = [isinstance(v, Masked) for v in self.values]
+        if self._mask_cache is None:
+            # Compute the return value
+            m = tuple([isinstance(v, Masked) for v in self.values])
 
-        if not any(m):
-            # No entry masked
-            return False
+            if not any(m): # No entry masked
+                m = False
 
-        elif all(m):
-            # All entries masked
-            return True
-
-        # There is at least one mask, return the tuple
-        return tuple(m)
+            elif all(m): # All entries masked
+                m = True
+            
+            # else: there is at least one masked value, leave as tuple
+            # Store in cache
+            self._mask_cache = m
+        
+        return self._mask_cache
 
     @mask.setter
     def mask(self, mask: Union[bool, Tuple[bool]]):
@@ -188,6 +192,9 @@ class ParamDimBase:
                              "was:  {}"
                              "".format(len(self), mask))
 
+        # Mark the mask cache as invalid, such that it is re-calculated
+        self._mask_cache = None
+
         # Now build a new values container and store as attributes
         self._vals = tuple([set_val(m, v) for m, v in zip(mask, self.values)])
 
@@ -208,11 +215,13 @@ class ParamDimBase:
             self._state = None
 
         elif isinstance(new_state, int):
+            # Check for valid state interval
             if new_state < 0 or new_state >= len(self):
                 raise ValueError("New state needs to be positive and cannot "
                                  "exceed the highest index of the value "
-                                 "container ({}), "
-                                 "was {}.".format(len(self)-1, new_state))
+                                 "container ({}), was {}."
+                                 "".format(len(self)-1, new_state))
+
             self._state = new_state
 
         else:
@@ -240,11 +249,13 @@ class ParamDimBase:
         Returns:
             bool: Whether the two parameter dimensions have the same content
         """
-        if not isinstance(other, ParamDimBase):
+        if not isinstance(other, type(self)):
             return False
 
-        # Check equality of the objects' __dict__s
-        return (self.__dict__ == other.__dict__)
+        # Check equality of the objects' __dict__s, leaving out _mask_cache
+        return all([self.__dict__[k] == other.__dict__[k]
+                    for k in self.__dict__.keys()
+                    if k not in ('_mask_cache',)])
 
     def __len__(self) -> int:
         """Returns the length of the parameter dimension.
@@ -267,7 +278,8 @@ class ParamDimBase:
                           repr(dict(default=self.default,
                                     order=self.order,
                                     values=self.values,
-                                    name=self.name))))
+                                    name=self.name,
+                                    mask=self.mask))))
 
     def __str__(self) -> str:
         """
@@ -326,8 +338,21 @@ class ParamDimBase:
                 raise StopIteration
 
     def enter_iteration(self) -> None:
-        """Sets the state to 0, symbolising that an iteration has started."""
-        self.state = 0
+        """Sets the state to the first possible one, symbolising that an
+        iteration has started.
+        """
+        # Distinguish mask states
+        if self.mask is False:
+            # Trivial case, start with 0
+            self.state = 0
+
+        elif self.mask is True:
+            # Need to communicate that there is nothing to iterate
+            raise StopIteration
+
+        else:
+            # Find the first unmasked state
+            self.state = self.mask.index(False)
 
     def reset(self) -> None:
         """Resets the state to None, called after the end of an iteration."""
