@@ -29,6 +29,12 @@ class Masked:
     def __str__(self) -> str:
         return "{} (masked)".format(self.value)
 
+    def __repr__(self) -> str:
+        return "<paramspace.paramdim.Masked object with masked value: {}>".format(repr(self.value))
+
+class MaskedValueError(ValueError):
+    """Raised when trying to set the state of a ParamDim to a masked value"""
+    pass
 
 # -----------------------------------------------------------------------------
 
@@ -143,7 +149,7 @@ class ParamDimBase:
         """
         if self._mask_cache is None:
             # Compute the return value
-            m = tuple([isinstance(v, Masked) for v in self.values])
+            m = self._mask_tuple()
 
             if not any(m): # No entry masked
                 m = False
@@ -192,7 +198,8 @@ class ParamDimBase:
                              "was:  {}"
                              "".format(len(self), mask))
 
-        # Mark the mask cache as invalid, such that it is re-calculated
+        # Mark the mask cache as invalid, such that it is re-calculated when
+        # the mask getter is accessed the next time
         self._mask_cache = None
 
         # Now build a new values container and store as attributes
@@ -222,6 +229,13 @@ class ParamDimBase:
                                  "container ({}), was {}."
                                  "".format(len(self)-1, new_state))
 
+            elif isinstance(self._mask_tuple()[new_state], Masked):
+                raise MaskedValueError("Value at index {} is masked: {}. "
+                                       "Cannot set the state to this index."
+                                       "".format(new_state,
+                                                 self.values[new_state]))
+
+            # Everything ok. Can set the
             self._state = new_state
 
         else:
@@ -323,25 +337,27 @@ class ParamDimBase:
         # an iteration
         if self.state is None:
             self.enter_iteration()
-            # NOTE This is always possible, as the length of the values is
-            # ensured to be at least 1
+            # NOTE This will raise StopIteration if all values are masked.
+            #      Thus, in the following, it can be assumed that at least one
+            #      value is unmasked.
+            return
             
-        else:
-            try:
-                self.state += 1
+        # Else: within iteration
+        try:
+            self.state += 1
 
-            except ValueError:
-                # Reached end of possible state values
-                # Reset the state, allowing to reuse the object (unlike with
-                # other Python iterators)
-                self.reset()
-                raise StopIteration
+        except ValueError:
+            # Reached end of possible state values
+            # Reset the state, allowing to reuse the object (unlike with
+            # other Python iterators)
+            self.reset()
+            raise StopIteration
 
     def enter_iteration(self) -> None:
         """Sets the state to the first possible one, symbolising that an
         iteration has started.
         """
-        # Distinguish mask states
+        # Need to distinguish mask states
         if self.mask is False:
             # Trivial case, start with 0
             self.state = 0
@@ -389,6 +405,10 @@ class ParamDimBase:
 
         # Now store it as tuple attribute
         self._vals = tuple(values)
+
+    def _mask_tuple(self) -> Tuple[bool]:
+        """Returns a tuple representation of the current mask"""
+        return tuple([isinstance(v, Masked) for v in self.values])
 
 
 # -----------------------------------------------------------------------------

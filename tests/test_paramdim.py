@@ -157,15 +157,28 @@ def test_mask():
     # NOTE not trivial to test because the .mask getter _computes_ the value
     assert not any([isinstance(v, Masked) for v in pd.values])
 
-    pd.mask = (True, False, True)
-    assert pd.mask == (True, False, True)
-
     pd.mask = True
     assert pd.mask is True
     assert all([isinstance(v, Masked) for v in pd.values])
 
+    # Check the string representation of masked values
+    assert str(pd.values[0]).find("(masked)") > -1
+    assert str(pd).find("with masked value") > -1
+
+    # Now to a more complex mask
+    pd.mask = (True, False, True)
+    assert pd.mask == (True, False, True)
+
     # Check that length remains the same
     assert len(pd) == 3
+
+    # Check that iteration starts at first unmasked state
+    pd.enter_iteration()
+    assert pd.state == 1
+
+    # No further iteration should be possible for this one
+    with pytest.raises(StopIteration):
+        pd.iterate_state()
 
 
 # CoupledParamDim -------------------------------------------------------------
