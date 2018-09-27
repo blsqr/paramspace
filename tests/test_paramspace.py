@@ -350,7 +350,7 @@ def test_basic_iteration(small_psp, basic_psp, adv_psp):
     assert psp.state_no == 16 + 3 + 1
     
     # ... and so on
-    psp._reset()
+    psp.reset()
     assert psp.state_vector == (0, 0, 0)
     assert psp.state_no == 0
 
@@ -369,6 +369,12 @@ def test_basic_iteration(small_psp, basic_psp, adv_psp):
     empty_psp = ParamSpace(dict(foo="bar"))
     with pytest.raises(ValueError, match="Cannot iterate over ParamSpace of"):
         list(iter(empty_psp))
+
+    # Check the dry run
+    psp.reset()
+    snos = list([s[0] for s in psp.all_points(with_info=('state_no',),
+                                           dry_run=True)])
+    assert snos[:4] == [16, 17, 19, 20]
     
     # Check that the counts match using a helper function . . . . . . . . . . .
     def check_counts(iters, counts):
@@ -387,7 +393,7 @@ def test_basic_iteration(small_psp, basic_psp, adv_psp):
     check_counts((basic_psp, adv_psp),
                  (basic_psp.volume, adv_psp.volume))
 
-    # Also test all information tuples
+    # Also test all information tuples and the dry run
     info = ("state_no", "state_vec")
     check_counts((small_psp.all_points(with_info=info),),
                  (small_psp.volume,))
@@ -418,8 +424,9 @@ def test_masking(small_psp):
     assert psp.shape == (1, 1, 1)  # i.e.: all dimensions masked
     assert psp.volume == 1 * 1 * 1
 
-    # Full volume should remain the old
+    # Full volume and full shape should remain the old
     assert psp.full_volume == 2 * 3 * 5
+    assert psp.full_shape == (2, 3, 5)
 
     # Remove the masks again, sometimes partly
     psp.set_mask('p0', False)

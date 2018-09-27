@@ -10,6 +10,7 @@ from functools import reduce
 from typing import Union, Sequence, Tuple, Generator, MutableMapping, MutableSequence, Dict, List
 
 import numpy as np
+import numpy.ma
 
 from .paramdim import ParamDimBase, ParamDim, CoupledParamDim
 from .tools import recursive_collect, recursive_update, recursive_replace
@@ -252,15 +253,6 @@ class ParamSpace:
 
         log.debug("Successfully set state vector to %s.", vec)
 
-
-    @property
-    def full_state_vector(self) -> OrderedDict:
-        """Returns an OrderedDict of all parameter space dimensions, including
-        coupled ones.
-        """
-        return OrderedDict((k, v) for k, v in chain(self.dims.items(),
-                                                    self.coupled_dims.items()))
-
     @property
     def num_dims(self) -> int:
         """Returns the number of parameter space dimensions. Coupled
@@ -285,13 +277,10 @@ class ParamSpace:
         log.debug("  states:       %s", states)
 
         # Now need the full shape of the parameter space, i.e. ignoring masked
-        # values
+        # values but including the default values
         states_shape = self.states_shape
         log.debug("  states shape: %s  (volume: %s)",
                   states_shape, reduce(lambda x, y: x*y, states_shape))
-
-        # Need to include the defaults into the shape
-
 
         # The lengths will now be used to calculate the multipliers, starting
         # with 1 for the 0th pdim.
@@ -437,7 +426,7 @@ class ParamSpace:
         return self._iter()
         # NOTE the generator will also raise StopIteration once it ended
         
-    def all_points(self, with_info: Tuple[str]=None) -> Generator[PStype, None, None]:
+    def all_points(self, with_info: Tuple[str]=None, dry_run: bool=False) -> Generator[PStype, None, None]:
         """Returns a generator yielding all points of the parameter space, i.e.
         the space spanned open by the parameter dimensions.
         
@@ -445,8 +434,7 @@ class ParamSpace:
             with_info (Tuple[str], optional): Can pass strings here that are to
                 be returned as the second value. Possible values are:
                     'state_no', 'state_vector'
-            include_default (bool, optional): If true, also includes the
-                parameter dimensions' default values.
+            dry_run (bool, optional): If true, only the info tuple is returned
         
         Returns:
             Generator[PStype, None, None]: yields point after point of the
@@ -468,16 +456,28 @@ class ParamSpace:
             pdim.enter_iteration()
 
         # Yield the first state
-        yield self._gen_info_tuple(self.current_point, with_info=with_info)
+        yield self._gen_info_tuple(self.current_point if not dry_run else None,
+                                   with_info=with_info)
 
         # Now yield all the other states, while available.
         while self._next_state():
-            yield self._gen_info_tuple(self.current_point, with_info=with_info)
+            yield self._gen_info_tuple((self.current_point if not dry_run
+                                        else None),
+                                       with_info=with_info)
 
         else:
             log.debug("Visited every point in ParamSpace.")
-            self._reset()
+            self.reset()
             return
+
+    def reset(self) -> None:
+        """Resets the paramter space and all of its dimensions to the initial
+        state, i.e. where all states are None.
+        """
+        for pdim in self.dims.values():
+            pdim.reset()
+
+        log.debug("Reset ParamSpace and ParamDims.")
 
     def _next_state(self) -> bool:
         """Iterates the state of the parameter dimensions managed by this
@@ -513,22 +513,13 @@ class ParamSpace:
             #    do so by returning false, which is more convenient than
             #    raising StopIteration; the iteration is handled by the
             #    all_points method anyway.
-            self._reset()
+            self.reset()
             return False
 
         # If this point is reached: broke out of loop
         # -> The next state was reached and we are not at the end yet.
         #    Communicate that by returning True.
         return True
-
-    def _reset(self) -> None:
-        """Resets the paramter space and all of its dimensions to the initial
-        state, i.e. where all states are None.
-        """
-        for pdim in self.dims.values():
-            pdim.reset()
-
-        log.debug("Reset ParamSpace and ParamDims.")
 
     # Public API ..............................................................
     # Mapping . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
@@ -569,6 +560,17 @@ class ParamSpace:
         log.debug("Finished creating inverse mapping. Caching it...")
         self._imap = imap
         return self._imap
+
+    def get_masked_imap(self) -> np.ma.MaskedArray:
+        """Returns a masked array based on the inverse mapping, where masked
+        states are also masked in the array.
+
+        Note that this array has to be re-calculated every time, as the mask
+        status of the ParamDim objects is not controlled by the ParamSpace and
+        can change without notice.
+        """
+
+
 
     def get_state_vector(self, *, state_no: int) -> Tuple[int]:
         """Returns the state vector that corresponds to a state number
@@ -665,6 +667,34 @@ class ParamSpace:
 
     # Non-public API ..........................................................
 
+    def _gen_info_tuple(self, pt, *, with_info: Sequence) -> tuple:
+        """Is used during iteration to add additional information to the
+        return tuple.
+
+        Note that pt can also be None if all_points is a dry_run
+        """
+        if not with_info:
+            return pt
+
+        # Parse the tuple and add information
+        info_tup = tuple()
+        for info in with_info:
+            if info in ['state_no']:
+                info_tup += (self.state_no,)
+
+            elif info in ['state_vector', 'state_vec']:
+                info_tup += (self.state_vector,)
+
+            else:
+                raise ValueError("No such information '{}' available. "
+                                 "Check the `with_info` argument!"
+                                 "".format(info))
+
+        # If a point was given, concatenate and return. otherwise only info_tup
+        if pt is not None:
+            return (pt,) + info_tup
+        return info_tup
+
     def _dim_by_name(self, name: Union[str, Tuple[str]]) -> ParamDimBase:
         """Get the ParamDim object with the given name.
 
@@ -730,30 +760,6 @@ class ParamSpace:
                            "".format(name, "\n * ".join(self._dim_names)))
 
         return pdim
-
-    def _gen_info_tuple(self, pt, *, with_info: Sequence) -> tuple:
-        """Is used during iteration to add additional information to the
-        return tuple.
-        """
-        if not with_info:
-            return pt
-
-        # Parse the tuple and add information
-        info_tup = tuple()
-        for info in with_info:
-            if info in ['state_no']:
-                info_tup += (self.state_no,)
-
-            elif info in ['state_vector', 'state_vec']:
-                info_tup += (self.state_vector,)
-
-            else:
-                raise ValueError("No such information '{}' available. "
-                                 "Check the `with_info` argument!"
-                                 "".format(info))
-
-        # Concatenate and return
-        return (pt,) + info_tup
 
     @staticmethod
     def _parse_dim_name(name: Tuple[str]) -> str:
