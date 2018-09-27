@@ -332,14 +332,55 @@ def test_masking(small_psp):
     assert psp.shape == (1, 1, 1)  # i.e.: all dimensions masked
     assert psp.volume == 1 * 1 * 1
 
-    # Check iteration; should contain only a default dict
+    # Remove the masks again, sometimes partly
+    psp.set_mask('p0', False)
+    assert psp.shape == (2, 1, 1)
+
+    psp.set_mask('p1', (1, 1, 0))  # length 1
+    assert psp.shape == (2, 1, 1)
+
+    psp.set_mask('p2', (1, 0, 0, 1, 0))  # length 3
+    assert psp.shape == (2, 1, 3)
+
+
+def test_masked_iteration(small_psp):
+    """Check iteration with a masked parameter space"""
+    # First test: fully masked array
+    psp = small_psp
+    psp.set_mask('p0', True)
+    psp.set_mask('p1', True)
+    psp.set_mask('p2', True)
+
+    # This should return only one entry: the default ParamSpace
     iter_res = {state_no:d
                 for d, state_no in psp.all_points(with_info=('state_no',))}
-    print("iteration result: ", iter_res)
+    print("fully masked array: ", iter_res)
     
     assert len(iter_res) == 1
     assert 0 in iter_res
-    assert iter_res[0] == dict(p0=0, p1=0, p2=0)
+    assert iter_res[0] == dict(p0=0, p1=0, p2=0) == psp.default
+
+    # Now the same with a non-trivial mask
+    psp.set_mask('p0', (1, 0))  # length 1
+    assert psp.shape == (1, 1, 1)
+    iter_res = {state_no:d
+                for d, state_no in psp.all_points(with_info=('state_no',))}
+    print("p0 mask (True, False): ", iter_res)
+    assert len(iter_res) == 1 == psp.volume
+    assert 2 in iter_res
+    assert iter_res[2] == dict(p0=2, p1=0, p2=0)
+
+    # ... and an even more complex one
+    psp.set_mask('p1', (0, 1, 0))
+    assert psp.shape == (1, 2, 1)
+    iter_res = {state_no:d
+                for d, state_no in psp.all_points(with_info=('state_no',))}
+    print("+ p1 mask (False, True, False): ", iter_res)
+    assert len(iter_res) == 1 * 2 == psp.volume
+    assert (3 + 2) in iter_res
+    assert iter_res[5] == dict(p0=2, p1=1, p2=0)
+    assert (9 + 2) in iter_res
+    assert iter_res[11] == dict(p0=2, p1=3, p2=0)
 
 
 # Complicated content ---------------------------------------------------------
