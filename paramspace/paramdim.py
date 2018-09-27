@@ -346,8 +346,10 @@ class ParamDim(ParamDimBase):
         """
         super().__init__(**kwargs)
 
-        # Additional attributes, needed for coupling and masking
+        # Additional attributes, needed for coupling, masking, iteration
         self._target_of = []
+
+        self._inside_iter = False
 
         self._mask_cache = None
         self.mask = mask
@@ -479,15 +481,18 @@ class ParamDim(ParamDimBase):
         # Check equality of the objects' __dict__s, leaving out _mask_cache
         return all([self.__dict__[k] == other.__dict__[k]
                     for k in self.__dict__.keys()
-                    if k not in ('_mask_cache',)])
+                    if k not in ('_mask_cache', '_inside_iter')])
 
     def __len__(self) -> int:
         """Returns the effective length of the parameter dimension, i.e. the
-        number of values that will be iterated over
+        number of values that will be iterated over.
         
         Returns:
             int: The number of values to be iterated over
         """
+        if self.mask is True:
+            # Will only return the default value, thus effective length is 1
+            return 1
         return len(self._vals) - self.num_masked
 
     # Public API ..............................................................
@@ -506,12 +511,16 @@ class ParamDim(ParamDimBase):
             self.state = 1
 
         elif self.mask is True:
-            # Need to communicate that there is nothing to iterate
-            raise StopIteration
+            # There is only the default state to go to; go there, but then
+            # communicate that the iteration is over
+            self.state = 0
 
         else:
             # Find the first unmasked state
             self.state = self.mask.index(False) + 1  # +1 accounts for default
+
+        # Set the flag to signify that inside iteration
+        self._inside_iter = True
 
     def iterate_state(self) -> None:
         """Iterates the state of the parameter dimension.
@@ -521,11 +530,8 @@ class ParamDim(ParamDimBase):
         """
         # Set to zero or increment, depending on whether inside or outside of
         # an iteration
-        if self.state == 0:
+        if not self._inside_iter:
             self.enter_iteration()
-            # NOTE This will raise StopIteration if all values are masked.
-            #      Thus, in the following, it can be assumed that at least one
-            #      value is unmasked.
             return
             
         # Else: within iteration
@@ -551,6 +557,7 @@ class ParamDim(ParamDimBase):
             None
         """
         self.state = 0  # the state corresponding to the default value
+        self._inside_iter = False
 
     # Non-public API ..........................................................
 

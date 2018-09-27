@@ -595,7 +595,14 @@ class ParamSpace:
                 enough to resolve the dimension names unambiguously.
             mask (Union[bool, Tuple[bool]]): The new mask values.
         """
+        # Resolve the parameter dimension
+        pdim = self._dim_by_name(name)
 
+        # Set its mask value
+        pdim.mask = mask
+
+        # Done.
+        log.debug("Set mask of parameter dimension %s to %s.", name, pdim.mask)
 
 
     # Non-public API ..........................................................

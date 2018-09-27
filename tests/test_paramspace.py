@@ -255,22 +255,14 @@ def test_inverse_mapping(small_psp, basic_psp, adv_psp):
         # Test caching branch
         psp.inverse_mapping()
 
-    # Test values more explicitly
+    # TODO Test values more explicitly
 
-@pytest.mark.skip() # TODO
-def test_masking(small_psp):
-    """Test whether the masking feature works"""
-    psp = small_psp
-    assert psp.shape == (2, 3, 5)
-    assert psp.volume == 2 * 3 * 5
-
-    # First try setting binary masks
-    psp.set_mask('p0', True)
-    assert psp.shape == (1, 3, 5)  # i.e.: 0th dimension only returns default
-    assert psp.volume == 1 * 3 * 5
-
-def test_iteration(basic_psp, adv_psp):
+def test_basic_iteration(small_psp, basic_psp, adv_psp):
     """Tests whether the iteration goes through all points"""
+    # Test the basics
+    # TODO
+    
+    # Check that the counts match using a helper function . . . . . . . . . . .
     def check_counts(iters, counts):
         cntrs = {i:0 for i, _ in enumerate(counts)}
 
@@ -283,22 +275,48 @@ def test_iteration(basic_psp, adv_psp):
     check_counts((basic_psp.all_points(), adv_psp.all_points()),
                  (basic_psp.volume, adv_psp.volume))
 
-    # For the call via __next__
+    # For the call via __iter__ and __next__
     check_counts((basic_psp, adv_psp),
                  (basic_psp.volume, adv_psp.volume))
 
     # Also test all information tuples
     info = ("state_no", "state_vec")
-    check_counts((basic_psp.all_points(with_info=info),
-                  adv_psp.all_points(with_info=info)),
-                 (basic_psp.volume, adv_psp.volume))
+    check_counts((small_psp.all_points(with_info=info),),
+                 (small_psp.volume,))
 
-    # and whether invalid values lead to failure
+    # ... and whether invalid values lead to failure
     with pytest.raises(ValueError):
         info = ("state_no", "foo bar")
-        check_counts((basic_psp.all_points(with_info=info),
-                      adv_psp.all_points(with_info=info)),
-                     (basic_psp.volume, adv_psp.volume))    
+        check_counts((small_psp.all_points(with_info=info),),
+                     (small_psp.volume,))
+
+# Masking ---------------------------------------------------------------------
+
+def test_masking(small_psp):
+    """Test whether the masking feature works"""
+    psp = small_psp
+    assert psp.shape == (2, 3, 5)
+    assert psp.volume == 2 * 3 * 5
+
+    # First try setting binary masks
+    psp.set_mask('p0', True)
+    assert psp.shape == (1, 3, 5)  # i.e.: 0th dimension only returns default
+    assert psp.volume == 1 * 3 * 5
+
+    # Mask completely
+    psp.set_mask('p1', True)
+    psp.set_mask('p2', True)
+    assert psp.shape == (1, 1, 1)  # i.e.: all dimensions masked
+    assert psp.volume == 1 * 1 * 1
+
+    # Check iteration; should contain only a default dict
+    iter_res = {state_no:d
+                for d, state_no in psp.all_points(with_info=('state_no',))}
+    print("iteration result: ", iter_res)
+    
+    assert len(iter_res) == 1
+    assert 0 in iter_res
+    assert iter_res[0] == dict(p0=0, p1=0, p2=0)
 
 
 # Complicated content ---------------------------------------------------------

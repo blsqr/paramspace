@@ -204,9 +204,11 @@ def test_mask():
     # Check iteration again
     assert list(pd) == [2, 4]
 
-    # Same for fully masked
+    # For fully masked, the default value should be returned. Eff. length: 1
     pd.mask = True
-    assert list(pd) == []
+    assert len(pd) == 1
+    assert pd.num_masked == pd.num_states - 1
+    assert list(pd) == [0]
 
 
 # CoupledParamDim -------------------------------------------------------------
