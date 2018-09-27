@@ -284,16 +284,6 @@ class ParamSpace:
         states = self.state_vector
         log.debug("  states:       %s", states)
 
-        # First check if any of the states were None. If yes, that means that
-        # the parameter space is not within an iteration currently, thus the
-        # state also needs to be None
-        if None in states:
-            log.debug("At least one parameter dimension state was None, thus "
-                      "the ParamSpace state is not within an iteration and "
-                      "the state is also None.")
-            return None
-        # NOTE can now be sure that all values are integer states, no Nones
-
         # Now need the full shape of the parameter space, i.e. ignoring masked
         # values
         states_shape = self.states_shape
@@ -396,9 +386,6 @@ class ParamSpace:
                         # Found the coupling target object; get the full name
                         resolved_target_name = pdim_name
                         break
-                else:
-                    raise RuntimeError("Could not find coupling target; this "
-                                       "should not have happened!")
 
                 if resolved_target_name != cpdim.target_name:
                     l[-1] += "  [resolves to: {}]".format(resolved_target_name)

@@ -207,7 +207,8 @@ def test_volume(small_psp, basic_psp, adv_psp):
     assert p.volume == 1*5*20*12
 
     # And of a paramspace without dimensions
-    assert ParamSpace(dict(a=1)).volume == 0
+    empty_psp = ParamSpace(dict(a=1))
+    assert empty_psp.volume == 0 == empty_psp.full_volume
 
 def test_shape(small_psp, basic_psp, adv_psp):
     """Asserts that the returned shape is correct"""
@@ -309,16 +310,41 @@ def test_basic_iteration(small_psp, basic_psp, adv_psp):
     psp = small_psp
     it = psp.all_points()  # is a generator now
     assert it.__next__() == dict(p0=1, p1=1, p2=1)
+    assert psp.state_vector == (1, 1, 1)
     assert psp.state_no == 16 # == 1 + 3 + 12  # 16
+
     assert it.__next__() == dict(p0=2, p1=1, p2=1)
+    assert psp.state_vector == (2, 1, 1)
     assert psp.state_no == 16 + 1
+
     assert it.__next__() == dict(p0=1, p1=2, p2=1)
+    assert psp.state_vector == (1, 2, 1)
     assert psp.state_no == 16 + 3
+
     assert it.__next__() == dict(p0=2, p1=2, p2=1)
+    assert psp.state_vector == (2, 2, 1)
     assert psp.state_no == 16 + 3 + 1
+    
     # ... and so on
     psp._reset()
+    assert psp.state_vector == (0, 0, 0)
     assert psp.state_no == 0
+
+    # Test some general properties relating to iteration and state
+    # Test manually setting state vector
+    psp.state_vector = (1, 1, 1)
+    assert psp.current_point == dict(p0=1, p1=1, p2=1)
+
+    with pytest.raises(ValueError, match="needs to be of same length as"):
+        psp.state_vector = (0, 0)
+    
+    with pytest.raises(ValueError, match="Could not set the state of "):
+        psp.state_vector = (-1, 42, 123.45)
+
+    # A paramspace without volume should raise an error
+    empty_psp = ParamSpace(dict(foo="bar"))
+    with pytest.raises(ValueError, match="Cannot iterate over ParamSpace of"):
+        list(iter(empty_psp))
     
     # Check that the counts match using a helper function . . . . . . . . . . .
     def check_counts(iters, counts):
@@ -367,6 +393,9 @@ def test_masking(small_psp):
     assert psp.shape == (1, 1, 1)  # i.e.: all dimensions masked
     assert psp.volume == 1 * 1 * 1
 
+    # Full volume should remain the old
+    assert psp.full_volume == 2 * 3 * 5
+
     # Remove the masks again, sometimes partly
     psp.set_mask('p0', False)
     assert psp.shape == (2, 1, 1)
@@ -388,6 +417,9 @@ def test_masking(small_psp):
     psp.set_masks(dict(name=('p0',), mask=True),
                   dict(name='p2',    mask=slice(2), invert=True))
     assert psp.shape == (1, 3, 2)
+
+    # Fully masked dimension also prompts changes in info string
+    assert psp.get_info_str().find("fully masked -> using default:") > -1
 
 def test_masked_iteration(small_psp):
     """Check iteration with a masked parameter space"""
@@ -462,6 +494,11 @@ def test_coupled(psp_with_coupled):
         assert pt['d']['cc1'] == pt['d']['aa']
         assert pt['d']['cc2'] == pt['a']
         assert pt['d']['cc3'] == pt['d']['aa']
+
+    # Invalid coupling targets should raise an error
+    with pytest.raises(ValueError, match="Could not resolve the coupling"):
+        ParamSpace(dict(a=ParamDim(default=0, range=[10]),
+                        b=CoupledParamDim(target_name="foo")))
     
 def test_nested(psp_nested, basic_psp):
 	"""Tests whether nested ParamSpaces behave as desired"""
