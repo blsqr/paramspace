@@ -131,6 +131,15 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         return self._vals
 
     @property
+    def num_values(self) -> int:
+        """The number of values available.
+        
+        Returns:
+            int: The number of available values
+        """
+        return len(self.values)
+
+    @property
     def state(self) -> Union[int, None]:
         """The current iterator state
         
@@ -167,14 +176,14 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         # Check equality of the objects' __dict__s
         return self.__dict__ == other.__dict__
 
+    @abc.abstractmethod
     def __len__(self) -> int:
-        """Returns the length of the parameter dimension.
+        """Returns the effective length of the parameter dimension, i.e. the
+        number of values that will be iterated over
         
         Returns:
-            int: The length of the associated values list. If the parameter
-                dimension is not enabled, the length is 1.
+            int: The number of values to be iterated over
         """
-        return len(self.values)
 
     def __str__(self) -> str:
         """
@@ -363,11 +372,11 @@ class ParamDim(ParamDimBase):
 
         elif isinstance(new_state, int):
             # Check for valid state interval
-            if new_state < 0 or new_state >= len(self):
+            if new_state < 0 or new_state >= self.num_values:
                 raise ValueError("New state needs to be positive and cannot "
                                  "exceed the highest index of the value "
                                  "container ({}), was {}."
-                                 "".format(len(self)-1, new_state))
+                                 "".format(self.num_values - 1, new_state))
 
             elif self._mask_tuple()[new_state] is True:
                 raise MaskedValueError("Value at index {} is masked: {}. "
@@ -424,14 +433,14 @@ class ParamDim(ParamDimBase):
 
         # Resolve boolean values
         if isinstance(mask, bool):
-            mask = [mask] * len(self)
+            mask = [mask] * self.num_values
 
         # Should be a container now. Assert correct length.
-        if len(mask) != len(self.values):
+        if len(mask) != self.num_values:
             raise ValueError("Given mask needs to be a boolean or a container "
                              "of same length as the values container ({}), "
                              "was:  {}"
-                             "".format(len(self), mask))
+                             "".format(self.num_values, mask))
 
         # Mark the mask cache as invalid, such that it is re-calculated when
         # the mask getter is accessed the next time
@@ -444,11 +453,6 @@ class ParamDim(ParamDimBase):
     def num_masked(self) -> int:
         """Returns the number of unmasked values"""
         return sum(self._mask_tuple())
-    
-    @property
-    def num_unmasked(self) -> int:
-        """Returns the number of unmasked values"""
-        return len(self) - self.num_masked
 
 
     # Magic Methods ...........................................................
@@ -470,6 +474,14 @@ class ParamDim(ParamDimBase):
                     for k in self.__dict__.keys()
                     if k not in ('_mask_cache',)])
 
+    def __len__(self) -> int:
+        """Returns the effective length of the parameter dimension, i.e. the
+        number of values that will be iterated over
+        
+        Returns:
+            int: The number of values to be iterated over
+        """
+        return len(self._vals) - self.num_masked
 
     # Public API ..............................................................
 
@@ -635,6 +647,19 @@ class CoupledParamDim(ParamDimBase):
         log.debug("CoupledParamDim initialised.")
         self._init_finished = True
 
+
+    # Magic methods ...........................................................
+
+    def __len__(self) -> int:
+        """Returns the effective length of the parameter dimension, i.e. the
+        number of values that will be iterated over; corresponds to that of
+        the target ParamDim
+        
+        Returns:
+            int: The number of values to be iterated over
+        """
+        return len(self.target_pdim)
+
     # Public API ..............................................................
     # These are needed by the ParamSpace class to have more control over the
     # iteration. Here, the parent class' behaviour is overwritten as the
@@ -702,11 +727,12 @@ class CoupledParamDim(ParamDimBase):
             raise TypeError("Target of CoupledParamDim needs to be of type "
                             "ParamDim, was "+str(type(pdim)))
 
-        elif not self.use_coupled_values and len(self) != len(pdim):
+        elif (not self.use_coupled_values
+              and self.num_values != pdim.num_values):
             raise ValueError("The lengths of the value sequences of target "
                              "ParamDim and this CoupledParamDim need to "
                              "match, were: {} and {}, respectively."
-                             "".format(len(pdim), len(self)))
+                             "".format(pdim.num_values, self.num_values))
 
         self._target_pdim = pdim
         log.debug("Set CoupledParamDim target.")

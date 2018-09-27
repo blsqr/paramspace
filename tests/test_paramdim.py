@@ -95,6 +95,10 @@ def test_properties(various_pdims):
     assert vpd['one'].current_value == vpd['one'].default
     assert vpd['two'].current_value == vpd['two'].default
     
+    # number of values and length (same in unmasked case)
+    assert vpd['one'].num_values == 3 == len(vpd['one'])
+    assert vpd['two'].num_values == 4 == len(vpd['two'])
+
     # target_of
     for pd in vpd.values():
         if isinstance(pd, ParamDim):
@@ -169,15 +173,12 @@ def test_mask():
 
     # Test the properties that inform about the number of masked and unmasked
     # values
+    assert len(pd) == 2
     assert pd.num_masked == 2
-    assert pd.num_unmasked == 2
 
     # Setting one with a bad length should not work
     with pytest.raises(ValueError, match="container of same length as the"):
         pd.mask = (True, False)
-
-    # Check that length remains the same
-    assert len(pd) == 4
 
     # Check that iteration starts at first unmasked state
     pd.enter_iteration()

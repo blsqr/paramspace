@@ -11,7 +11,14 @@ from paramspace import ParamSpace, ParamDim, CoupledParamDim
 # Setup methods ---------------------------------------------------------------
 
 @pytest.fixture()
-def basic_psp(request):
+def small_psp():
+    """Used to setup a small pspace object to be tested on."""
+    return ParamSpace(dict(p0=ParamDim(default=0, values=[1, 2]),
+                           p1=ParamDim(default=0, values=[1, 2, 3]),
+                           p2=ParamDim(default=0, values=[1, 2, 3, 4, 5])))
+
+@pytest.fixture()
+def basic_psp():
     """Used to setup a basic pspace object to be tested on."""
     d = dict(a=1, b=2, foo="bar", spam="eggs", mutable=[0, 0, 0],
              p1=ParamDim(default=0, values=[1,2,3]),
@@ -29,7 +36,7 @@ def basic_psp(request):
     return ParamSpace(d)
 
 @pytest.fixture()
-def adv_psp(request):
+def adv_psp():
     """Used to setup a more elaborate pspace object to be tested on. Includes name clashes, manually set names, order, ..."""
     d = dict(a=1, b=2, foo="bar", spam="eggs", mutable=[0, 0, 0],
              p1=ParamDim(default=0, values=[1,2,3], order=0),
@@ -47,7 +54,7 @@ def adv_psp(request):
     return ParamSpace(d)
 
 @pytest.fixture()
-def psp_with_coupled(request):
+def psp_with_coupled():
     """Used to setup a pspace object with coupled param dims"""
     d = dict(a=ParamDim(default=0, values=[1,2,3], order=0),
              c1=CoupledParamDim(target_name=('a',)),
@@ -61,7 +68,7 @@ def psp_with_coupled(request):
     return ParamSpace(d)
 
 @pytest.fixture()
-def psp_nested(request, basic_psp):
+def psp_nested(basic_psp):
 	"""Creates two ParamSpaces nested within another ParamSpace"""
 	return ParamSpace(dict(foo="bar", basic=basic_psp,
 	                       deeper=dict(basic=basic_psp)))
@@ -115,9 +122,7 @@ def test_default(basic_psp, adv_psp):
 def test_volume(basic_psp, adv_psp):
     """Asserts that the volume calculation is correct"""
     assert basic_psp.volume == 3**6
-    assert basic_psp.volume == basic_psp.full_volume
     assert adv_psp.volume == 3**6
-    assert adv_psp.volume == adv_psp.full_volume
 
     p = ParamSpace(dict(a=ParamDim(default=0, values=[1]), # 1
                         b=ParamDim(default=0, range=[0,10,2]), # 5
@@ -125,7 +130,6 @@ def test_volume(basic_psp, adv_psp):
                         d=ParamDim(default=0, logspace=[1,2,12,1]) # 12
                         ))
     assert p.volume == 1*5*20*12
-    assert p.volume == p.full_volume
 
     # And of a paramspace without dimensions
     assert ParamSpace(dict(a=1)).volume == 0
@@ -290,7 +294,6 @@ def test_eq(adv_psp):
     assert (psp == psp._dict) is False  # Not equivalent to the whole object
     assert (psp == psp) is True
 
-
 def test_item_access(psp_with_coupled):
     """Assert that item access is working and safe"""
     psp = psp_with_coupled
@@ -314,10 +317,17 @@ def test_item_access(psp_with_coupled):
     with pytest.raises(KeyError, match="Cannot remove item with key"):
         psp.pop("c1")
 
-@pytest.mark.skip("Feature is not implemented yet.")
-def test_subspace():
-    """Test whether the subspace retrieval is correct."""
-    pass
+@pytest.mark.skip() # TODO
+def test_masking(small_psp):
+    """Test whether the masking feature works"""
+    psp = small_psp
+    assert psp.shape == (2, 3, 5)
+    assert psp.volume == 2 * 3 * 5
+
+    # First try setting binary masks
+    psp.set_mask('p0', True)
+    assert psp.shape == (1, 3, 5)  # i.e.: 0th dimension only returns default
+    assert psp.volume == 1 * 3 * 5
 
 
 # YAML Dumping ----------------------------------------------------------------

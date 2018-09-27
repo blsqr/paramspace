@@ -170,24 +170,14 @@ class ParamSpace:
         
     @property
     def volume(self) -> int:
-        """Returns the volume of the parameter space, not counting coupled
-        parameter dimensions.
+        """Returns the active volume of the parameter space, i.e. not counting
+        coupled parameter dimensions or masked values
         """
         if self.num_dims == 0:
             return 0
 
         vol = 1
         for pdim in self.dims.values():
-            vol *= len(pdim)
-        return vol
-
-    @property
-    def full_volume(self) -> int:
-        """Returns the full volume of the parameter space, including coupled
-        parameter dimensions.
-        """
-        vol = 1
-        for pdim in chain(self.dims.values(), self.coupled_dims.values()):
             vol *= len(pdim)
         return vol
 
