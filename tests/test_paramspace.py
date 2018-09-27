@@ -342,6 +342,17 @@ def test_masking(small_psp):
     psp.set_mask('p2', (1, 0, 0, 1, 0))  # length 3
     assert psp.shape == (2, 1, 3)
 
+    # Try inverting the mask
+    psp.set_mask('p2', True, invert=True)
+    assert psp.shape == (2, 1, 5)
+
+    # Try setting multiple masks at once
+    psp.set_masks(('p0', False), ('p1', False), ('p2', False))
+    assert psp.shape == (2, 3, 5)
+    
+    psp.set_masks(dict(name=('p0',), mask=True),
+                  dict(name='p2',    mask=slice(2), invert=True))
+    assert psp.shape == (1, 3, 2)
 
 def test_masked_iteration(small_psp):
     """Check iteration with a masked parameter space"""

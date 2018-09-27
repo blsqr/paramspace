@@ -391,7 +391,7 @@ class ParamDim(ParamDimBase):
             raise ValueError("New state needs to be <= {}, was {}."
                              "".format(self.num_values, new_state))
 
-        elif new_state > 0 and self._mask_tuple()[new_state - 1] is True:
+        elif new_state > 0 and self.mask_tuple[new_state - 1] is True:
             raise MaskedValueError("Value at index {} is masked: {}. "
                                    "Cannot set the state to this index."
                                    "".format(new_state,
@@ -401,11 +401,19 @@ class ParamDim(ParamDimBase):
         self._state = new_state
 
     @property
+    def mask_tuple(self) -> Tuple[bool]:
+        """Returns a tuple representation of the current mask"""
+        if self._mask_cache is None:
+            self._mask_cache = tuple([isinstance(v, Masked)
+                                      for v in self.values])
+        return self._mask_cache
+
+    @property
     def mask(self) -> Union[bool, Tuple[bool]]:
         """Returns False if no value is masked or a tuple of booleans that
         represents the mask
         """        
-        m = self._mask_tuple()  # uses a cached value, if available
+        m = self.mask_tuple  # uses a cached value, if available
         
         if not any(m):  # no entry masked
             return False
@@ -444,11 +452,17 @@ class ParamDim(ParamDimBase):
         if isinstance(mask, bool):
             mask = [mask] * self.num_values
 
+        elif isinstance(mask, slice):
+            # Apply the slice to a list of indices in order to know which ones
+            # to set to True in the mask
+            idcs = list(range(self.num_values))[mask]
+            mask = [(i in idcs) for i in range(self.num_values)]
+
         # Should be a container now. Assert correct length.
         if len(mask) != self.num_values:
-            raise ValueError("Given mask needs to be a boolean or a container "
-                             "of same length as the values container ({}), "
-                             "was:  {}"
+            raise ValueError("Given mask needs to be a boolean, a slice, or a "
+                             "container of same length as the values "
+                             "container ({}), was:  {}"
                              "".format(self.num_values, mask))
 
         # Mark the mask cache as invalid, such that it is re-calculated when
@@ -461,7 +475,7 @@ class ParamDim(ParamDimBase):
     @property
     def num_masked(self) -> int:
         """Returns the number of unmasked values"""
-        return sum(self._mask_tuple())
+        return sum(self.mask_tuple)
 
 
     # Magic Methods ...........................................................
@@ -536,7 +550,7 @@ class ParamDim(ParamDimBase):
             
         # Else: within iteration
         # Look for further possible states in the remainder of the mask tuple
-        sub_mask = self._mask_tuple()[self.state:]
+        sub_mask = self.mask_tuple[self.state:]
 
         if False in sub_mask:
             # There is another possible state, find it via index
@@ -558,15 +572,6 @@ class ParamDim(ParamDimBase):
         """
         self.state = 0  # the state corresponding to the default value
         self._inside_iter = False
-
-    # Non-public API ..........................................................
-
-    def _mask_tuple(self) -> Tuple[bool]:
-        """Returns a tuple representation of the current mask"""
-        if self._mask_cache is None:
-            self._mask_cache = tuple([isinstance(v, Masked)
-                                      for v in self.values])
-        return self._mask_cache
 
 
 

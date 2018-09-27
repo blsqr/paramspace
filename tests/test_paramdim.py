@@ -210,6 +210,16 @@ def test_mask():
     assert pd.num_masked == pd.num_states - 1
     assert list(pd) == [0]
 
+    # Try using a slice to set the mask
+    pd.mask = slice(2)
+    assert pd.mask == (True, True, False, False)
+    
+    pd.mask = slice(2, None)
+    assert pd.mask == (False, False, True, True)
+    
+    pd.mask = slice(None, None, 2)
+    assert pd.mask == (True, False, True, False)
+
 
 # CoupledParamDim -------------------------------------------------------------
 

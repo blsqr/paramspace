@@ -583,7 +583,7 @@ class ParamSpace:
 
     # Masking .................................................................
 
-    def set_mask(self, name: Union[str, Tuple[str]], mask: Union[bool, Tuple[bool]]) -> None:
+    def set_mask(self, name: Union[str, Tuple[str]], mask: Union[bool, Tuple[bool]], invert: bool=False) -> None:
         """Set the mask value of the parameter dimension with the given name.
         
         Args:
@@ -594,6 +594,8 @@ class ParamSpace:
                 to be supplied but the last parts suffice; it just needs to be
                 enough to resolve the dimension names unambiguously.
             mask (Union[bool, Tuple[bool]]): The new mask values.
+            invert (bool, optional): If set, the mask will be inverted _after_
+                application.
         """
         # Resolve the parameter dimension
         pdim = self._dim_by_name(name)
@@ -601,9 +603,28 @@ class ParamSpace:
         # Set its mask value
         pdim.mask = mask
 
+        if invert:
+            pdim.mask = [(not m) for m in pdim.mask_tuple]
+
         # Done.
         log.debug("Set mask of parameter dimension %s to %s.", name, pdim.mask)
 
+    def set_masks(self, *mask_specs) -> None:
+        """Sets multiple mask specifications after another. Note that the order
+        is maintained and that sequential specifications can apply to the same
+        parameter dimensions.
+        
+        Args:
+            *mask_specs: Can be tuples/lists or dicts which will be unpacked
+                (in the given order) and passed to .set_mask
+        """
+        log.debug("Setting %d masks ...", len(mask_specs))
+
+        for ms in mask_specs:
+            if isinstance(ms, dict):
+                self.set_mask(**ms)
+            else:
+                self.set_mask(*ms)
 
     # Non-public API ..........................................................
     # Mostly helper functions
