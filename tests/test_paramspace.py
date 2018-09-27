@@ -286,15 +286,15 @@ def test_inverse_mapping(small_psp, basic_psp, adv_psp):
     psps = [small_psp, basic_psp, adv_psp]
 
     for psp in psps:
-        psp.inverse_mapping()
+        psp.inverse_mapping
         assert psp._imap is not None
 
         # Call again, which will return the cached value
-        psp.inverse_mapping()
+        psp.inverse_mapping
 
     # With specific pspace, do more explicit tests
     psp = small_psp
-    imap = psp.inverse_mapping()
+    imap = psp.inverse_mapping
     assert imap.shape == psp.states_shape
     assert imap[0,0,0] == 0
     assert np.max(imap) == reduce(lambda x, y: x*y, psp.states_shape) - 1
@@ -303,6 +303,30 @@ def test_inverse_mapping(small_psp, basic_psp, adv_psp):
     assert list(imap[:,0,0]) == [0, 1, 2]                # multiplier:  1
     assert list(imap[0,:,0]) == [0, 3, 6, 9]             # multiplier:  3
     assert list(imap[0,0,:]) == [0, 12, 24, 36, 48, 60]  # multiplier:  12
+
+def test_mapping_funcs(small_psp):
+    """Tests other mapping functions"""
+    psp = small_psp
+
+    # Test the get_state_vector method
+    assert psp.get_state_vector(state_no=0) == (0, 0, 0)
+    assert psp.get_state_vector(state_no=16) == (1, 1, 1)
+
+    with pytest.raises(ValueError, match="Did not find state number -1"):
+        psp.get_state_vector(state_no=-1)
+
+    # Test the get_dim_values method
+    psp.state_vector = (0, 0, 0)
+    assert psp.get_dim_values() == OrderedDict([(('p0',), 0),
+                                                (('p1',), 0),
+                                                (('p2',), 0)])
+    
+    assert list(psp.get_dim_values(state_no=16).values()) == [1, 1, 1]
+    assert list(psp.get_dim_values(state_vector=(1,2,3)).values()) == [1, 2, 3]
+
+    # Should not work for both arguments given
+    with pytest.raises(TypeError, match="Expected only one of the arguments"):
+        psp.get_dim_values(state_no=123, state_vector=(1,2,3))
 
 def test_basic_iteration(small_psp, basic_psp, adv_psp):
     """Tests whether the iteration goes through all points"""
@@ -373,6 +397,7 @@ def test_basic_iteration(small_psp, basic_psp, adv_psp):
         info = ("state_no", "foo bar")
         check_counts((small_psp.all_points(with_info=info),),
                      (small_psp.volume,))
+
 
 # Masking ---------------------------------------------------------------------
 

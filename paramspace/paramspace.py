@@ -531,8 +531,9 @@ class ParamSpace:
         log.debug("Reset ParamSpace and ParamDims.")
 
     # Public API ..............................................................
-    # for functions that go beyond iteration
+    # Mapping . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
+    @property
     def inverse_mapping(self) -> np.ndarray:
         """Returns an inverse mapping, i.e. an n-dimensional array where the
         indices along the dimensions relate to the states of the parameter
@@ -561,14 +562,57 @@ class ParamSpace:
 
         # Make sure there are no unset values
         if np.min(imap) < 0:
-            raise RuntimeError("Did not visit all points during iteration "
-                               "over state space!\nimap:\n{}".format(imap))
+            raise RuntimeError("Did (somehow) not visit all points during "
+                               "iteration over state space!\nimap:\n{}"
+                               "".format(imap))
         
         log.debug("Finished creating inverse mapping. Caching it...")
         self._imap = imap
         return self._imap
 
-    # Masking .................................................................
+    def get_state_vector(self, *, state_no: int) -> Tuple[int]:
+        """Returns the state vector that corresponds to a state number
+        
+        Args:
+            state_no (int): The state number to look for in the inverse mapping
+
+        Returns:
+            Tuple[int]: the state vector corresponding to the state number
+        """
+        try:
+            return tuple(np.argwhere(self.inverse_mapping == state_no)[0])
+
+        except IndexError as err:
+            raise ValueError("Did not find state number {} in inverse "
+                             "mapping! Make sure it is an integer in the "
+                             "closed interval [0, {}]."
+                             "".format(state_no,
+                                       reduce(lambda x, y: x*y,
+                                              self.states_shape) - 1))
+
+    def get_dim_values(self, *, state_no: int=None, state_vector: Tuple[int]=None) -> OrderedDict:
+        """Returns the current parameter dimension values or those of a
+        certain state number or state vector.
+        """
+        if state_no is None and state_vector is None:
+            # Return the current value
+            return OrderedDict([(name, pdim.current_value)
+                                for name, pdim in self.dims.items()])
+
+        # Check that only one of the arguments was given
+        if state_no is not None and state_vector is not None:
+            raise TypeError("Expected only one of the arguments `state_no` "
+                            "and `state_vector`, got both!")
+
+        elif state_no is not None:
+            state_vector = self.get_state_vector(state_no=state_no)
+
+        # Can now assume that state_vector is set
+        return OrderedDict([(name, pdim.values[s-1])
+                            for (name, pdim), s
+                            in zip(self.dims.items(), state_vector)])
+
+    # Masking . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
     def set_mask(self, name: Union[str, Tuple[str]], mask: Union[bool, Tuple[bool]], invert: bool=False) -> None:
         """Set the mask value of the parameter dimension with the given name.
