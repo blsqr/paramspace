@@ -29,9 +29,6 @@ def various_pdims(request):
     pds['coupled2']  = CoupledParamDim(target_pdim=pds['two'],values=[1,2,3,4])
     pds['coupled3']  = CoupledParamDim(target_pdim=pds['range'], default=0)
 
-    # base
-    pds['base']      = ParamDimBase(default=0, values=[1,2,3])
-
     return pds
 
 
@@ -44,20 +41,20 @@ def test_init(various_pdims):
         ParamDim()
 
     # No values given
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError, match="Missing one of the following"):
         ParamDim(default=0)
     
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="need be a container of length > 0"):
         ParamDim(default=0, values=[])
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError, match="Received invalid keyword argument"):
         ParamDim(default=0, foo="bar")
 
     # Multiple values or kwargs given
-    with pytest.warns(UserWarning):
+    with pytest.raises(TypeError, match="Received too many keyword arguments"):
         ParamDim(default=0, values=[1,2,3], linspace=[10,20,30])
     
-    with pytest.warns(UserWarning):
+    with pytest.raises(TypeError, match="Received too many keyword arguments"):
         ParamDim(default=0, range=[1,2], linspace=[10,20,30])
 
     # Assert correct range, linspace, logspace creation
@@ -76,9 +73,6 @@ def test_properties(various_pdims):
     
     with pytest.raises(AttributeError, match="can't set attribute"):
         vpd['two'].values = [1,2,3]
-
-    with pytest.raises(AttributeError, match="can't set attribute"):
-        vpd['base'].values = "baz"
 
     # Assert immutability of values
     with pytest.raises(TypeError, match="does not support item assignment"):
@@ -209,7 +203,7 @@ def test_coupled_init():
         # No default given
         CoupledParamDim(target_name=("foo",), use_coupled_default=False)
 
-    with pytest.raises(ValueError, match="No argument `values` or other"):
+    with pytest.raises(TypeError, match="Missing one of the following"):
         # No values given
         CoupledParamDim(target_name=("foo",), use_coupled_values=False)
 
@@ -282,7 +276,7 @@ def test_coupled_mask():
     pd = ParamDim(default=0, values=[1,2,3])
     
     # It should not be possible to mask a CPD
-    with pytest.warns(UserWarning, match="`mask` is not valid"):
+    with pytest.raises(TypeError, match="Received invalid keyword argument"):
         CoupledParamDim(target_pdim=pd, mask=True)
 
 # YAML Dumping ----------------------------------------------------------------

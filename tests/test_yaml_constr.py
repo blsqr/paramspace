@@ -96,7 +96,7 @@ pdims:
 
     strs[('cpdim1', TypeError)] = """not_a_mapping: !coupled-pdim 1 """
     strs[('cpdim2', TypeError)] = """not_a_mapping: !coupled-pdim [1,2,3] """
-    strs[('cpdim3', ValueError, UserWarning)] = """wrong_args: !coupled-pdim {foo: bar} """
+    strs[('cpdim3', TypeError)] = """wrong_args: !coupled-pdim {foo: bar} """
     strs[('cpdim4', None, UserWarning)] = """
 too_many_args: !coupled-pdim
   target_name: [foo, bar]
@@ -129,9 +129,11 @@ def test_loading(yamlstrs):
                 with pytest.raises(exc):
                     with pytest.warns(warn):
                         yaml.load(ystr)
+
             elif warn and not exc:
                 with pytest.warns(warn):
                     yaml.load(ystr)
+
             elif exc and not warn:
                 with pytest.raises(exc):
                     yaml.load(ystr)

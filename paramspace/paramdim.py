@@ -1,5 +1,9 @@
-"""The ParamDim classes ...""" # TODO
+"""The ParamDim classes define parameter dimensions along which discrete values
+can be assumed. While they provide iteration abilities on their own, they make
+sense mostly to use as objects in a dict that is converted to a ParamSpace.
+"""
 
+import abc
 import copy
 import logging
 import warnings
@@ -38,10 +42,10 @@ class MaskedValueError(ValueError):
 
 # -----------------------------------------------------------------------------
 
-class ParamDimBase:
+class ParamDimBase(metaclass=abc.ABCMeta):
     """The ParamDim base class."""
 
-    def __init__(self, *, default, values: Iterable=None, order: float=np.inf, name: str=None, mask: Union[bool, Tuple[bool]]=False, **kwargs) -> None:
+    def __init__(self, *, default, values: Iterable=None, order: float=np.inf, name: str=None, **kwargs) -> None:
         """Initialise a parameter dimension object.
         
         Args:
@@ -54,9 +58,6 @@ class ParamDimBase:
             name (str, optional): If given, this is an *additional* name of
                 this ParamDim object, and can be used by the ParamSpace to
                 access this object.
-            mask (Union[bool, Tuple[bool]], optional): Which values of the
-                dimension to mask, i.e.: skip in iteration. Note that masked
-                values still count to the length of the parameter dimension!
             **kwargs: Constructors for the `values` argument, valid keys are
                 `range`, `linspace`, and `logspace`; corresponding values are
                 expected to be iterables and are passed to `range(*args)`,
@@ -65,65 +66,50 @@ class ParamDimBase:
         Raises:
             ValueError: Description
         """
-        # Initialize attributes that are not managed
-        self.name = name
-        self.order = order
-        
         # Initialize attributes that are managed by properties or methods
         self._vals = None
         self._state = None
-        self._mask_cache = None
 
-        # Carry over arguments
+        # Set attributes that need no further checks
+        self.name = name
+        self.order = order
         self._default = default
 
-        # Set the values, first via the `values` argument, and check whether
-        # there are enough arguments to set the values
+        # Parse the keyword arguments, filtering out unallowed ones
+        vkwargs = ('values', 'range', 'linspace', 'logspace')
         if values is not None:
-            self._set_values(values)
+            kwargs['values'] = values
 
-        elif not any([k in kwargs for k in ('range', 'linspace', 'logspace')]):
-            raise ValueError("No argument `values` or other `**kwargs` was "
-                             "specified, but at least one of these is needed "
-                             "for initialisation.")
+        # Now check for unexpected ones and set the valid ones
+        if any([k not in vkwargs for k in kwargs.keys()]):
+            raise TypeError("Received invalid keyword argument(s) for {}: {}. "
+                            "Allowed arguments: {}"
+                            "".format(self.__class__.__name__,
+                                      ", ".join([k for k in kwargs
+                                                 if k not in vkwargs]),
+                                      ", ".join(vkwargs)))
 
-        # Check again, now including the `kwargs`
-        # TODO simplify these checks
-        if kwargs is not None and self.values is None:
-            # Need to parse the additional keyword arguments to generate the
-            # values attribute from it.
-            if len(kwargs) > 1:
-                warnings.warn("{}.__init__ was called with multiple "
-                              "additional keyword arguments {}; only one of "
-                              "these will be used! The order in which the "
-                              "arguments are used is: `range`, `linspace`, "
-                              "`logspace`."
-                              "".format(self.__class__.__name__, kwargs),
-                              UserWarning)
+        elif len(kwargs) > 1:
+            raise TypeError("Received too many keyword arguments. Need _one_ "
+                            "of:  {}".format(", ".join(vkwargs)))
 
-            # Set the values
-            if 'range' in kwargs:
-                self._set_values(range(*kwargs.get('range')))
+        elif 'values' in kwargs:
+            self._set_values(kwargs['values'])
 
-            elif 'linspace' in kwargs:
-                self._set_values(np.linspace(*kwargs.get('linspace')),
-                                 as_float=True)
+        elif 'range' in kwargs:
+            self._set_values(range(*kwargs['range']))
 
-            elif 'logspace' in kwargs:
-                self._set_values(np.logspace(*kwargs.get('logspace')),
-                                 as_float=True)
-            # else: not possible, was checked above
+        elif 'linspace' in kwargs:
+            self._set_values(np.linspace(*kwargs['linspace']), as_float=True)
 
-        elif kwargs and self.values is not None:
-            warnings.warn("{}.__init__ was called with both the argument "
-                          "`values` and additional keyword arguments {}. With "
-                          "`values` present, the additional keyword arguments "
-                          "are ignored!"
-                          "".format(self.__class__.__name__, kwargs),
-                          UserWarning)
+        elif 'logspace' in kwargs:
+            self._set_values(np.logspace(*kwargs['logspace']), as_float=True)
 
-        # Can now set the mask
-        self.mask = mask
+        else:
+            raise TypeError("Missing one of the following required keyword "
+                            "arguments to set the values of {}: {}."
+                            "".format(self.__class__.__name__,
+                                      ", ".join(vkwargs)))
 
         # Done.
             
@@ -143,6 +129,256 @@ class ParamDimBase:
                 values are not yet set.
         """
         return self._vals
+
+    @property
+    def state(self) -> Union[int, None]:
+        """The current iterator state
+        
+        Returns:
+            Union[int, None]: The state of the iterator; if it is None, the
+                ParamDim is not inside an iteration.
+        """
+        return self._state
+
+    @property
+    def current_value(self):
+        """If in an iteration: return the value according to the current
+        state. If not in an iteration, return the default value.
+        """
+        if self.state is None:
+            return self.default
+        return self.values[self.state]
+
+
+    # Magic methods ...........................................................
+
+    def __eq__(self, other) -> bool:
+        """Check for equality between self and other
+        
+        Args:
+            other: the object to compare to
+        
+        Returns:
+            bool: Whether the two objects are equivalent
+        """
+        if not isinstance(other, type(self)):
+            return False
+
+        # Check equality of the objects' __dict__s
+        return self.__dict__ == other.__dict__
+
+    def __len__(self) -> int:
+        """Returns the length of the parameter dimension.
+        
+        Returns:
+            int: The length of the associated values list. If the parameter
+                dimension is not enabled, the length is 1.
+        """
+        return len(self.values)
+
+    def __str__(self) -> str:
+        """
+        Returns:
+            str: Returns the string representation of the ParamDimBase-derived
+                object
+        """
+        return repr(self)
+
+    def __repr__(self) -> str:
+        """
+        Returns:
+            str: Returns the string representation of the ParamDimBase-derived
+                object
+        """
+        # TODO should actually be a string from which to re-create the object
+        return ("<{} object at {} with {}>"
+                "".format(self.__class__.__name__, id(self),
+                          repr(self._parse_repr_attrs())))
+
+    _REPR_ATTRS = []
+
+    def _parse_repr_attrs(self) -> dict:
+        """For the __repr__ method, collects some attributes into a dict"""
+        d = dict(default=self.default,
+                 order=self.order,
+                 values=self.values,
+                 name=self.name)
+
+        for attr_name in self._REPR_ATTRS:
+            d[attr_name] = getattr(self, attr_name)
+
+        return d
+
+
+    # Iterator functionality ..................................................
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        """Move to the next valid state and return the corresponding parameter
+        value.
+        
+        Returns:
+            The current value (inside an iteration)
+        """
+        self.iterate_state()
+        return self.current_value
+
+
+    # Public API ..............................................................
+    # These are needed by the ParamSpace class to have more control over the
+    # iteration.
+
+    @abc.abstractmethod
+    def iterate_state(self) -> None:
+        """Iterates the state of the parameter dimension.
+        
+        Returns:
+            None
+
+        Raises:
+            StopIteration: Upon end of iteration
+        """
+
+    @abc.abstractmethod
+    def enter_iteration(self) -> None:
+        """Sets the state to the first possible one, symbolising that an
+        iteration has started.
+        
+        Returns:
+            None
+
+        Raises:
+            StopIteration: If no iteration is possible
+        """
+
+    @abc.abstractmethod
+    def reset(self) -> None:
+        """Called after the end of an iteration and should reset the object to
+        a state where it is possible to start another iteration over it.
+
+        Returns:
+            None
+        """
+
+
+    # Non-public API ..........................................................
+
+    def _set_values(self, values: Iterable, as_float: bool=False):
+        """This function sets the values attribute; it is needed for the
+        values setter function that is overwritten when changing the property
+        in a derived class.
+        
+        Args:
+            values (Iterable): The iterable to set the values with
+            as_float (bool, optional): If given, makes sure that values are
+                of type float; this is needed for the numpy initializers
+        
+        Raises:
+            AttributeError: If the attribute is already set
+            ValueError: If the iterator is invalid
+        """
+        if self._vals is not None:
+            # Was already set
+            raise AttributeError("Values already set; cannot be set again!")
+
+        elif not len(values):
+            raise ValueError("{} values need be a container of length > 0, "
+                             "were {}".format(self.__class__.__name__, values))
+        
+        # Resolve iterator as tuple, optionally ensuring it is a float
+        if as_float:
+            values = [float(v) for v in values]
+
+        # Now store it as tuple attribute
+        self._vals = tuple(values)
+
+# -----------------------------------------------------------------------------
+
+class ParamDim(ParamDimBase):
+    """The ParamDim class."""
+
+    # Define the additional attribute names that are to be added to __repr__
+    _REPR_ATTRS = ['mask']
+
+    def __init__(self, *, mask: Union[bool, Tuple[bool]]=False, **kwargs):
+        """Initialize a regular parameter dimension.
+        
+        Args:
+            mask (Union[bool, Tuple[bool]], optional): Which values of the
+                dimension to mask, i.e.: skip in iteration. Note that masked
+                values still count to the length of the parameter dimension!
+            **kwargs: Passed to ParamDimBase.__init__. Possible arguments:
+                default: default value of this parameter dimension
+                values (Iterable, optional): Which discrete values this
+                    parameter dimension can take. This argument takes
+                    precedence over any constructors given in the kwargs
+                    (like range, linspace, …).
+                order (float, optional): If given, this allows to specify an
+                    order within a ParamSpace that includes this ParamDim
+                name (str, optional): If given, this is an *additional* name of
+                    this ParamDim object, and can be used by the ParamSpace to
+                    access this object.
+                **kwargs: Constructors for the `values` argument, valid keys
+                    are `range`, `linspace`, and `logspace`; corresponding
+                    values are expected to be iterables and are passed to
+                    `range(*args)`, `np.linspace(*args)`, or
+                    `np.logspace(*args)`, respectively.
+        """
+        super().__init__(**kwargs)
+
+        # Additional attributes, needed for coupling and masking
+        self._target_of = []
+
+        self._mask_cache = None
+        self.mask = mask
+
+    # Additional properties ...................................................
+
+    @property
+    def target_of(self):
+        """Returns the list that holds all the CoupledParamDim objects that
+        point to this instance of ParamDim.
+        """
+        return self._target_of
+
+    @property
+    def state(self) -> Union[int, None]:
+        """The current iterator state
+        
+        Returns:
+            Union[int, None]: The state of the iterator; if it is None, the
+                ParamDim is not inside an iteration.
+        """
+        return self._state
+
+    @state.setter
+    def state(self, new_state: Union[int, None]):
+        """Sets the current iterator state."""
+        if new_state is None:
+            self._state = None
+
+        elif isinstance(new_state, int):
+            # Check for valid state interval
+            if new_state < 0 or new_state >= len(self):
+                raise ValueError("New state needs to be positive and cannot "
+                                 "exceed the highest index of the value "
+                                 "container ({}), was {}."
+                                 "".format(len(self)-1, new_state))
+
+            elif isinstance(self._mask_tuple()[new_state], Masked):
+                raise MaskedValueError("Value at index {} is masked: {}. "
+                                       "Cannot set the state to this index."
+                                       "".format(new_state,
+                                                 self.values[new_state]))
+
+            # Everything ok. Can set the
+            self._state = new_state
+
+        else:
+            raise TypeError("New state can only be of type int or None, "
+                            "was "+str(type(new_state)))
 
     @property
     def mask(self) -> Union[bool, Tuple[bool]]:
@@ -202,63 +438,17 @@ class ParamDimBase:
         # Now build a new values container and store as attributes
         self._vals = tuple([set_val(m, v) for m, v in zip(mask, self.values)])
 
-    @property
-    def state(self) -> Union[int, None]:
-        """The current iterator state
-        
-        Returns:
-            Union[int, None]: The state of the iterator; if it is None, the
-                ParamDim is not inside an iteration.
-        """
-        return self._state
 
-    @state.setter
-    def state(self, new_state: Union[int, None]):
-        """Sets the current iterator state."""
-        if new_state is None:
-            self._state = None
-
-        elif isinstance(new_state, int):
-            # Check for valid state interval
-            if new_state < 0 or new_state >= len(self):
-                raise ValueError("New state needs to be positive and cannot "
-                                 "exceed the highest index of the value "
-                                 "container ({}), was {}."
-                                 "".format(len(self)-1, new_state))
-
-            elif isinstance(self._mask_tuple()[new_state], Masked):
-                raise MaskedValueError("Value at index {} is masked: {}. "
-                                       "Cannot set the state to this index."
-                                       "".format(new_state,
-                                                 self.values[new_state]))
-
-            # Everything ok. Can set the
-            self._state = new_state
-
-        else:
-            raise TypeError("New state can only be of type int or None, "
-                            "was "+str(type(new_state)))
-
-    @property
-    def current_value(self):
-        """If in an iteration: return the value according to the current
-        state. If not in an iteration, return the default value.
-        """
-        if self.state is None:
-            return self.default
-        return self.values[self.state]
-
-
-    # Magic methods ...........................................................
+    # Magic Methods ...........................................................
 
     def __eq__(self, other) -> bool:
         """Check for equality between self and other
         
         Args:
-            other (ParamDimBase): the other ParamDim
+            other: the object to compare to
         
         Returns:
-            bool: Whether the two parameter dimensions have the same content
+            bool: Whether the two objects are equivalent
         """
         if not isinstance(other, type(self)):
             return False
@@ -267,57 +457,6 @@ class ParamDimBase:
         return all([self.__dict__[k] == other.__dict__[k]
                     for k in self.__dict__.keys()
                     if k not in ('_mask_cache',)])
-
-    def __len__(self) -> int:
-        """Returns the length of the parameter dimension.
-        
-        Returns:
-            int: The length of the associated values list. If the parameter
-                dimension is not enabled, the length is 1.
-        """
-        return len(self.values)
-
-    def __repr__(self) -> str:
-        """
-        Returns:
-            str: Returns the string representation of the ParamDimBase-derived
-                object
-        """
-        # TODO should actually be a string from which to re-create the object
-        return ("<{} object at {} with {}>"
-                "".format(self.__class__.__name__, id(self),
-                          repr(dict(default=self.default,
-                                    order=self.order,
-                                    values=self.values,
-                                    name=self.name,
-                                    mask=self.mask))))
-
-    def __str__(self) -> str:
-        """
-        Returns:
-            str: Returns the string representation of the ParamDimBase-derived
-                object
-        """
-        return repr(self)
-
-
-    # Iterator functionality ..................................................
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        """Move to the next valid state and return the corresponding parameter
-        value.
-        
-        Returns:
-            The current value of the iteration
-        """
-        log.debug("__next__ called")
-
-        # Iterate state and return the new value (i.e., the new current value)
-        self.iterate_state()
-        return self.current_value
 
 
     # Public API ..............................................................
@@ -376,40 +515,15 @@ class ParamDimBase:
             self.state = self.mask.index(False)
 
     def reset(self) -> None:
-        """Resets the state to None, called after the end of an iteration."""
+        """Called after the end of an iteration and should reset the object to
+        a state where it is possible to start another iteration over it.
+
+        Returns:
+            None
+        """
         self.state = None
 
-
     # Non-public API ..........................................................
-    
-    def _set_values(self, values: Iterable, as_float: bool=False):
-        """This function sets the values attribute; it is needed for the
-        values setter function that is overwritten when changing the property
-        in a derived class.
-        
-        Args:
-            values (Iterable): The iterable to set the values with
-            as_float (bool, optional): If given, makes sure that values are
-                of type float; this is needed for the numpy initializers
-        
-        Raises:
-            AttributeError: If the attribute is already set
-            ValueError: If the iterator is invalid
-        """
-        if self._vals is not None:
-            # Was already set
-            raise AttributeError("Values already set; cannot be set again!")
-
-        elif not len(values):
-            raise ValueError("Argument `values` needs to be an iterable "
-                             "of at least length 1, was " + str(values))
-        
-        # Resolve iterator as tuple, optionally ensuring it is a float
-        if as_float:
-            values = [float(v) for v in values]
-
-        # Now store it as tuple attribute
-        self._vals = tuple(values)
 
     def _mask_tuple(self) -> Tuple[bool]:
         """Returns a tuple representation of the current mask"""
@@ -419,24 +533,6 @@ class ParamDimBase:
         return self._mask_cache
 
 
-# -----------------------------------------------------------------------------
-
-class ParamDim(ParamDimBase):
-    """The ParamDim class."""
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        # Additional attributes, needed for coupling.
-        self._target_of = []        
-
-    @property
-    def target_of(self):
-        """Returns the list that holds all the CoupledParamDim objects that
-        point to this instance of ParamDim.
-        """
-        return self._target_of
-
 
 # -----------------------------------------------------------------------------
 
@@ -444,6 +540,10 @@ class CoupledParamDim(ParamDimBase):
     """A CoupledParamDim object is recognized by the ParamSpace and its state
     moves alongside with another ParamDim's state.
     """
+
+    # Define the additional attribute names that are to be added to __repr__
+    _REPR_ATTRS = ['target_pdim', 'target_name',
+                   'use_coupled_default', 'use_coupled_values']
 
     def __init__(self, *, target_pdim: ParamDim=None, target_name: Union[str, Sequence[str]]=None, use_coupled_default: bool=None, use_coupled_values: bool=None, **kwargs):
         """
@@ -461,7 +561,7 @@ class CoupledParamDim(ParamDimBase):
                 of the coupled ParamDim; need not be given: if it is not
                 set it is determined by looking at whether argument `values`
                 was passed in the kwargs.
-            **kwargs: All ParamDim kwargs
+            **kwargs: Passed to ParamDimBase.__init__
         
         Raises:
             ValueError: If neither target_pdim nor target_name were given
@@ -500,11 +600,6 @@ class CoupledParamDim(ParamDimBase):
             kwargs['values'] = [None]
         # NOTE the values passed here will never actually be used and are just
         # placeholders to comply with the parent signature
-
-        if 'mask' in kwargs:
-            warnings.warn("Argument `mask` is not valid for CoupledParamDim "
-                          "and will be ignored!", UserWarning)
-            kwargs.pop('mask')
 
         # Initialise via parent 
         super().__init__(**kwargs)
@@ -547,7 +642,7 @@ class CoupledParamDim(ParamDimBase):
         """Does nothing, as state has no effect for CoupledParamDim"""
         pass
 
-    # Properties that only the CoupledParamDim has ----------------------------
+    # Properties that only the CoupledParamDim has ............................
 
     @property
     def target_name(self) -> Union[str, Sequence[str]]:
@@ -606,7 +701,7 @@ class CoupledParamDim(ParamDimBase):
         self._target_pdim = pdim
         log.debug("Set CoupledParamDim target.")
 
-    # Properties that need to relay to the coupled ParamDim -------------------
+    # Properties that need to relay to the coupled ParamDim ...................
     
     @property
     def default(self):
@@ -667,3 +762,4 @@ class CoupledParamDim(ParamDimBase):
         if self.state is None:
             return self.default
         return self.values[self.state]
+
