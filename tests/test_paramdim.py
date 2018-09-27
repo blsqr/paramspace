@@ -166,6 +166,8 @@ def test_mask():
     # Now to a more complex mask
     pd.mask = (True, False, True, False)
     assert pd.mask == (True, False, True, False)
+    assert pd.num_masked == 2
+    assert pd.num_unmasked == 2
 
     # Setting one with a bad length should not work
     with pytest.raises(ValueError, match="container of same length as the"):

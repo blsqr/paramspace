@@ -440,6 +440,16 @@ class ParamDim(ParamDimBase):
         # Now build a new values container and store as attributes
         self._vals = tuple([set_val(m, v) for m, v in zip(mask, self.values)])
 
+    @property
+    def num_masked(self) -> int:
+        """Returns the number of unmasked values"""
+        return sum(self._mask_tuple())
+    
+    @property
+    def num_unmasked(self) -> int:
+        """Returns the number of unmasked values"""
+        return len(self) - self.num_masked
+
 
     # Magic Methods ...........................................................
 
@@ -462,8 +472,6 @@ class ParamDim(ParamDimBase):
 
 
     # Public API ..............................................................
-    # These are needed by the ParamSpace class to have more control over the
-    # iteration.
 
     def iterate_state(self) -> None:
         """Iterates the state of the parameter dimension.
@@ -756,4 +764,3 @@ class CoupledParamDim(ParamDimBase):
         if self.state is None:
             return self.default
         return self.values[self.state]
-
