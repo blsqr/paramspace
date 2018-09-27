@@ -88,15 +88,17 @@ class ParamDimBase:
                              "for initialisation.")
 
         # Check again, now including the `kwargs`
+        # TODO simplify these checks
         if kwargs is not None and self.values is None:
             # Need to parse the additional keyword arguments to generate the
-            # values attribute from it
+            # values attribute from it.
             if len(kwargs) > 1:
                 warnings.warn("{}.__init__ was called with multiple "
-                              "additional `**kwargs`; only one of these will "
-                              "be used! The order in which the arguments are "
-                              "used is: `range`, `linspace`, "
-                              "`logspace`.".format(self.__class__.__name__),
+                              "additional keyword arguments {}; only one of "
+                              "these will be used! The order in which the "
+                              "arguments are used is: `range`, `linspace`, "
+                              "`logspace`."
+                              "".format(self.__class__.__name__, kwargs),
                               UserWarning)
 
             # Set the values
@@ -114,10 +116,10 @@ class ParamDimBase:
 
         elif kwargs and self.values is not None:
             warnings.warn("{}.__init__ was called with both the argument "
-                          "`values` and additional `**kwargs`: {}. With "
+                          "`values` and additional keyword arguments {}. With "
                           "`values` present, the additional keyword arguments "
-                          "are ignored.".format(self.__class__.__name__,
-                                                kwargs),
+                          "are ignored!"
+                          "".format(self.__class__.__name__, kwargs),
                           UserWarning)
 
         # Can now set the mask
@@ -485,19 +487,24 @@ class CoupledParamDim(ParamDimBase):
         # Warn if there is ambiguity regarding which values will be used
         if self.use_coupled_default is True:
             if 'default' in kwargs:
-                warnings.warn("argument `default` was given despite "
+                warnings.warn("Argument `default` was given despite "
                               "`use_coupled_default` being set to True. "
-                              "Will ignore the given defaults!")
+                              "Will ignore `default`!", UserWarning)
             kwargs['default'] = None
 
         if self.use_coupled_values is True:
             if 'values' in kwargs:
-                warnings.warn("argument `values` was given despite "
+                warnings.warn("Argument `values` was given despite "
                               "`use_coupled_values` being set to True. "
-                              "Will ignore the given defaults!")
+                              "Will ignore `values`!", UserWarning)
             kwargs['values'] = [None]
         # NOTE the values passed here will never actually be used and are just
-        # placeholders
+        # placeholders to comply with the parent signature
+
+        if 'mask' in kwargs:
+            warnings.warn("Argument `mask` is not valid for CoupledParamDim "
+                          "and will be ignored!", UserWarning)
+            kwargs.pop('mask')
 
         # Initialise via parent 
         super().__init__(**kwargs)

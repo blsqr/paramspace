@@ -277,6 +277,13 @@ def test_coupled_iteration():
                                                values=[2,3,4])):
         assert pval + 1 == cpval
 
+def test_coupled_mask():
+    """Test the masking features' effects on CoupledParamDim"""
+    pd = ParamDim(default=0, values=[1,2,3])
+    
+    # It should not be possible to mask a CPD
+    with pytest.warns(UserWarning, match="`mask` is not valid"):
+        CoupledParamDim(target_pdim=pd, mask=True)
 
 # YAML Dumping ----------------------------------------------------------------
 
