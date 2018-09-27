@@ -426,15 +426,17 @@ class ParamSpace:
         return self._iter()
         # NOTE the generator will also raise StopIteration once it ended
         
-    def all_points(self, with_info: Tuple[str]=None, dry_run: bool=False) -> Generator[PStype, None, None]:
+    def all_points(self, *, with_info: Union[str, Tuple[str]]=None, dry_run: bool=False) -> Generator[PStype, None, None]:
         """Returns a generator yielding all points of the parameter space, i.e.
         the space spanned open by the parameter dimensions.
         
         Args:
-            with_info (Tuple[str], optional): Can pass strings here that are to
-                be returned as the second value. Possible values are:
-                    'state_no', 'state_vector'
-            dry_run (bool, optional): If true, only the info tuple is returned
+            with_info (Union[str, Tuple[str]], optional): Can pass strings
+                here that are to be returned as the second value. Possible
+                values are: 'state_no', 'state_vector'.
+                To get multiple, add them to a tuple.
+            dry_run (bool, optional): If true, _only_ the info tuple is
+                returned and the current value is omitted.
         
         Returns:
             Generator[PStype, None, None]: yields point after point of the
@@ -448,7 +450,11 @@ class ParamSpace:
         if self.volume < 1:
             raise ValueError("Cannot iterate over ParamSpace of zero volume.")
 
-        log.debug("Starting iteration over all %d points in ParamSpace ...",
+        # Parse the with_info argument, making sure it is a tuple
+        if isinstance(with_info, str):
+            with_info = (with_info,)
+
+        log.debug("Starting iteration over %d points in ParamSpace ...",
                   self.volume)
 
         # Prepare parameter dimensions: set them to state 0
@@ -456,14 +462,14 @@ class ParamSpace:
             pdim.enter_iteration()
 
         # Yield the first state
-        yield self._gen_info_tuple(self.current_point if not dry_run else None,
-                                   with_info=with_info)
+        yield self._gen_iter_rv(self.current_point if not dry_run else None,
+                                with_info=with_info)
 
         # Now yield all the other states, while available.
         while self._next_state():
-            yield self._gen_info_tuple((self.current_point if not dry_run
-                                        else None),
-                                       with_info=with_info)
+            yield self._gen_iter_rv((self.current_point if not dry_run
+                                     else None),
+                                    with_info=with_info)
 
         else:
             log.debug("Visited every point in ParamSpace.")
@@ -569,7 +575,13 @@ class ParamSpace:
         status of the ParamDim objects is not controlled by the ParamSpace and
         can change without notice.
         """
+        mmap = np.ma.MaskedArray(data=self.inverse_mapping(),
+                                 mask=True)
 
+        # Unmask the unmasked values
+        for state_vector in self.all_points(with_info='state_vector',
+                                            dry_run=True):
+            pass
 
 
     def get_state_vector(self, *, state_no: int) -> Tuple[int]:
@@ -667,9 +679,9 @@ class ParamSpace:
 
     # Non-public API ..........................................................
 
-    def _gen_info_tuple(self, pt, *, with_info: Sequence) -> tuple:
-        """Is used during iteration to add additional information to the
-        return tuple.
+    def _gen_iter_rv(self, pt, *, with_info: Sequence[str]) -> tuple:
+        """Is used during iteration to generate the iteration return value,
+        adding additional information if specified.
 
         Note that pt can also be None if all_points is a dry_run
         """
@@ -690,9 +702,16 @@ class ParamSpace:
                                  "Check the `with_info` argument!"
                                  "".format(info))
 
-        # If a point was given, concatenate and return. otherwise only info_tup
+        # Return depending on whether a point was given or not
         if pt is not None:
+            # Concatenate and return
             return (pt,) + info_tup
+
+        elif len(info_tup) == 1:
+            # Return only the single info entry
+            return info_tup[0]
+
+        # else: return as tuple
         return info_tup
 
     def _dim_by_name(self, name: Union[str, Tuple[str]]) -> ParamDimBase:

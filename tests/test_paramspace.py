@@ -372,8 +372,7 @@ def test_basic_iteration(small_psp, basic_psp, adv_psp):
 
     # Check the dry run
     psp.reset()
-    snos = list([s[0] for s in psp.all_points(with_info=('state_no',),
-                                           dry_run=True)])
+    snos = list([s for s in psp.all_points(with_info='state_no',dry_run=True)])
     assert snos[:4] == [16, 17, 19, 20]
     
     # Check that the counts match using a helper function . . . . . . . . . . .
@@ -463,7 +462,7 @@ def test_masked_iteration(small_psp):
 
     # This should return only one entry: the default ParamSpace
     iter_res = {state_no:d
-                for d, state_no in psp.all_points(with_info=('state_no',))}
+                for d, state_no in psp.all_points(with_info='state_no')}
     print("fully masked array: ", iter_res)
     
     assert len(iter_res) == 1
@@ -474,7 +473,7 @@ def test_masked_iteration(small_psp):
     psp.set_mask('p0', (1, 0))  # length 1
     assert psp.shape == (1, 1, 1)
     iter_res = {state_no:d
-                for d, state_no in psp.all_points(with_info=('state_no',))}
+                for d, state_no in psp.all_points(with_info='state_no')}
     print("p0 mask (True, False): ", iter_res)
     assert len(iter_res) == 1 == psp.volume
     assert 2 in iter_res
@@ -484,7 +483,7 @@ def test_masked_iteration(small_psp):
     psp.set_mask('p1', (0, 1, 0))
     assert psp.shape == (1, 2, 1)
     iter_res = {state_no:d
-                for d, state_no in psp.all_points(with_info=('state_no',))}
+                for d, state_no in psp.all_points(with_info='state_no')}
     print("+ p1 mask (False, True, False): ", iter_res)
     assert len(iter_res) == 1 * 2 == psp.volume
     assert (3 + 2) in iter_res
