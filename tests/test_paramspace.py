@@ -38,7 +38,8 @@ def basic_psp():
 
 @pytest.fixture()
 def adv_psp():
-    """Used to setup a more elaborate pspace object to be tested on. Includes name clashes, manually set names, order, ..."""
+    """Used to setup a more elaborate pspace object to be tested on. Includes
+    name clashes, manually set names, order, ..."""
     d = dict(a=1, b=2, foo="bar", spam="eggs", mutable=[0, 0, 0],
              p1=ParamDim(default=0, values=[1,2,3], order=0),
              p2=ParamDim(default=0, values=[1,2,3], order=1),
@@ -126,6 +127,7 @@ def test_strings(basic_psp, adv_psp, psp_with_coupled):
         str(psp)
         repr(psp)
         psp.get_info_str()
+        psp._dim_names
 
 def test_eq(adv_psp):
     """Test that __eq__ works"""
@@ -157,6 +159,39 @@ def test_item_access(psp_with_coupled):
 
     with pytest.raises(KeyError, match="Cannot remove item with key"):
         psp.pop("c1")
+
+def test_dim_access(basic_psp, adv_psp):
+    """Test the _dim_by_name helper"""
+    psp = basic_psp
+    get_dim = psp._dim_by_name
+
+    # Get existing parameter dimensions
+    assert get_dim('p1') == psp._dict['p1']
+    assert get_dim(('p1',)) == psp._dict['p1']
+    assert get_dim(('d', 'pp1',)) == psp._dict['d']['pp1']
+    assert get_dim(('d', 'dd', 'ppp1')) == psp._dict['d']['dd']['ppp1']
+
+    # Non-existant dim should fail
+    with pytest.raises(KeyError, match="A parameter dimension with name"):
+        get_dim('foo')
+
+    # More complicated setup, e.g. with ambiguous and custom names
+    psp = adv_psp
+    get_dim = psp._dim_by_name
+
+    # p1 is now ambiguous
+    with pytest.raises(ValueError, match="Could not unambiguously find"):
+        get_dim('p1')
+
+    # Need to add a "/" in front
+    assert get_dim(('/', 'p1',)) == psp._dict['p1']
+
+    # Also test the others, but with subsequences
+    assert get_dim(('d', 'd', 'p1')) == psp._dict['d']['d']['p1']
+
+    # Test access via name
+    assert get_dim('ppp1') == psp._dict['d']['d']['p1']
+
 
 def test_volume(small_psp, basic_psp, adv_psp):
     """Asserts that the volume calculation is correct"""

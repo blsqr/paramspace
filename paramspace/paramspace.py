@@ -593,7 +593,13 @@ class ParamSpace:
                 If name is a tuple of strings, not the whole sequence needs
                 to be supplied but the last parts suffice; it just needs to be
                 enough to resolve the dimension names unambiguously.
-            mask (Union[bool, Tuple[bool]]): The new mask values.
+                For names at the root level that could be ambiguous, a leading
+                "/" can be added as first segement of the key sequence.
+                Also, the ParamDim's custom name attribute can be used to
+                identify it.
+            mask (Union[bool, Tuple[bool]]): The new mask values. Can also be
+                a slice, the result of which defines the True values of the
+                mask.
             invert (bool, optional): If set, the mask will be inverted _after_
                 application.
         """
@@ -627,10 +633,12 @@ class ParamSpace:
                 self.set_mask(*ms)
 
     # Non-public API ..........................................................
-    # Mostly helper functions
 
     def _dim_by_name(self, name: Union[str, Tuple[str]]) -> ParamDimBase:
-        """Get the ParamDim object with the given name
+        """Get the ParamDim object with the given name.
+
+        Note that coupled parameter dimensions cannot be accessed via this
+        method.
         
         Args:
             name (Union[str, Tuple[str]]): the name of the dim, which can be a
@@ -639,15 +647,17 @@ class ParamSpace:
                 If name is a tuple of strings, not the whole sequence needs
                 to be supplied but the last parts suffice; it just needs to be
                 enough to resolve the dimension names unambiguously.
-            include_coupled (bool, optional): Whether to include
-                CoupledParamDim objects into the search (NotImplemented)
+                For names at the root level that could be ambiguous, a leading
+                "/" can be added as first segement of the key sequence.
+                Also, the ParamDim's custom name attribute can be used to
+                identify it.
         
         Returns:
             int: the number of the dimension
         
         Raises:
             KeyError: If the ParamDim could not be found
-            ValueError: If the parameter dimension was ambiguous
+            ValueError: If the parameter dimension name was ambiguous
         
         """
         pdim = None
@@ -656,16 +666,23 @@ class ParamSpace:
         if isinstance(name, str):
             name = (name,)        
 
-        # Assume `name` is a sort of sequence of strings
+        # Need to check whether the given key sequence suggests an abs. path
+        is_abs = (name[0] == "/" and len(name) > 1)
+
+        # Assume `name` is a sequence of strings
         for dim_name, _pdim in self.dims.items():
-            if name == dim_name[-len(name):]:
+            if (   (not is_abs and name == dim_name[-len(name):])
+                or (    is_abs and name[1:] == dim_name)
+                or (_pdim.name and name[-1] == _pdim.name)):
                 # The last part of the key sequence matches the given name
                 if pdim is not None:
                     # Already set -> there was already one matching this name
                     raise ValueError("Could not unambiguously find a "
                                      "parameter dimension matching the name "
                                      "{}! Pass a sequence of keys to select "
-                                     "the right dimension.\n"
+                                     "the right dimension. To symbolize that "
+                                     "the key sequence is absolute, start "
+                                     "with an `/` entry in the key sequence.\n"
                                      "Available parameter dimensions:\n"
                                      " * {}"
                                      "".format(name,
