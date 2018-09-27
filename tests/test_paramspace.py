@@ -251,16 +251,39 @@ def test_inverse_mapping(small_psp, basic_psp, adv_psp):
 
     for psp in psps:
         psp.inverse_mapping()
+        assert psp._imap is not None
 
-        # Test caching branch
+        # Call again, which will return the cached value
         psp.inverse_mapping()
 
-    # TODO Test values more explicitly
+    # With specific pspace, do more explicit tests
+    psp = small_psp
+    imap = psp.inverse_mapping()
+    assert imap.shape == psp.states_shape
+    assert imap[0,0,0] == 0
+    assert np.max(imap) == reduce(lambda x, y: x*y, psp.states_shape) - 1
+
+    # Test that the slices of the different dimensions are correct
+    assert list(imap[:,0,0]) == [0, 1, 2]                # multiplier:  1
+    assert list(imap[0,:,0]) == [0, 3, 6, 9]             # multiplier:  3
+    assert list(imap[0,0,:]) == [0, 12, 24, 36, 48, 60]  # multiplier:  12
 
 def test_basic_iteration(small_psp, basic_psp, adv_psp):
     """Tests whether the iteration goes through all points"""
-    # Test the basics
-    # TODO
+    # Test on the __iter__ and __next__ level
+    psp = small_psp
+    it = psp.all_points()  # is a generator now
+    assert it.__next__() == dict(p0=1, p1=1, p2=1)
+    assert psp.state_no == 16 # == 1 + 3 + 12  # 16
+    assert it.__next__() == dict(p0=2, p1=1, p2=1)
+    assert psp.state_no == 16 + 1
+    assert it.__next__() == dict(p0=1, p1=2, p2=1)
+    assert psp.state_no == 16 + 3
+    assert it.__next__() == dict(p0=2, p1=2, p2=1)
+    assert psp.state_no == 16 + 3 + 1
+    # ... and so on
+    psp._reset()
+    assert psp.state_no == 0
     
     # Check that the counts match using a helper function . . . . . . . . . . .
     def check_counts(iters, counts):

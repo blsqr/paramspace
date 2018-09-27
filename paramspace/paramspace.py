@@ -443,7 +443,7 @@ class ParamSpace:
             StopIteration: When the iteration has finished
         """
         if self._iter is None:
-            # Associate with the all_points iteration
+            # Associate with the all_points iterator
             self._iter = self.all_points
 
         # Let generator yield and given the return value, check how to proceed
