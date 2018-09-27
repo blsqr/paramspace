@@ -7,7 +7,7 @@ import collections
 from collections import OrderedDict
 from itertools import chain
 from functools import reduce
-from typing import Union, Sequence, Tuple, Generator, MutableMapping, MutableSequence, Dict
+from typing import Union, Sequence, Tuple, Generator, MutableMapping, MutableSequence, Dict, List
 
 import numpy as np
 
@@ -369,7 +369,7 @@ class ParamSpace:
         l += ["  (First mentioned are iterated over most often)", ""]
 
         for name, pdim in self.dims.items():
-            l += ["  * {}".format(" -> ".join([str(e) for e in name]))]
+            l += ["  * {}".format(self._parse_dim_name(name))]
             l += ["      {}".format(pdim.values)]
             # TODO add information on length?!
             if pdim.mask is True:
@@ -387,7 +387,7 @@ class ParamSpace:
             l += ["  (Move alongside the state of the coupled ParamDim)", ""]
 
             for name, cpdim in self.coupled_dims.items():
-                l += ["  * {}".format(" -> ".join([str(e) for e in name]))]
+                l += ["  * {}".format(self._parse_dim_name(name))]
                 l += ["      Coupled to:  {}".format(cpdim.target_name)]
 
                 # Add resolved target name, if it differs
@@ -544,6 +544,7 @@ class ParamSpace:
         log.debug("Reset ParamSpace and ParamDims.")
 
     # Public API ..............................................................
+    # for functions that go beyond iteration
 
     def inverse_mapping(self) -> np.ndarray:
         """Returns an inverse mapping, i.e. an n-dimensional array where the
@@ -552,7 +553,7 @@ class ParamSpace:
         """
         # Check if the cached result can be returned
         if self._imap is not None:
-            log.debug("Using previously created inverse mapping ...")
+            log.debug("Using previously cached inverse mapping ...")
             return self._imap
         
         # else: need to calculate the inverse mapping
@@ -580,75 +581,36 @@ class ParamSpace:
         self._imap = imap
         return self._imap
 
+    # Masking .................................................................
 
-    # Non-public API ..........................................................
-
-    def _dim_no_by_name(self, name: str, include_coupled: bool=False) -> int:
-        """Tries to find a ParamDim by its name and returns the number it
-        corresponds to in the list of ordered 
+    def set_mask(self, name: Union[str, Tuple[str]], mask: Union[bool, Tuple[bool]]) -> None:
+        """Set the mask value of the parameter dimension with the given name.
         
         Args:
-            name (str): the name of the dim, which can be a tuple of strings
-                or a string. If name is a tuple of strings, the exact tuple is
-                required to find the dim by its dim_name. If name is a
-                string, only the last element of the dim_name is considered.
-            include_coupled (bool, optional): Whether to include
-                CoupledParamDim objects into the search (NotImplemented)
-        
-        Returns:
-            int: the number of the dimension
-        
-        Raises:
-            KeyError: If the ParamDim could not be found
-            NotImplementedError: Argument `include_coupled`
-            ValueError: If argument name was only a string, there can be
-                duplicates. In the case of duplicate entries, a ValueError is
-                raised.
-        
+            name (Union[str, Tuple[str]]): the name of the dim, which can be a
+                tuple of strings or a string. If name is a string, only the
+                last element of the dimension name tuple is considered.
+                If name is a tuple of strings, not the whole sequence needs
+                to be supplied but the last parts suffice; it just needs to be
+                enough to resolve the dimension names unambiguously.
+            mask (Union[bool, Tuple[bool]]): The new mask values.
         """
-        if include_coupled:
-            raise NotImplementedError("include_coupled")
 
-        dim_no = None
 
-        if isinstance(name, str):
-            for n, dim_name in enumerate(self.dims.keys()):
-                if dim_name[-1] == name:
-                    if dim_no is not None:
-                        # Was already set -> there was a duplicate
-                        raise ValueError("Duplicate dim name {} encountered "
-                                         "during access via the last key of "
-                                         "the dim name. To not get an "
-                                         "ambiguous result, pass the full dim "
-                                         "name as a tuple.".format(name))
-                    dim_no = n
 
-        else:
-            for n, dim_name in enumerate(self.dims.keys()):
-                if dim_name[-len(name):] == name:
-                    # The last part of the sequence matches the given name
-                    if dim_no is not None:
-                        # Was already set -> there was a duplicate
-                        raise ValueError("Access via '{}' was ambiguous. Give "
-                                         "the full sequence of strings as a "
-                                         "dim name to be sure to access the "
-                                         "right element.".format(name))
-                    dim_no = n
+    # Non-public API ..........................................................
+    # Mostly helper functions
 
-        if dim_no is None:
-            raise KeyError("A ParamDim with name {} was not "
-                           "found in this ParamSpace.".format(name))
-
-        return dim_no
-
-    def _dim_by_name(self, name: str, include_coupled: bool=False) -> ParamDimBase:
+    def _dim_by_name(self, name: Union[str, Tuple[str]]) -> ParamDimBase:
         """Get the ParamDim object with the given name
         
         Args:
-            name (str): the name of the dim, which can be a tuple of strings
-                or a string. If name is a tuple of strings, the exact tuple is
-                required to find the dim by its dim_name. If name is a
-                string, only the last element of the dim_name is considered.
+            name (Union[str, Tuple[str]]): the name of the dim, which can be a
+                tuple of strings or a string. If name is a string, only the
+                last element of the dimension name tuple is considered.
+                If name is a tuple of strings, not the whole sequence needs
+                to be supplied but the last parts suffice; it just needs to be
+                enough to resolve the dimension names unambiguously.
             include_coupled (bool, optional): Whether to include
                 CoupledParamDim objects into the search (NotImplemented)
         
@@ -657,46 +619,39 @@ class ParamSpace:
         
         Raises:
             KeyError: If the ParamDim could not be found
-            NotImplementedError: Argument `include_coupled`
-            ValueError: If argument name was only a string, there can be
-                duplicates. In the case of duplicate entries, a ValueError is
-                raised.
+            ValueError: If the parameter dimension was ambiguous
         
         """
-        if include_coupled:
-            raise NotImplementedError("include_coupled")
-
         pdim = None
 
+        # Make sure it's a sequence of strings
         if isinstance(name, str):
-            for dim_name, _pdim in self.dims.items():
-                if dim_name[-1] == name:
-                    if pdim is not None:
-                        # Was already set -> there was a duplicate
-                        raise ValueError("Duplicate dim name {} encountered "
-                                         "during access via the last key of "
-                                         "the dim name. To not get an "
-                                         "ambiguous result, pass the full dim "
-                                         "name as a tuple.".format(name))
-                    # Found one, save it
-                    pdim = _pdim
+            name = (name,)        
 
-        else:
-            for dim_name, _pdim in self.dims.items():
-                if dim_name[-len(name):] == name:
-                    # The last part of the sequence matches the given name
-                    if pdim is not None:
-                        # Was already set -> there was a duplicate
-                        raise ValueError("Access via '{}' was ambiguous. Give "
-                                         "the full sequence of strings as a "
-                                         "dim name to be sure to access the "
-                                         "right element.".format(name))
-                    # Found one, save it
-                    pdim = _pdim
+        # Assume `name` is a sort of sequence of strings
+        for dim_name, _pdim in self.dims.items():
+            if name == dim_name[-len(name):]:
+                # The last part of the key sequence matches the given name
+                if pdim is not None:
+                    # Already set -> there was already one matching this name
+                    raise ValueError("Could not unambiguously find a "
+                                     "parameter dimension matching the name "
+                                     "{}! Pass a sequence of keys to select "
+                                     "the right dimension.\n"
+                                     "Available parameter dimensions:\n"
+                                     " * {}"
+                                     "".format(name,
+                                               "\n * ".join(self._dim_names)))
+                # Found one, save it
+                pdim = _pdim
 
+        # If still None after all this, no such name was found
         if pdim is None:
-            raise KeyError("A ParamDim with name {} was not "
-                           "found in this ParamSpace.".format(name))
+            raise KeyError("A parameter dimension with name {} was not "
+                           "found in this ParamSpace."
+                           "Available parameter dimensions:\n"
+                           " * {}"
+                           "".format(name, "\n * ".join(self._dim_names)))
 
         return pdim
 
@@ -723,3 +678,13 @@ class ParamSpace:
 
         # Concatenate and return
         return (pt,) + info_tup
+
+    @staticmethod
+    def _parse_dim_name(name: Tuple[str]) -> str:
+        """Returns a string representation of a parameter dimension name"""
+        return " -> ".join([str(e) for e in name])
+
+    @property
+    def _dim_names(self) -> List[str]:
+        """Returns a sequence of dimension names that can be joined together"""
+        return [self._parse_dim_name(n) for n in self.dims.keys()]
