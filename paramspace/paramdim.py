@@ -68,7 +68,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         """
         # Initialize attributes that are managed by properties or methods
         self._vals = None
-        self._state = None
+        self._state = 0  # corresponding to the default state
 
         # Set attributes that need no further checks
         self.name = name
@@ -138,9 +138,18 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             int: The number of available values
         """
         return len(self.values)
+    
+    @property
+    def num_states(self) -> int:
+        """The number of possible states, i.e.: including the default state
+        
+        Returns:
+            int: The number of possible states
+        """
+        return self.num_values + 1
 
     @property
-    def state(self) -> Union[int, None]:
+    def state(self) -> int:
         """The current iterator state
         
         Returns:
@@ -154,9 +163,9 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         """If in an iteration: return the value according to the current
         state. If not in an iteration, return the default value.
         """
-        if self.state is None:
+        if self.state is 0:
             return self.default
-        return self.values[self.state]
+        return self.values[self.state - 1]
 
 
     # Magic methods ...........................................................
@@ -292,9 +301,9 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             # Was already set
             raise AttributeError("Values already set; cannot be set again!")
 
-        elif not len(values):
-            raise ValueError("{} values need be a container of length > 0, "
-                             "were {}".format(self.__class__.__name__, values))
+        elif len(values) < 1:
+            raise ValueError("{} values need be a container of length >= 1, "
+                             "was {}".format(self.__class__.__name__, values))
         
         # Resolve iterator as tuple, optionally ensuring it is a float
         if as_float:
@@ -355,7 +364,7 @@ class ParamDim(ParamDimBase):
         return self._target_of
 
     @property
-    def state(self) -> Union[int, None]:
+    def state(self) -> int:
         """The current iterator state
         
         Returns:
@@ -365,31 +374,29 @@ class ParamDim(ParamDimBase):
         return super().state
 
     @state.setter
-    def state(self, new_state: Union[int, None]):
+    def state(self, new_state: int):
         """Sets the current iterator state."""
-        if new_state is None:
-            self._state = None
+        # Perform type and value checks
+        if not isinstance(new_state, int):
+            raise TypeError("New state can only be of type int, was {}!"
+                            "".format(type(new_state)))
 
-        elif isinstance(new_state, int):
-            # Check for valid state interval
-            if new_state < 0 or new_state >= self.num_values:
-                raise ValueError("New state needs to be positive and cannot "
-                                 "exceed the highest index of the value "
-                                 "container ({}), was {}."
-                                 "".format(self.num_values - 1, new_state))
+        elif new_state < 0:
+            raise ValueError("New state needs to be >= 0, was {}."
+                             "".format(new_state))
+        
+        elif new_state > self.num_values:
+            raise ValueError("New state needs to be <= {}, was {}."
+                             "".format(self.num_values, new_state))
 
-            elif self._mask_tuple()[new_state] is True:
-                raise MaskedValueError("Value at index {} is masked: {}. "
-                                       "Cannot set the state to this index."
-                                       "".format(new_state,
-                                                 self.values[new_state]))
+        elif new_state > 0 and self._mask_tuple()[new_state - 1] is True:
+            raise MaskedValueError("Value at index {} is masked: {}. "
+                                   "Cannot set the state to this index."
+                                   "".format(new_state,
+                                             self.values[new_state - 1]))
 
-            # Everything ok. Can set the
-            self._state = new_state
-
-        else:
-            raise TypeError("New state can only be of type int or None, "
-                            "was "+str(type(new_state)))
+        # Everything ok. Can set the state
+        self._state = new_state
 
     @property
     def mask(self) -> Union[bool, Tuple[bool]]:
@@ -495,8 +502,8 @@ class ParamDim(ParamDimBase):
         """
         # Need to distinguish mask states
         if self.mask is False:
-            # Trivial case, start with 0
-            self.state = 0
+            # Trivial case, start with 1, the first iteration value state
+            self.state = 1
 
         elif self.mask is True:
             # Need to communicate that there is nothing to iterate
@@ -504,7 +511,7 @@ class ParamDim(ParamDimBase):
 
         else:
             # Find the first unmasked state
-            self.state = self.mask.index(False)
+            self.state = self.mask.index(False) + 1  # +1 accounts for default
 
     def iterate_state(self) -> None:
         """Iterates the state of the parameter dimension.
@@ -514,7 +521,7 @@ class ParamDim(ParamDimBase):
         """
         # Set to zero or increment, depending on whether inside or outside of
         # an iteration
-        if self.state is None:
+        if self.state == 0:
             self.enter_iteration()
             # NOTE This will raise StopIteration if all values are masked.
             #      Thus, in the following, it can be assumed that at least one
@@ -522,8 +529,8 @@ class ParamDim(ParamDimBase):
             return
             
         # Else: within iteration
-        # Look for further possible states in the shortened mask tuple
-        sub_mask = self._mask_tuple()[self.state + 1:]
+        # Look for further possible states in the remainder of the mask tuple
+        sub_mask = self._mask_tuple()[self.state:]
 
         if False in sub_mask:
             # There is another possible state, find it via index
@@ -543,7 +550,7 @@ class ParamDim(ParamDimBase):
         Returns:
             None
         """
-        self.state = None
+        self.state = 0  # the state corresponding to the default value
 
     # Non-public API ..........................................................
 
@@ -774,7 +781,7 @@ class CoupledParamDim(ParamDimBase):
         return self._vals
 
     @property
-    def state(self) -> Union[int, None]:
+    def state(self) -> int:
         """The current iterator state of the target ParamDim
         
         Returns:
@@ -788,9 +795,9 @@ class CoupledParamDim(ParamDimBase):
         """If in an iteration: return the value according to the current
         state. If not in an iteration, return the default value.
         """
-        if self.state is None:
+        if self.state is 0:
             return self.default
-        return self.values[self.state]
+        return self.values[self.state - 1]
 
 
     @property

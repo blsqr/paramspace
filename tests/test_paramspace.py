@@ -1,5 +1,6 @@
 """Tests for the ParamSpace class"""
 
+from functools import reduce
 from collections import OrderedDict
 
 import pytest
@@ -119,8 +120,47 @@ def test_default(basic_psp, adv_psp):
     assert d2['d']['d']['p1'] == 0
     assert d2['d']['d']['p2'] == 0
 
-def test_volume(basic_psp, adv_psp):
+def test_strings(basic_psp, adv_psp, psp_with_coupled):
+    """Test whether the string generation works correctly."""
+    for psp in [basic_psp, adv_psp, psp_with_coupled]:
+        str(psp)
+        repr(psp)
+        psp.get_info_str()
+
+def test_eq(adv_psp):
+    """Test that __eq__ works"""
+    psp = adv_psp
+    
+    assert (psp == "foo") is False      # Type does not match
+    assert (psp == psp._dict) is False  # Not equivalent to the whole object
+    assert (psp == psp) is True
+
+def test_item_access(psp_with_coupled):
+    """Assert that item access is working and safe"""
+    psp = psp_with_coupled
+    
+    # get method - should be a deepcopy
+    assert psp.get("foo") == "bar"
+    assert psp.get("mutable") == [0, 0, 0]
+    assert psp.get("mutable") is not psp._dict["mutable"]
+
+    # pop method - should not work for parameter dimensions
+    assert psp.pop("foo") == "bar"
+    assert psp.pop("foo", "baz") == "baz"
+    assert "foo" not in psp._dict
+
+    assert psp.pop("spam") == "eggs"
+    assert "spam" not in psp._dict
+    
+    with pytest.raises(KeyError, match="Cannot remove item with key"):
+        psp.pop("a")
+
+    with pytest.raises(KeyError, match="Cannot remove item with key"):
+        psp.pop("c1")
+
+def test_volume(small_psp, basic_psp, adv_psp):
     """Asserts that the volume calculation is correct"""
+    assert small_psp.volume == 2 * 3 * 5
     assert basic_psp.volume == 3**6
     assert adv_psp.volume == 3**6
 
@@ -134,10 +174,11 @@ def test_volume(basic_psp, adv_psp):
     # And of a paramspace without dimensions
     assert ParamSpace(dict(a=1)).volume == 0
 
-def test_shape(basic_psp, adv_psp):
+def test_shape(small_psp, basic_psp, adv_psp):
     """Asserts that the returned shape is correct"""
-    assert basic_psp.shape == (3,3,3,3,3,3)
-    assert adv_psp.shape == (3,3,3,3,3,3)
+    assert small_psp.shape == (2, 3, 5)
+    assert basic_psp.shape == (3, 3, 3, 3, 3, 3)
+    assert adv_psp.shape ==   (3, 3, 3, 3, 3, 3)
 
     p = ParamSpace(dict(a=ParamDim(default=0, values=[1]), # 1
                         b=ParamDim(default=0, range=[0,10,2]), # 5
@@ -150,6 +191,11 @@ def test_shape(basic_psp, adv_psp):
     assert basic_psp.num_dims == 6
     assert adv_psp.num_dims == 6
     assert p.num_dims == 4
+
+    # And the state shape, which is +1 larger in each entry
+    assert small_psp.states_shape == (3, 4, 6)
+    assert basic_psp.states_shape == (4, 4, 4, 4, 4, 4)
+    assert adv_psp.states_shape ==   (4, 4, 4, 4, 4, 4)
 
 def test_dim_order(basic_psp, adv_psp):
     """Tests whether the dimension order is correct."""
@@ -171,7 +217,57 @@ def test_dim_order(basic_psp, adv_psp):
                     ('d', 'd', 'p1'),
                     ('d', 'd', 'p2'))
     for name_is, name_should in zip(adv_psp.dims, adv_psp_names):
-        assert name_is == name_should
+        assert name_is == name_should    
+
+def test_state_no(small_psp, basic_psp, adv_psp, psp_with_coupled):
+    """Test that state number calculation is correct"""    
+    def test_state_nos(psp):
+        # Check that the state number is zero outside an iteration
+        assert psp.state_no is 0
+        
+        # Get all points, then check them
+        nos = [n for _, n in psp.all_points(with_info=("state_no",))]
+        print("state numbers: ", nos)
+
+        # Interval is correct
+        assert nos[0] == min(nos)  # equivalent to sum of multipliers
+        assert nos[-1] == max(nos) == reduce(lambda x, y: x*y,
+                                             psp.states_shape) - 1
+        assert len(nos) == psp.volume
+
+        # All ok
+        return True
+
+    # Call the test function on the given parameter spaces
+    assert test_state_nos(small_psp)
+    assert test_state_nos(basic_psp)
+    assert test_state_nos(adv_psp)
+    assert test_state_nos(psp_with_coupled)
+    # TODO add a masked one
+
+def test_inverse_mapping(small_psp, basic_psp, adv_psp):
+    """Test whether the state mapping is correct."""
+    psps = [small_psp, basic_psp, adv_psp]
+
+    for psp in psps:
+        psp.inverse_mapping()
+
+        # Test caching branch
+        psp.inverse_mapping()
+
+    # Test values more explicitly
+
+@pytest.mark.skip() # TODO
+def test_masking(small_psp):
+    """Test whether the masking feature works"""
+    psp = small_psp
+    assert psp.shape == (2, 3, 5)
+    assert psp.volume == 2 * 3 * 5
+
+    # First try setting binary masks
+    psp.set_mask('p0', True)
+    assert psp.shape == (1, 3, 5)  # i.e.: 0th dimension only returns default
+    assert psp.volume == 1 * 3 * 5
 
 def test_iteration(basic_psp, adv_psp):
     """Tests whether the iteration goes through all points"""
@@ -192,7 +288,7 @@ def test_iteration(basic_psp, adv_psp):
                  (basic_psp.volume, adv_psp.volume))
 
     # Also test all information tuples
-    info = ("state_no", "state_vec", "progress")
+    info = ("state_no", "state_vec")
     check_counts((basic_psp.all_points(with_info=info),
                   adv_psp.all_points(with_info=info)),
                  (basic_psp.volume, adv_psp.volume))
@@ -202,42 +298,10 @@ def test_iteration(basic_psp, adv_psp):
         info = ("state_no", "foo bar")
         check_counts((basic_psp.all_points(with_info=info),
                       adv_psp.all_points(with_info=info)),
-                     (basic_psp.volume, adv_psp.volume))        
+                     (basic_psp.volume, adv_psp.volume))    
 
-def test_state_no(basic_psp, adv_psp, psp_with_coupled):
-    """Test that state number calculation is correct"""    
-    def test_state_nos(psp):
-        # Check that the state number is None outside an iteration
-        assert psp.state_no is None
-        
-        # Get all points, then check them
-        nos = [n for _, n in psp.all_points(with_info=("state_no",))]
 
-        # Interval is correct
-        assert nos[0] == 0
-        assert len(nos) == psp.volume
-        assert nos[-1] == max(nos) == psp.volume - 1
-        
-        # Increment is always 1
-        d = np.diff(nos)
-        assert max(d) == min(d) == 1
-
-        # All ok
-        return True
-
-    # Call the test function on the given parameter spaces
-    assert test_state_nos(basic_psp)
-    assert test_state_nos(adv_psp)
-    assert test_state_nos(psp_with_coupled)
-
-def test_inverse_mapping(basic_psp, adv_psp):
-    """Test whether the state mapping is correct."""
-    basic_psp.inverse_mapping()
-    adv_psp.inverse_mapping()
-
-    # Test caching branch
-    basic_psp.inverse_mapping()
-    adv_psp.inverse_mapping()
+# Complicated content ---------------------------------------------------------
 
 def test_coupled(psp_with_coupled):
     """Test parameter spaces with CoupledParamDims in them"""
@@ -278,56 +342,6 @@ def test_nested(psp_nested, basic_psp):
 	assert default['foo'] == "bar"
 	assert default['basic'] == basic_psp
 	assert default['deeper']['basic'] == basic_psp
-
-def test_strings(basic_psp, adv_psp, psp_with_coupled):
-    """Test whether the string generation works correctly."""
-    for psp in [basic_psp, adv_psp, psp_with_coupled]:
-        str(psp)
-        repr(psp)
-        psp.get_info_str()
-
-def test_eq(adv_psp):
-    """Test that __eq__ works"""
-    psp = adv_psp
-    
-    assert (psp == "foo") is False      # Type does not match
-    assert (psp == psp._dict) is False  # Not equivalent to the whole object
-    assert (psp == psp) is True
-
-def test_item_access(psp_with_coupled):
-    """Assert that item access is working and safe"""
-    psp = psp_with_coupled
-    
-    # get method - should be a deepcopy
-    assert psp.get("foo") == "bar"
-    assert psp.get("mutable") == [0, 0, 0]
-    assert psp.get("mutable") is not psp._dict["mutable"]
-
-    # pop method - should not work for parameter dimensions
-    assert psp.pop("foo") == "bar"
-    assert psp.pop("foo", "baz") == "baz"
-    assert "foo" not in psp._dict
-
-    assert psp.pop("spam") == "eggs"
-    assert "spam" not in psp._dict
-    
-    with pytest.raises(KeyError, match="Cannot remove item with key"):
-        psp.pop("a")
-
-    with pytest.raises(KeyError, match="Cannot remove item with key"):
-        psp.pop("c1")
-
-@pytest.mark.skip() # TODO
-def test_masking(small_psp):
-    """Test whether the masking feature works"""
-    psp = small_psp
-    assert psp.shape == (2, 3, 5)
-    assert psp.volume == 2 * 3 * 5
-
-    # First try setting binary masks
-    psp.set_mask('p0', True)
-    assert psp.shape == (1, 3, 5)  # i.e.: 0th dimension only returns default
-    assert psp.volume == 1 * 3 * 5
 
 
 # YAML Dumping ----------------------------------------------------------------

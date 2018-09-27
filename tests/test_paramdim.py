@@ -44,7 +44,7 @@ def test_init(various_pdims):
     with pytest.raises(TypeError, match="Missing one of the following"):
         ParamDim(default=0)
     
-    with pytest.raises(ValueError, match="need be a container of length > 0"):
+    with pytest.raises(ValueError, match="need be a container of length >= 1"):
         ParamDim(default=0, values=[])
 
     with pytest.raises(TypeError, match="Received invalid keyword argument"):
@@ -82,13 +82,13 @@ def test_properties(various_pdims):
         vpd['two'].values[1] = "bar"
 
     # Whether the state is restricted to the value bounds
-    with pytest.raises(ValueError, match="needs to be positive"):
+    with pytest.raises(ValueError, match="needs to be >= 0, was -1"):
         vpd['one'].state = -1
     
-    with pytest.raises(ValueError, match="cannot exceed the highest index"):
-        vpd['two'].state = 4
+    with pytest.raises(ValueError, match="needs to be <= 4, was 5"):
+        vpd['two'].state = 5
 
-    with pytest.raises(TypeError, match="can only be of type int or None"):
+    with pytest.raises(TypeError, match="can only be of type int"):
         vpd['two'].state = "foo"
 
     # current_value
@@ -107,24 +107,27 @@ def test_properties(various_pdims):
 
 def test_iteration(various_pdims):
     """Tests whether the iteration over the span's state works."""
-    pd = ParamDim(default=0, values=[0,1,2])
+    pd = ParamDim(default=0, values=[1,2,3])
+
+    # Should start in default state
+    assert pd.state == 0
 
     # First iteration
-    assert pd.__next__() == 0
     assert pd.__next__() == 1
     assert pd.__next__() == 2
+    assert pd.__next__() == 3
     with pytest.raises(StopIteration):
         pd.__next__()
 
     # Should be able to iterate again
-    assert pd.__next__() == 0
     assert pd.__next__() == 1
     assert pd.__next__() == 2
+    assert pd.__next__() == 3
     with pytest.raises(StopIteration):
         pd.__next__()
 
-    # State should be None now
-    assert pd.state is None
+    # State should be reset to 0 now
+    assert pd.state is 0
 
     # And as a loop
     for _ in pd:
@@ -154,7 +157,7 @@ def test_np_methods_return_floats():
 def test_mask():
     """Test that masking works"""
     # Test initialization, property getter and setter, and type
-    pd = ParamDim(default=0, values=[0, 1, 2, 3], mask=False)
+    pd = ParamDim(default=0, values=[1, 2, 3, 4], mask=False)
     assert pd.mask is False
     # NOTE not trivial to test because the .mask getter _computes_ the value
     assert not any([isinstance(v, Masked) for v in pd.values])
@@ -182,24 +185,24 @@ def test_mask():
 
     # Check that iteration starts at first unmasked state
     pd.enter_iteration()
-    assert pd.state == 1
-    assert pd.current_value == 1
+    assert pd.state == 2
+    assert pd.current_value == 2
 
     # Iterate one step, this should jump to index and value 3
-    assert pd.__next__() == 3
-    assert pd.state == 3
+    assert pd.__next__() == 4
+    assert pd.state == 4
 
     # Setting the state manually to something masked should not work
-    with pytest.raises(MaskedValueError, match="Value at index 0 is masked"):
-        pd.state = 0
+    with pytest.raises(MaskedValueError, match="Value at index 1 is masked"):
+        pd.state = 1
 
     # No further iteration should be possible for this one
     with pytest.raises(StopIteration):
         pd.iterate_state()
-    assert pd.state is None
+    assert pd.state is 0
 
     # Check iteration again
-    assert list(pd) == [1, 3]
+    assert list(pd) == [2, 4]
 
     # Same for fully masked
     pd.mask = True
@@ -280,9 +283,9 @@ def test_cpd_init():
     with pytest.raises(AttributeError, match="Values already set; cannot be"):
         cpd._set_values([1,2,3])
 
-    # Test disabled has no state set
+    # Test it has no state set
     cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4])
-    assert cpd.state is None
+    assert cpd.state == 0
     assert cpd.current_value is 0 # that of the coupled ParamDim!
 
 def test_cpd_iteration():

@@ -178,18 +178,80 @@ class ParamSpace:
 
         vol = 1
         for pdim in self.dims.values():
-            vol *= len(pdim)
+            # Need to check whether a dimension is fully masked, in which case
+            # the default value is used and the dimension length is 1
+            vol *= len(pdim) if pdim.mask is not True else 1
+        return vol
+
+    @property
+    def full_volume(self) -> int:
+        """Returns the full volume, i.e. ignoring whether parameter dimensions
+        are masked.
+        """
+        if self.num_dims == 0:
+            return 0
+
+        vol = 1
+        for pdim in self.dims.values():
+            vol *= pdim.num_values
         return vol
 
     @property
     def shape(self) -> Tuple[int]:
-        """Returns the shape of the parameter space"""
-        return tuple([len(pd) for pd in self.dims.values()])
+        """Returns the shape of the parameter space, not counting masked
+        values of parameter dimensions. If a dimension is fully masked, it is
+        still represented as of length 1, representing the default value
+        being used.
+        
+        Returns:
+            Tuple[int]: The iterator shape
+        """
+        return tuple([len(pdim) if pdim.mask is not True else 1
+                      for pdim in self.dims.values()])
+    
+    @property
+    def full_shape(self) -> Tuple[int]:
+        """Returns the shape of the parameter space, ignoring masked values
+        
+        Returns:
+            Tuple[int]: The shape of the fully unmasked iterator
+        """
+        return tuple([pdim.num_values for pdim in self.dims.values()])
+    
+    @property
+    def states_shape(self) -> Tuple[int]:
+        """Returns the shape of the parameter space, including default states
+        for each parameter dimension and ignoring masked ones.
+        
+        Returns:
+            Tuple[int]: The shape tuple
+        """
+        return tuple([pdim.num_states for pdim in self.dims.values()])
     
     @property
     def state_vector(self) -> Tuple[int]:
         """Returns a tuple of all current parameter dimension states"""
         return tuple([s.state for s in self.dims.values()])
+
+    @state_vector.setter
+    def state_vector(self, vec: Tuple[int]):
+        """Sets the state of all parameter dimensions"""
+        if len(vec) != self.num_dims:
+            raise ValueError("Given vector needs to be of same length as "
+                             "there are number of dimensions ({}), was: {}"
+                             "".format(self.num_dims, vec))
+
+        for (name, pdim), new_state in zip(self.dims.items(), vec):
+            try:
+                pdim.state = new_state
+
+            except ValueError as err:
+                raise ValueError("Could not set the state of parameter "
+                                 "dimension {} to {}!"
+                                 "".format(name, new_state)) from err
+
+        log.debug("Successfully set state vector to %s.", vec)
+
 
     @property
     def full_state_vector(self) -> OrderedDict:
@@ -232,15 +294,20 @@ class ParamSpace:
             return None
         # NOTE can now be sure that all values are integer states, no Nones
 
-        # Now need the lengths, i.e. the shape of the parameter space
-        shape = self.shape
-        log.debug("  shape:       %s", shape)
+        # Now need the full shape of the parameter space, i.e. ignoring masked
+        # values
+        states_shape = self.states_shape
+        log.debug("  states shape: %s  (volume: %s)",
+                  states_shape, reduce(lambda x, y: x*y, states_shape))
+
+        # Need to include the defaults into the shape
+
 
         # The lengths will now be used to calculate the multipliers, starting
         # with 1 for the 0th pdim.
         # For example, given lengths [10, 10,  20,    5], the corresponding
         # multipliers are:           [ 1, 10, 100, 2000]
-        mults = [reduce(lambda x, y: x*y, shape[:i], 1)
+        mults = [reduce(lambda x, y: x*y, states_shape[:i], 1)
                  for i in range(self.num_dims)]
         log.debug("  multipliers:  %s", mults)
 
@@ -293,8 +360,9 @@ class ParamSpace:
 
         # General information about the Parameter Space
         l += ["  Dimensions:  {}".format(self.num_dims)]
-        l += ["  Volume:      {}".format(self.volume)]
         l += ["  Coupled:     {}".format(self.num_coupled_dims)]
+        l += ["  Shape:       {}".format(self.shape)]
+        l += ["  Volume:      {}".format(self.volume)]
 
         # ParamDim information
         l += ["", "Parameter Dimensions"]
@@ -303,6 +371,10 @@ class ParamSpace:
         for name, pdim in self.dims.items():
             l += ["  * {}".format(" -> ".join([str(e) for e in name]))]
             l += ["      {}".format(pdim.values)]
+            # TODO add information on length?!
+            if pdim.mask is True:
+                l += ["      fully masked -> using default:  {}"
+                      "".format(pdim.default)]
 
             if pdim.order < np.inf:
                 l += ["      Order: {}".format(pdim.order)]
@@ -378,8 +450,25 @@ class ParamSpace:
         return self._iter()
         # NOTE the generator will also raise StopIteration once it ended
         
-    def all_points(self, with_info: Sequence=None) -> Generator[PStype, None, None]:
-        """Returns a generator yielding all points of the parameter space."""
+    def all_points(self, with_info: Tuple[str]=None) -> Generator[PStype, None, None]:
+        """Returns a generator yielding all points of the parameter space, i.e.
+        the space spanned open by the parameter dimensions.
+        
+        Args:
+            with_info (Tuple[str], optional): Can pass strings here that are to
+                be returned as the second value. Possible values are:
+                    'state_no', 'state_vector'
+            include_default (bool, optional): If true, also includes the
+                parameter dimensions' default values.
+        
+        Returns:
+            Generator[PStype, None, None]: yields point after point of the
+                ParamSpace
+        
+        Raises:
+            ValueError: If the ParamSpace volume is zero and no iteration can
+                be performed
+        """
 
         if self.volume < 1:
             raise ValueError("Cannot iterate over ParamSpace of zero volume.")
@@ -457,39 +546,38 @@ class ParamSpace:
     # Public API ..............................................................
 
     def inverse_mapping(self) -> np.ndarray:
-        """Returns an inverse mapping of dimension to state numbers."""
+        """Returns an inverse mapping, i.e. an n-dimensional array where the
+        indices along the dimensions relate to the states of the parameter
+        dimensions and the content of the array relates to the state numbers.
+        """
+        # Check if the cached result can be returned
         if self._imap is not None:
-            # Return the cached result
             log.debug("Using previously created inverse mapping ...")
             return self._imap
-        # else: calculate the inverse mapping
+        
+        # else: need to calculate the inverse mapping
 
-        # Create empty n-dimensional array
-        shape = self.shape
-        imap = np.ndarray(shape, dtype=int)
+        # Create empty n-dimensional array which will hold state numbers
+        imap = np.ndarray(self.states_shape, dtype=int)
         imap.fill(-1) # i.e., not set yet
 
-        # Iterate over all points and save the state number to the map
-        for _, state_no, state_vec in self.all_points(with_info=['state_no',
-                                                      'state_vec']):
-            # Need to convert entries in the state vector if there are Nones
-            s = [0 if i is None else i for i in state_vec]
+        # As .all_points does not allow iterating over default states, iterate
+        # over the multi-index of the imap, set the state vector and get the
+        # corresponding state number
+        for midx in np.ndindex(imap.shape):
+            # Set the state vector ( == midx) of the paramspace
+            self.state_vector = midx
 
-            # Save the state number to the mapping
-            try:
-                imap[tuple(s)] = state_no
+            # Resolve the corresponding state number and store at this midx
+            imap[tuple(midx)] = self.state_no
 
-            except IndexError as err:
-                raise RuntimeError("Creating inverse mapping failed, probably "
-                                   "due to a change in the parameter "
-                                   "dimensions sizes.  "
-                                   "Selector: {} -- imap shape: {}"
-                                   "".format(s, imap.shape)
-                                   ) from err
-        else:
-            log.debug("Finished creating inverse mapping. Caching it...")
-            self._imap = imap
-
+        # Make sure there are no unset values
+        if np.min(imap) < 0:
+            raise RuntimeError("Did not visit all points during iteration "
+                               "over state space!\nimap:\n{}".format(imap))
+        
+        log.debug("Finished creating inverse mapping. Caching it...")
+        self._imap = imap
         return self._imap
 
 
@@ -624,10 +712,10 @@ class ParamSpace:
         for info in with_info:
             if info in ['state_no']:
                 info_tup += (self.state_no,)
+
             elif info in ['state_vector', 'state_vec']:
                 info_tup += (self.state_vector,)
-            elif info in ['progress']:
-                info_tup += ((self.state_no+1)/self.volume,)
+
             else:
                 raise ValueError("No such information '{}' available. "
                                  "Check the `with_info` argument!"

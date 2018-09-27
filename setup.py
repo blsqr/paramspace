@@ -3,7 +3,7 @@
 from setuptools import setup
 
 # Dependency lists
-install_deps = ['numpy>=1.13', 'PyYAML>=3.12,<4.0']
+install_deps = ['numpy>=1.15', 'PyYAML>=3.12,<4.0']
 test_deps    = ['tox>=3.1.2', 'pytest>=3.4.0', 'pytest-cov>=2.5.1']
 
 
