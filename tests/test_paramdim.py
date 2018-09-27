@@ -166,6 +166,9 @@ def test_mask():
     # Now to a more complex mask
     pd.mask = (True, False, True, False)
     assert pd.mask == (True, False, True, False)
+
+    # Test the properties that inform about the number of masked and unmasked
+    # values
     assert pd.num_masked == 2
     assert pd.num_unmasked == 2
 
@@ -204,7 +207,7 @@ def test_mask():
 
 # CoupledParamDim -------------------------------------------------------------
 
-def test_coupled_init():
+def test_cpd_init():
     """Test whether initialisation of CoupledParamDim works"""
     # These should work
     CoupledParamDim(target_name=("foo",))
@@ -281,7 +284,7 @@ def test_coupled_init():
     assert cpd.state is None
     assert cpd.current_value is 0 # that of the coupled ParamDim!
 
-def test_coupled_iteration():
+def test_cpd_iteration():
     """Tests iteration of CoupledParamDim"""
     # ParamDim to couple to for testing
     pd = ParamDim(default=0, values=[1,2,3])
@@ -295,13 +298,26 @@ def test_coupled_iteration():
                                                values=[2,3,4])):
         assert pval + 1 == cpval
 
+@pytest.mark.skip("Not working yet")
+def test_cpd_standalone_iteration():
+    """CoupledParamDim should be iterable standalone, too!"""
+    cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4])
+    assert list(cpd) == [2,3,4]  # FIXME infinite loop
+
 def test_coupled_mask():
     """Test the masking features' effects on CoupledParamDim"""
-    pd = ParamDim(default=0, values=[1,2,3])
+    pd = ParamDim(default=0, values=[1, 2, 3, 4], mask=(0, 1, 0, 1))
     
     # It should not be possible to mask a CPD
     with pytest.raises(TypeError, match="Received invalid keyword argument"):
         CoupledParamDim(target_pdim=pd, mask=True)
+
+    # Test that coupled iteration is masked accordingly
+    vals = []
+    for pval, cpval in zip(pd,CoupledParamDim(target_pdim=pd)):
+        assert pval == cpval
+        vals.append(pval)
+    assert vals == [1, 3]
 
 # YAML Dumping ----------------------------------------------------------------
 

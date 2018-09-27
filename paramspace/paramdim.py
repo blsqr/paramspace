@@ -190,7 +190,6 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             str: Returns the string representation of the ParamDimBase-derived
                 object
         """
-        # TODO should actually be a string from which to re-create the object
         return ("<{} object at {} with {}>"
                 "".format(self.__class__.__name__, id(self),
                           repr(self._parse_repr_attrs())))
@@ -213,6 +212,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     # Iterator functionality ..................................................
 
     def __iter__(self):
+        """Iterate over available values"""
         return self
 
     def __next__(self):
@@ -231,17 +231,6 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     # iteration.
 
     @abc.abstractmethod
-    def iterate_state(self) -> None:
-        """Iterates the state of the parameter dimension.
-        
-        Returns:
-            None
-
-        Raises:
-            StopIteration: Upon end of iteration
-        """
-
-    @abc.abstractmethod
     def enter_iteration(self) -> None:
         """Sets the state to the first possible one, symbolising that an
         iteration has started.
@@ -251,6 +240,17 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
         Raises:
             StopIteration: If no iteration is possible
+        """
+
+    @abc.abstractmethod
+    def iterate_state(self) -> None:
+        """Iterates the state of the parameter dimension.
+        
+        Returns:
+            None
+
+        Raises:
+            StopIteration: Upon end of iteration
         """
 
     @abc.abstractmethod
@@ -473,6 +473,27 @@ class ParamDim(ParamDimBase):
 
     # Public API ..............................................................
 
+    def enter_iteration(self) -> None:
+        """Sets the state to the first possible one, symbolising that an
+        iteration has started.
+        
+        Raises:
+            StopIteration: If no iteration is possible because all values are
+                masked.
+        """
+        # Need to distinguish mask states
+        if self.mask is False:
+            # Trivial case, start with 0
+            self.state = 0
+
+        elif self.mask is True:
+            # Need to communicate that there is nothing to iterate
+            raise StopIteration
+
+        else:
+            # Find the first unmasked state
+            self.state = self.mask.index(False)
+
     def iterate_state(self) -> None:
         """Iterates the state of the parameter dimension.
         
@@ -502,27 +523,6 @@ class ParamDim(ParamDimBase):
             # other Python iterators). Then communicate: iteration should stop.
             self.reset()
             raise StopIteration
-
-    def enter_iteration(self) -> None:
-        """Sets the state to the first possible one, symbolising that an
-        iteration has started.
-        
-        Raises:
-            StopIteration: If no iteration is possible because all values are
-                masked.
-        """
-        # Need to distinguish mask states
-        if self.mask is False:
-            # Trivial case, start with 0
-            self.state = 0
-
-        elif self.mask is True:
-            # Need to communicate that there is nothing to iterate
-            raise StopIteration
-
-        else:
-            # Find the first unmasked state
-            self.state = self.mask.index(False)
 
     def reset(self) -> None:
         """Called after the end of an iteration and should reset the object to
@@ -640,11 +640,12 @@ class CoupledParamDim(ParamDimBase):
     # iteration. Here, the parent class' behaviour is overwritten as the
     # CoupledParamDim's state and iteration should depend completely on that of
     # the target ParamDim...
-
-    def iterate_state(self) -> None:
-        """Does nothing, as state has no effect for CoupledParamDim"""
+    # TODO these should allow standalone iteration as well!
 
     def enter_iteration(self) -> None:
+        """Does nothing, as state has no effect for CoupledParamDim"""
+
+    def iterate_state(self) -> None:
         """Does nothing, as state has no effect for CoupledParamDim"""
 
     def reset(self) -> None:
@@ -764,3 +765,9 @@ class CoupledParamDim(ParamDimBase):
         if self.state is None:
             return self.default
         return self.values[self.state]
+
+
+    @property
+    def mask(self) -> Union[bool, Tuple[bool]]:
+        """Return the coupled object's mask value"""
+        return self.target_pdim.mask
