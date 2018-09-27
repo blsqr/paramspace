@@ -334,6 +334,8 @@ class ParamDim(ParamDimBase):
         self._mask_cache = None
         self.mask = mask
 
+        log.debug("ParamDim initialised.")
+
     # Additional properties ...................................................
 
     @property
@@ -351,7 +353,7 @@ class ParamDim(ParamDimBase):
             Union[int, None]: The state of the iterator; if it is None, the
                 ParamDim is not inside an iteration.
         """
-        return self._state
+        return super().state
 
     @state.setter
     def state(self, new_state: Union[int, None]):
@@ -367,7 +369,7 @@ class ParamDim(ParamDimBase):
                                  "container ({}), was {}."
                                  "".format(len(self)-1, new_state))
 
-            elif isinstance(self._mask_tuple()[new_state], Masked):
+            elif self._mask_tuple()[new_state] is True:
                 raise MaskedValueError("Value at index {} is masked: {}. "
                                        "Cannot set the state to this index."
                                        "".format(new_state,
@@ -604,22 +606,23 @@ class CoupledParamDim(ParamDimBase):
         # Initialise via parent 
         super().__init__(**kwargs)
 
-        # Carry over further arguments
-        if target_pdim:
+        # Check and set the target-related attributes
+        if target_pdim is not None and target_name is not None:
+            raise TypeError("Got both `target_pdim` and `target_name` "
+                            "arguments, but only accepting one of them at the "
+                            "same time!")
+
+        elif target_name:
+            # Save only the name of object to couple to. Resolved by ParamSpace
+            self.target_name = target_name
+        
+        elif target_pdim:
+            # Directly save the object to couple to
             self.target_pdim = target_pdim
 
-            if target_name is not None:
-                warnings.warn("Got both `target_pdim` and `target_name` "
-                              "arguments; will ignore the latter.",
-                              UserWarning)
-        elif target_name:
-            # Save name of the object to couple to. Resolved by ParamSpace
-            self.target_name = target_name
-
         else:
-            raise ValueError("Need either argument `target_pdim` or "
-                             "`target_name` to ensure coupling, got none of "
-                             "those.")
+            raise TypeError("Expected either argument `target_pdim` or "
+                            "`target_name`, got neither.")
 
         log.debug("CoupledParamDim initialised.")
         self._init_finished = True
@@ -632,15 +635,13 @@ class CoupledParamDim(ParamDimBase):
 
     def iterate_state(self) -> None:
         """Does nothing, as state has no effect for CoupledParamDim"""
-        pass
 
     def enter_iteration(self) -> None:
         """Does nothing, as state has no effect for CoupledParamDim"""
-        pass
 
     def reset(self) -> None:
         """Does nothing, as state has no effect for CoupledParamDim"""
-        pass
+
 
     # Properties that only the CoupledParamDim has ............................
 
@@ -658,8 +659,8 @@ class CoupledParamDim(ParamDimBase):
         # Make sure it is of valid type
         if not isinstance(target_name, (tuple, list, str)):
             raise TypeError("Argument `target_name` should be a tuple or list "
-                            "(i.e.: a key sequence) or a string! "
-                            "Was of type: "+str(type(target_name)))
+                            "(i.e.: a key sequence) or a string! Was {}: {}"
+                            "".format(type(target_name), target_name))
 
         elif isinstance(target_name, list):
             target_name = tuple(target_name)
@@ -746,13 +747,6 @@ class CoupledParamDim(ParamDimBase):
                 ParamDim is not inside an iteration.
         """
         return self.target_pdim.state
-
-    @state.setter
-    def state(self, new_state):
-        """The state of a coupled ParamDim is of no importance; don't change
-        it.
-        """
-        pass
 
     @property
     def current_value(self):

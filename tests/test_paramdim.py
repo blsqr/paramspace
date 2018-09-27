@@ -7,7 +7,7 @@ import numpy as np
 import yaml
 
 from paramspace import ParamDim, CoupledParamDim
-from paramspace.paramdim import ParamDimBase, Masked
+from paramspace.paramdim import ParamDimBase, Masked, MaskedValueError
 
 # Setup methods ---------------------------------------------------------------
 
@@ -91,7 +91,11 @@ def test_properties(various_pdims):
     with pytest.raises(TypeError, match="can only be of type int or None"):
         vpd['two'].state = "foo"
 
-    # Misc
+    # current_value
+    assert vpd['one'].current_value == vpd['one'].default
+    assert vpd['two'].current_value == vpd['two'].default
+    
+    # target_of
     for pd in vpd.values():
         if isinstance(pd, ParamDim):
             # Can be a target of a coupled ParamDim
@@ -163,6 +167,10 @@ def test_mask():
     pd.mask = (True, False, True, False)
     assert pd.mask == (True, False, True, False)
 
+    # Setting one with a bad length should not work
+    with pytest.raises(ValueError, match="container of same length as the"):
+        pd.mask = (True, False)
+
     # Check that length remains the same
     assert len(pd) == 4
 
@@ -174,6 +182,10 @@ def test_mask():
     # Iterate one step, this should jump to index and value 3
     assert pd.__next__() == 3
     assert pd.state == 3
+
+    # Setting the state manually to something masked should not work
+    with pytest.raises(MaskedValueError, match="Value at index 0 is masked"):
+        pd.state = 0
 
     # No further iteration should be possible for this one
     with pytest.raises(StopIteration):
@@ -198,7 +210,11 @@ def test_coupled_init():
     CoupledParamDim(target_name=("foo",), values=[1,2,3])
     CoupledParamDim(target_name="foo")
 
-    # These should fail
+    # These should fail due to wrong arguments given
+    with pytest.raises(TypeError, match="Expected either argument"):
+        # Neither target_pdim nor target_name given
+        CoupledParamDim()
+
     with pytest.raises(TypeError, match="missing 1 required"):
         # No default given
         CoupledParamDim(target_name=("foo",), use_coupled_default=False)
@@ -211,9 +227,15 @@ def test_coupled_init():
         # Not coupled yet
         CoupledParamDim(target_name=("foo",)).default
 
-    with pytest.warns(UserWarning, match="Got both `target_pdim` and"):
+    with pytest.raises(TypeError, match="Got both `target_pdim` and"):
+        # Got both target_pdim and target_name
         CoupledParamDim(target_pdim=ParamDim(default=0, values=[1,2,3]),
                         target_name=["foo", "bar"])
+
+    with pytest.raises(TypeError, match="should be a tuple or list"):
+        # Bad target_name type
+        CoupledParamDim(target_name=dict(foo="bar"))
+
 
     # Set target
     pd = ParamDim(default=0, values=[1,2,3])
