@@ -21,6 +21,7 @@ def various_pdims():
     pds['range']     = ParamDim(default=0, range=[1, 4, 1])
     pds['linspace']  = ParamDim(default=0, linspace=[1, 3, 3, True])
     pds['logspace']  = ParamDim(default=0, logspace=[-1, 1, 11])
+    pds['typed']     = ParamDim(default=0, range=[3], as_type='bool')
     pds['named']     = ParamDim(default=0, values=[1,2,3], name="named_span")
     pds['with_order']= ParamDim(default=0, values=[1,2,3], order=42)
 
@@ -61,6 +62,12 @@ def test_init(various_pdims):
     assert vpd['range'].values == tuple(range(1, 4, 1))
     assert all(vpd['linspace'].values == np.linspace(1, 3, 3, True))
     assert all(vpd['logspace'].values == np.logspace(-1, 1, 11))
+
+    # Test the as_type argument
+    assert vpd['typed'].values == (False, True, True)
+    with pytest.raises(KeyError, match="some_type"):
+        ParamDim(default=0, range=[10], as_type="some_type")
+
 
 def test_properties(various_pdims):
     """Test all properties and whether they are write-protected."""

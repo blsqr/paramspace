@@ -55,7 +55,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
     # .........................................................................
 
-    def __init__(self, *, default, values: Iterable=None, order: float=None, name: str=None, **kwargs) -> None:
+    def __init__(self, *, default, values: Iterable=None, order: float=None, name: str=None, as_type: str=None, **kwargs) -> None:
         """Initialise a parameter dimension object.
         
         Args:
@@ -69,12 +69,18 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             name (str, optional): If given, this is an *additional* name of
                 this ParamDim object, and can be used by the ParamSpace to
                 access this object.
+            as_type (str, optional): If given, casts the individual created
+                values to a certain python type. The following string values
+                are possible: str, int, bool, float
             **kwargs: Constructors for the `values` argument, valid keys are
                 `range`, `linspace`, and `logspace`; corresponding values are
                 expected to be iterables and are passed to `range(*args)`,
                 `np.linspace(*args)`, or `np.logspace(*args)`, respectively.
         
         Raises:
+            TypeError: Description
+        
+        No Longer Raises:
             ValueError: Description
         """
         # Initialize attributes that are managed by properties or methods
@@ -106,16 +112,18 @@ class ParamDimBase(metaclass=abc.ABCMeta):
                             "of:  {}".format(", ".join(vkwargs)))
 
         elif 'values' in kwargs:
-            self._set_values(kwargs['values'])
+            self._set_values(kwargs['values'], as_type=as_type)
 
         elif 'range' in kwargs:
-            self._set_values(range(*kwargs['range']))
+            self._set_values(range(*kwargs['range']), as_type=as_type)
 
         elif 'linspace' in kwargs:
-            self._set_values(np.linspace(*kwargs['linspace']), as_float=True)
+            self._set_values(np.linspace(*kwargs['linspace']),
+                             as_type='float' if as_type is None else as_type)
 
         elif 'logspace' in kwargs:
-            self._set_values(np.logspace(*kwargs['logspace']), as_float=True)
+            self._set_values(np.logspace(*kwargs['logspace']),
+                             as_type='float' if as_type is None else as_type)
 
         else:
             raise TypeError("Missing one of the following required keyword "
@@ -127,6 +135,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         self._init_kwargs = dict(default=default,
                                  order=order,
                                  name=name,
+                                 as_type=as_type,
                                  **kwargs)
         # Derived classes should add the necessary kwargs in their __init__s
 
@@ -312,19 +321,24 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
     # Non-public API ..........................................................
 
-    def _set_values(self, values: Iterable, as_float: bool=False):
+    def _set_values(self, values: Iterable, as_type: str=None):
         """This function sets the values attribute; it is needed for the
         values setter function that is overwritten when changing the property
         in a derived class.
         
         Args:
             values (Iterable): The iterable to set the values with
-            as_float (bool, optional): If given, makes sure that values are
-                of type float; this is needed for the numpy initializers
+            as_type (str, optional): The following values are possible:
+                str, int, bool, float. If not given, will leave the values
+                as they are.
         
         Raises:
             AttributeError: If the attribute is already set
             ValueError: If the iterator is invalid
+        
+        Deleted Parameters:
+            as_float (bool, optional): If given, makes sure that values are
+                of type float; this is needed for the numpy initializers
         """
         if self._vals is not None:
             # Was already set
@@ -335,8 +349,9 @@ class ParamDimBase(metaclass=abc.ABCMeta):
                              "was {}".format(self.__class__.__name__, values))
         
         # Resolve iterator as tuple, optionally ensuring it is a float
-        if as_float:
-            values = [float(v) for v in values]
+        if as_type is not None:
+            t = dict(str=str, int=int, float=float, bool=bool)[as_type]
+            values = [t(v) for v in values]
 
         # Now store it as tuple attribute
         self._vals = tuple(values)
