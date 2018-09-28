@@ -2,8 +2,15 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
-## v1.2
+## v2.0
 - #18: Calculate the `ParamSpace.state_no` instead of incrementing; this leads to higher reliability and allows more flexible iteration schemes.
+- #3: Include the ability to restrict `ParamSpace` to a subspace for iteration by introducing `ParamDim.mask`.
+   - This required changing the `state` property of the dimension and parameter space classes to include the default value as state 0. It is one of many changes to the public interface of this package that is introduced in version 2.0 and makes the whole state numbering more 
+   - Improvements going along this:
+      - Accessing a parameter dimension by name
+      - Calculating the state mapping; indices now relate directly and unambiguously to the state vector of the parameter space.
+      - Accessing single states via number or vector
+- #12: Test coverage is now up to 99% and the existing tests have been extended in order to more explicitly test the behaviour of the package. 
 
 ## v1.1.1
 - #17: Fix a bug that prohibited using nested `ParamSpace` objects
