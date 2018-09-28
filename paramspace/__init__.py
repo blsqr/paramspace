@@ -10,4 +10,4 @@ __version__ = "2.0.0-pre.0"  # NOTE also change the value in setup.py!
 
 from paramspace.paramspace import ParamSpace
 from paramspace.paramdim import ParamDim, CoupledParamDim
-from paramspace.yaml import yaml
+from paramspace.yaml import yaml, yaml_safe, yaml_unsafe

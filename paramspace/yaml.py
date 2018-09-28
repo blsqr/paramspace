@@ -14,8 +14,8 @@ from .yaml_constructors import coupled_pdim, coupled_pdim_default
 yaml_safe = YAML(typ='safe')
 yaml_unsafe = YAML(typ='unsafe')
 
-# Define the unsafe one as default, trading convenience for security
-yaml = yaml_unsafe
+# Define the safe one as default
+yaml = yaml_safe
 
 
 # Attach representers .........................................................

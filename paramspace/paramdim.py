@@ -239,7 +239,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             str: Returns the string representation of the ParamDimBase-derived
                 object
         """
-        return ("<{} object at {} with {}>"
+        return ("<paramspace.paramdim.{} object at {} with {}>"
                 "".format(self.__class__.__name__, id(self),
                           repr(self._parse_repr_attrs())))
 

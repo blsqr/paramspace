@@ -314,7 +314,7 @@ class ParamSpace:
         #      content asserts that the _smap attributes will be equal, too.
         return all([self.__dict__[k] == other.__dict__[k]
                     for k in self.__dict__.keys()
-                    if k not in ['_smap', '_iter']])
+                    if k not in ('_smap', '_iter')])
 
     def __str__(self) -> str:
         """Returns a parsed, human-readable information string"""
@@ -326,7 +326,7 @@ class ParamSpace:
     def __repr__(self) -> str:
         """Returns the raw string representation of the ParamSpace."""
         # TODO should actually be a string from which to re-create the object
-        return ("<{} object at {} with {}>"
+        return ("<paramspace.paramdim.{} object at {} with {}>"
                 "".format(self.__class__.__name__, id(self),
                           repr(dict(volume=self.volume,
                                     shape=self.shape,
