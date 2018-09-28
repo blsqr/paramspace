@@ -66,7 +66,7 @@ class ParamSpace:
         self._gather_paramdims() # NOTE attributes set within this method
 
         # Initialize caching attributes
-        self._imap = None
+        self._smap = None
         self._iter = None
 
     def _gather_paramdims(self):
@@ -304,12 +304,12 @@ class ParamSpace:
             return False
 
         # Check for equality of the two objects' underlying __dict__s content,
-        # skipping the caching attributes _imap and _iter
+        # skipping the caching attributes _smap and _iter
         # NOTE it is ok to not check these, because equality of the other
-        #      content asserts that the _imap attributes will be equal, too.
+        #      content asserts that the _smap attributes will be equal, too.
         return all([self.__dict__[k] == other.__dict__[k]
                     for k in self.__dict__.keys()
-                    if k not in ['_imap', '_iter']])
+                    if k not in ['_smap', '_iter']])
 
     def __str__(self) -> str:
         """Returns a parsed, human-readable information string"""
@@ -426,7 +426,7 @@ class ParamSpace:
         return self._iter()
         # NOTE the generator will also raise StopIteration once it ended
         
-    def all_points(self, *, with_info: Union[str, Tuple[str]]=None, dry_run: bool=False) -> Generator[PStype, None, None]:
+    def all_points(self, *, with_info: Union[str, Tuple[str]]=None, omit_pt: bool=False) -> Generator[PStype, None, None]:
         """Returns a generator yielding all points of the parameter space, i.e.
         the space spanned open by the parameter dimensions.
         
@@ -435,12 +435,12 @@ class ParamSpace:
                 here that are to be returned as the second value. Possible
                 values are: 'state_no', 'state_vector'.
                 To get multiple, add them to a tuple.
-            dry_run (bool, optional): If true, _only_ the info tuple is
-                returned and the current value is omitted.
+            omit_pt (bool, optional): If true, the current value is omitted and
+                only the information is returned.
         
         Returns:
             Generator[PStype, None, None]: yields point after point of the
-                ParamSpace
+                ParamSpace and the corresponding information
         
         Raises:
             ValueError: If the ParamSpace volume is zero and no iteration can
@@ -462,12 +462,12 @@ class ParamSpace:
             pdim.enter_iteration()
 
         # Yield the first state
-        yield self._gen_iter_rv(self.current_point if not dry_run else None,
+        yield self._gen_iter_rv(self.current_point if not omit_pt else None,
                                 with_info=with_info)
 
         # Now yield all the other states, while available.
         while self._next_state():
-            yield self._gen_iter_rv((self.current_point if not dry_run
+            yield self._gen_iter_rv((self.current_point if not omit_pt
                                      else None),
                                     with_info=with_info)
 
@@ -531,43 +531,45 @@ class ParamSpace:
     # Mapping . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
     @property
-    def inverse_mapping(self) -> np.ndarray:
+    def state_map(self) -> np.ndarray:
         """Returns an inverse mapping, i.e. an n-dimensional array where the
         indices along the dimensions relate to the states of the parameter
         dimensions and the content of the array relates to the state numbers.
         """
         # Check if the cached result can be returned
-        if self._imap is not None:
+        if self._smap is not None:
             log.debug("Using previously cached inverse mapping ...")
-            return self._imap
+            return self._smap
         
         # else: need to calculate the inverse mapping
 
         # Create empty n-dimensional array which will hold state numbers
-        imap = np.ndarray(self.states_shape, dtype=int)
-        imap.fill(-1) # i.e., not set yet
+        smap = np.ndarray(self.states_shape, dtype=int)
+        smap.fill(-1) # i.e., not set yet
 
         # As .all_points does not allow iterating over default states, iterate
-        # over the multi-index of the imap, set the state vector and get the
+        # over the multi-index of the smap, set the state vector and get the
         # corresponding state number
-        for midx in np.ndindex(imap.shape):
+        for midx in np.ndindex(smap.shape):
             # Set the state vector ( == midx) of the paramspace
             self.state_vector = midx
 
             # Resolve the corresponding state number and store at this midx
-            imap[tuple(midx)] = self.state_no
+            smap[tuple(midx)] = self.state_no
 
         # Make sure there are no unset values
-        if np.min(imap) < 0:
+        if np.min(smap) < 0:
             raise RuntimeError("Did (somehow) not visit all points during "
-                               "iteration over state space!\nimap:\n{}"
-                               "".format(imap))
+                               "iteration over state space!\n state map:\n{}"
+                               "".format(smap))
         
         log.debug("Finished creating inverse mapping. Caching it...")
-        self._imap = imap
-        return self._imap
+        self._smap = smap
+        # TODO consider setting writable to False
 
-    def get_masked_imap(self) -> np.ma.MaskedArray:
+        return self._smap
+
+    def get_masked_smap(self) -> np.ma.MaskedArray:
         """Returns a masked array based on the inverse mapping, where masked
         states are also masked in the array.
 
@@ -575,14 +577,18 @@ class ParamSpace:
         status of the ParamDim objects is not controlled by the ParamSpace and
         can change without notice.
         """
-        mmap = np.ma.MaskedArray(data=self.inverse_mapping(),
-                                 mask=True)
+        mmap = np.ma.MaskedArray(data=self.state_map, mask=True)
 
+        # TODO could improve the below loop by checking what needs fewer
+        #      iterations: unmasking falsely masked entries or vice versa ...
         # Unmask the unmasked values
-        for state_vector in self.all_points(with_info='state_vector',
-                                            dry_run=True):
-            pass
+        for s_no, s_vec in self.all_points(with_info=('state_no', 'state_vec'),
+                                           omit_pt=True):
+            # By assigning any value, the mask is removed
+            mmap[s_vec] = s_no
+            # TODO isn't there a better way than re-assigning the state no?!
 
+        return mmap
 
     def get_state_vector(self, *, state_no: int) -> Tuple[int]:
         """Returns the state vector that corresponds to a state number
@@ -594,7 +600,7 @@ class ParamSpace:
             Tuple[int]: the state vector corresponding to the state number
         """
         try:
-            return tuple(np.argwhere(self.inverse_mapping == state_no)[0])
+            return tuple(np.argwhere(self.state_map == state_no)[0])
 
         except IndexError as err:
             raise ValueError("Did not find state number {} in inverse "

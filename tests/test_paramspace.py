@@ -6,6 +6,7 @@ from collections import OrderedDict
 import pytest
 import yaml
 import numpy as np
+import numpy.ma
 
 from paramspace import ParamSpace, ParamDim, CoupledParamDim
 
@@ -281,20 +282,21 @@ def test_state_no(small_psp, basic_psp, adv_psp, psp_with_coupled):
     assert test_state_nos(psp_with_coupled)
     # TODO add a masked one
 
-def test_inverse_mapping(small_psp, basic_psp, adv_psp):
+def test_state_map(small_psp, basic_psp, adv_psp):
     """Test whether the state mapping is correct."""
     psps = [small_psp, basic_psp, adv_psp]
 
     for psp in psps:
-        psp.inverse_mapping
-        assert psp._imap is not None
+        assert psp._smap is None
+        psp.state_map
+        assert psp._smap is not None
 
         # Call again, which will return the cached value
-        psp.inverse_mapping
+        psp.state_map
 
     # With specific pspace, do more explicit tests
     psp = small_psp
-    imap = psp.inverse_mapping
+    imap = psp.state_map
     assert imap.shape == psp.states_shape
     assert imap[0,0,0] == 0
     assert np.max(imap) == reduce(lambda x, y: x*y, psp.states_shape) - 1
@@ -372,7 +374,7 @@ def test_basic_iteration(small_psp, basic_psp, adv_psp):
 
     # Check the dry run
     psp.reset()
-    snos = list([s for s in psp.all_points(with_info='state_no',dry_run=True)])
+    snos = list([s for s in psp.all_points(with_info='state_no',omit_pt=True)])
     assert snos[:4] == [16, 17, 19, 20]
     
     # Check that the counts match using a helper function . . . . . . . . . . .
@@ -491,6 +493,18 @@ def test_masked_iteration(small_psp):
     assert (9 + 2) in iter_res
     assert iter_res[11] == dict(p0=2, p1=3, p2=0)
 
+def test_masked_mapping_funcs(small_psp):
+    """Test the mapping methods for masked parameter spaces"""
+    psp = small_psp
+
+    # Compare the default array to a reference masked array
+    ref_ma = np.ma.MaskedArray(data=small_psp.state_map)
+    ref_ma[:,0,0] = np.ma.masked
+    ref_ma[0,:,0] = np.ma.masked
+    ref_ma[0,0,:] = np.ma.masked
+    mmap = psp.get_masked_smap()
+    print("masked state map:\n", mmap)
+    assert np.array_equal(mmap, ref_ma)
 
 # Complicated content ---------------------------------------------------------
 
