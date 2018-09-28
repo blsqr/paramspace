@@ -4,11 +4,10 @@ from functools import reduce
 from collections import OrderedDict
 
 import pytest
-import yaml
 import numpy as np
 import numpy.ma
 
-from paramspace import ParamSpace, ParamDim, CoupledParamDim
+from paramspace import ParamSpace, ParamDim, CoupledParamDim, yaml
 
 # Setup methods ---------------------------------------------------------------
 

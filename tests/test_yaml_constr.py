@@ -3,24 +3,9 @@
 import pytest
 
 import numpy as np
-import yaml
 
 # Add the constructors using the paramspace package methods
-from paramspace import ParamSpace, ParamDim, yaml_constructors
-
-yaml.add_constructor(u'!pspace', yaml_constructors.pspace)
-yaml.add_constructor(u'!pspace-sorted', yaml_constructors.pspace_sorted)
-
-yaml.add_constructor(u'!pdim',
-                     yaml_constructors.pdim)
-yaml.add_constructor(u'!pdim-default',
-                     yaml_constructors.pdim_get_default)
-
-yaml.add_constructor(u'!coupled-pdim',
-                     yaml_constructors.coupled_pdim)
-yaml.add_constructor(u'!coupled-pdim-default',
-                     yaml_constructors.coupled_pdim_get_default)
-
+from paramspace import ParamSpace, ParamDim, yaml
 
 # Fixtures --------------------------------------------------------------------
 
@@ -38,14 +23,14 @@ mapping: !pspace
   a: 1
   b: 2
   c: 3
-sequence_sorted: !pspace-sorted  # is a sequence, should not have an effect
+sequence_sorted: !pspace-unsorted
   - 1
   - 2
   - 3
   - foo:
     bar: 1
     baz: 2
-mapping_sorted: !pspace-sorted
+mapping_sorted: !pspace-unsorted
   a: 1
   c: 3
   b: 2

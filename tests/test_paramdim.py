@@ -4,10 +4,9 @@ import warnings
 
 import pytest
 import numpy as np
-import yaml
 
-from paramspace import ParamDim, CoupledParamDim
-from paramspace.paramdim import ParamDimBase, Masked, MaskedValueError
+from paramspace import ParamDim, CoupledParamDim, yaml
+from paramspace.paramdim import Masked, MaskedValueError
 
 # Setup methods ---------------------------------------------------------------
 
