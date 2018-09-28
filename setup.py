@@ -3,12 +3,12 @@
 from setuptools import setup
 
 # Dependency lists
-install_deps = ['numpy>=1.13', 'PyYAML>=3.12,<4.0']
-test_deps    = ['tox>=3.1.2', 'pytest>=3.4.0', 'pytest-cov>=2.5.1']
+install_deps = ['numpy>=1.15', 'PyYAML>=3.12,<4.0']
+test_deps    = ['tox>=3.1', 'pytest>=3.4', 'pytest-cov>=2.6']
 
 
 setup(name='ParamSpace',
-      version='1.2.0-pre.0',  # NOTE: also change this in __init__.py
+      version='2.0.0-pre.0',  # NOTE: also change this in __init__.py
       description='Multidimensional parameter space with dictionaries at each point.',
       long_description='Classes that allow easy iteration over a multidimensional parameter space, generating dictionaries at each point in this parameter space.',
       author='Yunus Sevinchan',

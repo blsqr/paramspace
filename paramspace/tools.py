@@ -8,14 +8,20 @@ from typing import Union, Callable, Iterator, Sequence, Mapping, List
 # Get logger
 log = logging.getLogger(__name__)
 
-# Special class for indicating that a value is to be skipped
-# Used in recursive_update
+
+# -----------------------------------------------------------------------------
+# Small helper classes
+
 class Skip:
-    """A skip object can be used to indiciate that no action should be taken."""
+    """A skip object can be used to indiciate that no action should be taken
+
+    It is used in recursive_update to indicate that a value is to be skipped
+    """
     pass
 
-# Also initialise such an object, simplifying the calls
+# Initialize such an object, simplifying the calls
 SKIP = Skip()
+
 
 # -----------------------------------------------------------------------------
 

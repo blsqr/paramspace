@@ -7,9 +7,10 @@ import collections
 from collections import OrderedDict
 from itertools import chain
 from functools import reduce
-from typing import Union, Sequence, Tuple, Generator, MutableMapping, MutableSequence, Dict
+from typing import Union, Sequence, Tuple, Generator, MutableMapping, MutableSequence, Dict, List
 
 import numpy as np
+import numpy.ma
 
 from .paramdim import ParamDimBase, ParamDim, CoupledParamDim
 from .tools import recursive_collect, recursive_update, recursive_replace
@@ -65,7 +66,7 @@ class ParamSpace:
         self._gather_paramdims() # NOTE attributes set within this method
 
         # Initialize caching attributes
-        self._imap = None
+        self._smap = None
         self._iter = None
 
     def _gather_paramdims(self):
@@ -170,44 +171,87 @@ class ParamSpace:
         
     @property
     def volume(self) -> int:
-        """Returns the volume of the parameter space, not counting coupled
-        parameter dimensions.
+        """Returns the active volume of the parameter space, i.e. not counting
+        coupled parameter dimensions or masked values
         """
         if self.num_dims == 0:
             return 0
 
         vol = 1
         for pdim in self.dims.values():
-            vol *= len(pdim)
+            # Need to check whether a dimension is fully masked, in which case
+            # the default value is used and the dimension length is 1
+            vol *= len(pdim) if pdim.mask is not True else 1
         return vol
 
     @property
     def full_volume(self) -> int:
-        """Returns the full volume of the parameter space, including coupled
-        parameter dimensions.
+        """Returns the full volume, i.e. ignoring whether parameter dimensions
+        are masked.
         """
+        if self.num_dims == 0:
+            return 0
+
         vol = 1
-        for pdim in chain(self.dims.values(), self.coupled_dims.values()):
-            vol *= len(pdim)
+        for pdim in self.dims.values():
+            vol *= pdim.num_values
         return vol
 
     @property
     def shape(self) -> Tuple[int]:
-        """Returns the shape of the parameter space"""
-        return tuple([len(pd) for pd in self.dims.values()])
+        """Returns the shape of the parameter space, not counting masked
+        values of parameter dimensions. If a dimension is fully masked, it is
+        still represented as of length 1, representing the default value
+        being used.
+        
+        Returns:
+            Tuple[int]: The iterator shape
+        """
+        return tuple([len(pdim) if pdim.mask is not True else 1
+                      for pdim in self.dims.values()])
+    
+    @property
+    def full_shape(self) -> Tuple[int]:
+        """Returns the shape of the parameter space, ignoring masked values
+        
+        Returns:
+            Tuple[int]: The shape of the fully unmasked iterator
+        """
+        return tuple([pdim.num_values for pdim in self.dims.values()])
+    
+    @property
+    def states_shape(self) -> Tuple[int]:
+        """Returns the shape of the parameter space, including default states
+        for each parameter dimension and ignoring masked ones.
+        
+        Returns:
+            Tuple[int]: The shape tuple
+        """
+        return tuple([pdim.num_states for pdim in self.dims.values()])
     
     @property
     def state_vector(self) -> Tuple[int]:
         """Returns a tuple of all current parameter dimension states"""
         return tuple([s.state for s in self.dims.values()])
 
-    @property
-    def full_state_vector(self) -> OrderedDict:
-        """Returns an OrderedDict of all parameter space dimensions, including
-        coupled ones.
-        """
-        return OrderedDict((k, v) for k, v in chain(self.dims.items(),
-                                                    self.coupled_dims.items()))
+    @state_vector.setter
+    def state_vector(self, vec: Tuple[int]):
+        """Sets the state of all parameter dimensions"""
+        if len(vec) != self.num_dims:
+            raise ValueError("Given vector needs to be of same length as "
+                             "there are number of dimensions ({}), was: {}"
+                             "".format(self.num_dims, vec))
+
+        for (name, pdim), new_state in zip(self.dims.items(), vec):
+            try:
+                pdim.state = new_state
+
+            except ValueError as err:
+                raise ValueError("Could not set the state of parameter "
+                                 "dimension {} to {}!"
+                                 "".format(name, new_state)) from err
+
+        log.debug("Successfully set state vector to %s.", vec)
 
     @property
     def num_dims(self) -> int:
@@ -232,25 +276,17 @@ class ParamSpace:
         states = self.state_vector
         log.debug("  states:       %s", states)
 
-        # First check if any of the states were None. If yes, that means that
-        # the parameter space is not within an iteration currently, thus the
-        # state also needs to be None
-        if None in states:
-            log.debug("At least one parameter dimension state was None, thus "
-                      "the ParamSpace state is not within an iteration and "
-                      "the state is also None.")
-            return None
-        # NOTE can now be sure that all values are integer states, no Nones
-
-        # Now need the lengths, i.e. the shape of the parameter space
-        shape = self.shape
-        log.debug("  shape:       %s", shape)
+        # Now need the full shape of the parameter space, i.e. ignoring masked
+        # values but including the default values
+        states_shape = self.states_shape
+        log.debug("  states shape: %s  (volume: %s)",
+                  states_shape, reduce(lambda x, y: x*y, states_shape))
 
         # The lengths will now be used to calculate the multipliers, starting
         # with 1 for the 0th pdim.
         # For example, given lengths [10, 10,  20,    5], the corresponding
         # multipliers are:           [ 1, 10, 100, 2000]
-        mults = [reduce(lambda x, y: x*y, shape[:i], 1)
+        mults = [reduce(lambda x, y: x*y, states_shape[:i], 1)
                  for i in range(self.num_dims)]
         log.debug("  multipliers:  %s", mults)
 
@@ -268,12 +304,12 @@ class ParamSpace:
             return False
 
         # Check for equality of the two objects' underlying __dict__s content,
-        # skipping the caching attributes _imap and _iter
+        # skipping the caching attributes _smap and _iter
         # NOTE it is ok to not check these, because equality of the other
-        #      content asserts that the _imap attributes will be equal, too.
+        #      content asserts that the _smap attributes will be equal, too.
         return all([self.__dict__[k] == other.__dict__[k]
                     for k in self.__dict__.keys()
-                    if k not in ['_imap', '_iter']])
+                    if k not in ['_smap', '_iter']])
 
     def __str__(self) -> str:
         """Returns a parsed, human-readable information string"""
@@ -303,16 +339,21 @@ class ParamSpace:
 
         # General information about the Parameter Space
         l += ["  Dimensions:  {}".format(self.num_dims)]
-        l += ["  Volume:      {}".format(self.volume)]
         l += ["  Coupled:     {}".format(self.num_coupled_dims)]
+        l += ["  Shape:       {}".format(self.shape)]
+        l += ["  Volume:      {}".format(self.volume)]
 
         # ParamDim information
         l += ["", "Parameter Dimensions"]
         l += ["  (First mentioned are iterated over most often)", ""]
 
         for name, pdim in self.dims.items():
-            l += ["  * {}".format(" -> ".join([str(e) for e in name]))]
+            l += ["  * {}".format(self._parse_dim_name(name))]
             l += ["      {}".format(pdim.values)]
+            # TODO add information on length?!
+            if pdim.mask is True:
+                l += ["      fully masked -> using default:  {}"
+                      "".format(pdim.default)]
 
             if pdim.order < np.inf:
                 l += ["      Order: {}".format(pdim.order)]
@@ -325,7 +366,7 @@ class ParamSpace:
             l += ["  (Move alongside the state of the coupled ParamDim)", ""]
 
             for name, cpdim in self.coupled_dims.items():
-                l += ["  * {}".format(" -> ".join([str(e) for e in name]))]
+                l += ["  * {}".format(self._parse_dim_name(name))]
                 l += ["      Coupled to:  {}".format(cpdim.target_name)]
 
                 # Add resolved target name, if it differs
@@ -334,9 +375,6 @@ class ParamSpace:
                         # Found the coupling target object; get the full name
                         resolved_target_name = pdim_name
                         break
-                else:
-                    raise RuntimeError("Could not find coupling target; this "
-                                       "should not have happened!")
 
                 if resolved_target_name != cpdim.target_name:
                     l[-1] += "  [resolves to: {}]".format(resolved_target_name)
@@ -381,20 +419,42 @@ class ParamSpace:
             StopIteration: When the iteration has finished
         """
         if self._iter is None:
-            # Associate with the all_points iteration
+            # Associate with the all_points iterator
             self._iter = self.all_points
 
         # Let generator yield and given the return value, check how to proceed
         return self._iter()
         # NOTE the generator will also raise StopIteration once it ended
         
-    def all_points(self, with_info: Sequence=None) -> Generator[PStype, None, None]:
-        """Returns a generator yielding all points of the parameter space."""
+    def all_points(self, *, with_info: Union[str, Tuple[str]]=None, omit_pt: bool=False) -> Generator[PStype, None, None]:
+        """Returns a generator yielding all points of the parameter space, i.e.
+        the space spanned open by the parameter dimensions.
+        
+        Args:
+            with_info (Union[str, Tuple[str]], optional): Can pass strings
+                here that are to be returned as the second value. Possible
+                values are: 'state_no', 'state_vector'.
+                To get multiple, add them to a tuple.
+            omit_pt (bool, optional): If true, the current value is omitted and
+                only the information is returned.
+        
+        Returns:
+            Generator[PStype, None, None]: yields point after point of the
+                ParamSpace and the corresponding information
+        
+        Raises:
+            ValueError: If the ParamSpace volume is zero and no iteration can
+                be performed
+        """
 
         if self.volume < 1:
             raise ValueError("Cannot iterate over ParamSpace of zero volume.")
 
-        log.debug("Starting iteration over all %d points in ParamSpace ...",
+        # Parse the with_info argument, making sure it is a tuple
+        if isinstance(with_info, str):
+            with_info = (with_info,)
+
+        log.debug("Starting iteration over %d points in ParamSpace ...",
                   self.volume)
 
         # Prepare parameter dimensions: set them to state 0
@@ -402,16 +462,28 @@ class ParamSpace:
             pdim.enter_iteration()
 
         # Yield the first state
-        yield self._gen_info_tuple(self.current_point, with_info=with_info)
+        yield self._gen_iter_rv(self.current_point if not omit_pt else None,
+                                with_info=with_info)
 
         # Now yield all the other states, while available.
         while self._next_state():
-            yield self._gen_info_tuple(self.current_point, with_info=with_info)
+            yield self._gen_iter_rv((self.current_point if not omit_pt
+                                     else None),
+                                    with_info=with_info)
 
         else:
             log.debug("Visited every point in ParamSpace.")
-            self._reset()
+            self.reset()
             return
+
+    def reset(self) -> None:
+        """Resets the paramter space and all of its dimensions to the initial
+        state, i.e. where all states are None.
+        """
+        for pdim in self.dims.values():
+            pdim.reset()
+
+        log.debug("Reset ParamSpace and ParamDims.")
 
     def _next_state(self) -> bool:
         """Iterates the state of the parameter dimensions managed by this
@@ -447,7 +519,7 @@ class ParamSpace:
             #    do so by returning false, which is more convenient than
             #    raising StopIteration; the iteration is handled by the
             #    all_points method anyway.
-            self._reset()
+            self.reset()
             return False
 
         # If this point is reached: broke out of loop
@@ -455,176 +527,171 @@ class ParamSpace:
         #    Communicate that by returning True.
         return True
 
-    def _reset(self) -> None:
-        """Resets the paramter space and all of its dimensions to the initial
-        state, i.e. where all states are None.
-        """
-        for pdim in self.dims.values():
-            pdim.reset()
-
-        log.debug("Reset ParamSpace and ParamDims.")
-
     # Public API ..............................................................
+    # Mapping . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
-    def inverse_mapping(self) -> np.ndarray:
-        """Returns an inverse mapping of dimension to state numbers."""
-        if self._imap is not None:
-            # Return the cached result
-            log.debug("Using previously created inverse mapping ...")
-            return self._imap
-        # else: calculate the inverse mapping
+    @property
+    def state_map(self) -> np.ndarray:
+        """Returns an inverse mapping, i.e. an n-dimensional array where the
+        indices along the dimensions relate to the states of the parameter
+        dimensions and the content of the array relates to the state numbers.
+        """
+        # Check if the cached result can be returned
+        if self._smap is not None:
+            log.debug("Using previously cached inverse mapping ...")
+            return self._smap
+        
+        # else: need to calculate the inverse mapping
 
-        # Create empty n-dimensional array
-        shape = self.shape
-        imap = np.ndarray(shape, dtype=int)
-        imap.fill(-1) # i.e., not set yet
+        # Create empty n-dimensional array which will hold state numbers
+        smap = np.ndarray(self.states_shape, dtype=int)
+        smap.fill(-1) # i.e., not set yet
 
-        # Iterate over all points and save the state number to the map
-        for _, state_no, state_vec in self.all_points(with_info=['state_no',
-                                                      'state_vec']):
-            # Need to convert entries in the state vector if there are Nones
-            s = [0 if i is None else i for i in state_vec]
+        # As .all_points does not allow iterating over default states, iterate
+        # over the multi-index of the smap, set the state vector and get the
+        # corresponding state number
+        for midx in np.ndindex(smap.shape):
+            # Set the state vector ( == midx) of the paramspace
+            self.state_vector = midx
 
-            # Save the state number to the mapping
-            try:
-                imap[tuple(s)] = state_no
+            # Resolve the corresponding state number and store at this midx
+            smap[tuple(midx)] = self.state_no
 
-            except IndexError as err:
-                raise RuntimeError("Creating inverse mapping failed, probably "
-                                   "due to a change in the parameter "
-                                   "dimensions sizes.  "
-                                   "Selector: {} -- imap shape: {}"
-                                   "".format(s, imap.shape)
-                                   ) from err
-        else:
-            log.debug("Finished creating inverse mapping. Caching it...")
-            self._imap = imap
+        # Make sure there are no unset values
+        if np.min(smap) < 0:
+            raise RuntimeError("Did (somehow) not visit all points during "
+                               "iteration over state space!\n state map:\n{}"
+                               "".format(smap))
+        
+        # Cache and make it read-only before returning
+        log.debug("Finished creating inverse mapping. Caching it and making "
+                  "the cache read-only ...")
+        self._smap = smap
+        self._smap.flags.writeable = False
 
-        return self._imap
+        return self._smap
 
+    def get_masked_smap(self) -> np.ma.MaskedArray:
+        """Returns a masked array based on the inverse mapping, where masked
+        states are also masked in the array.
+
+        Note that this array has to be re-calculated every time, as the mask
+        status of the ParamDim objects is not controlled by the ParamSpace and
+        can change without notice.
+        """
+        mmap = np.ma.MaskedArray(data=self.state_map.copy(), mask=True)
+
+        # TODO could improve the below loop by checking what needs fewer
+        #      iterations: unmasking falsely masked entries or vice versa ...
+        # Unmask the unmasked values
+        for s_no, s_vec in self.all_points(with_info=('state_no', 'state_vec'),
+                                           omit_pt=True):
+            # By assigning any value, the mask is removed
+            mmap[s_vec] = s_no
+            # TODO isn't there a better way than re-assigning the state no?!
+
+        return mmap
+
+    def get_state_vector(self, *, state_no: int) -> Tuple[int]:
+        """Returns the state vector that corresponds to a state number
+        
+        Args:
+            state_no (int): The state number to look for in the inverse mapping
+
+        Returns:
+            Tuple[int]: the state vector corresponding to the state number
+        """
+        try:
+            return tuple(np.argwhere(self.state_map == state_no)[0])
+
+        except IndexError as err:
+            raise ValueError("Did not find state number {} in inverse "
+                             "mapping! Make sure it is an integer in the "
+                             "closed interval [0, {}]."
+                             "".format(state_no,
+                                       reduce(lambda x, y: x*y,
+                                              self.states_shape) - 1))
+
+    def get_dim_values(self, *, state_no: int=None, state_vector: Tuple[int]=None) -> OrderedDict:
+        """Returns the current parameter dimension values or those of a
+        certain state number or state vector.
+        """
+        if state_no is None and state_vector is None:
+            # Return the current value
+            return OrderedDict([(name, pdim.current_value)
+                                for name, pdim in self.dims.items()])
+
+        # Check that only one of the arguments was given
+        if state_no is not None and state_vector is not None:
+            raise TypeError("Expected only one of the arguments `state_no` "
+                            "and `state_vector`, got both!")
+
+        elif state_no is not None:
+            state_vector = self.get_state_vector(state_no=state_no)
+
+        # Can now assume that state_vector is set
+        return OrderedDict([(name, pdim.values[s-1])
+                            for (name, pdim), s
+                            in zip(self.dims.items(), state_vector)])
+
+    # Masking . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+    def set_mask(self, name: Union[str, Tuple[str]], mask: Union[bool, Tuple[bool]], invert: bool=False) -> None:
+        """Set the mask value of the parameter dimension with the given name.
+        
+        Args:
+            name (Union[str, Tuple[str]]): the name of the dim, which can be a
+                tuple of strings or a string. If name is a string, only the
+                last element of the dimension name tuple is considered.
+                If name is a tuple of strings, not the whole sequence needs
+                to be supplied but the last parts suffice; it just needs to be
+                enough to resolve the dimension names unambiguously.
+                For names at the root level that could be ambiguous, a leading
+                "/" can be added as first segement of the key sequence.
+                Also, the ParamDim's custom name attribute can be used to
+                identify it.
+            mask (Union[bool, Tuple[bool]]): The new mask values. Can also be
+                a slice, the result of which defines the True values of the
+                mask.
+            invert (bool, optional): If set, the mask will be inverted _after_
+                application.
+        """
+        # Resolve the parameter dimension
+        pdim = self._dim_by_name(name)
+
+        # Set its mask value
+        pdim.mask = mask
+
+        if invert:
+            pdim.mask = [(not m) for m in pdim.mask_tuple]
+
+        # Done.
+        log.debug("Set mask of parameter dimension %s to %s.", name, pdim.mask)
+
+    def set_masks(self, *mask_specs) -> None:
+        """Sets multiple mask specifications after another. Note that the order
+        is maintained and that sequential specifications can apply to the same
+        parameter dimensions.
+        
+        Args:
+            *mask_specs: Can be tuples/lists or dicts which will be unpacked
+                (in the given order) and passed to .set_mask
+        """
+        log.debug("Setting %d masks ...", len(mask_specs))
+
+        for ms in mask_specs:
+            if isinstance(ms, dict):
+                self.set_mask(**ms)
+            else:
+                self.set_mask(*ms)
 
     # Non-public API ..........................................................
 
-    def _dim_no_by_name(self, name: str, include_coupled: bool=False) -> int:
-        """Tries to find a ParamDim by its name and returns the number it
-        corresponds to in the list of ordered 
-        
-        Args:
-            name (str): the name of the dim, which can be a tuple of strings
-                or a string. If name is a tuple of strings, the exact tuple is
-                required to find the dim by its dim_name. If name is a
-                string, only the last element of the dim_name is considered.
-            include_coupled (bool, optional): Whether to include
-                CoupledParamDim objects into the search (NotImplemented)
-        
-        Returns:
-            int: the number of the dimension
-        
-        Raises:
-            KeyError: If the ParamDim could not be found
-            NotImplementedError: Argument `include_coupled`
-            ValueError: If argument name was only a string, there can be
-                duplicates. In the case of duplicate entries, a ValueError is
-                raised.
-        
-        """
-        if include_coupled:
-            raise NotImplementedError("include_coupled")
+    def _gen_iter_rv(self, pt, *, with_info: Sequence[str]) -> tuple:
+        """Is used during iteration to generate the iteration return value,
+        adding additional information if specified.
 
-        dim_no = None
-
-        if isinstance(name, str):
-            for n, dim_name in enumerate(self.dims.keys()):
-                if dim_name[-1] == name:
-                    if dim_no is not None:
-                        # Was already set -> there was a duplicate
-                        raise ValueError("Duplicate dim name {} encountered "
-                                         "during access via the last key of "
-                                         "the dim name. To not get an "
-                                         "ambiguous result, pass the full dim "
-                                         "name as a tuple.".format(name))
-                    dim_no = n
-
-        else:
-            for n, dim_name in enumerate(self.dims.keys()):
-                if dim_name[-len(name):] == name:
-                    # The last part of the sequence matches the given name
-                    if dim_no is not None:
-                        # Was already set -> there was a duplicate
-                        raise ValueError("Access via '{}' was ambiguous. Give "
-                                         "the full sequence of strings as a "
-                                         "dim name to be sure to access the "
-                                         "right element.".format(name))
-                    dim_no = n
-
-        if dim_no is None:
-            raise KeyError("A ParamDim with name {} was not "
-                           "found in this ParamSpace.".format(name))
-
-        return dim_no
-
-    def _dim_by_name(self, name: str, include_coupled: bool=False) -> ParamDimBase:
-        """Get the ParamDim object with the given name
-        
-        Args:
-            name (str): the name of the dim, which can be a tuple of strings
-                or a string. If name is a tuple of strings, the exact tuple is
-                required to find the dim by its dim_name. If name is a
-                string, only the last element of the dim_name is considered.
-            include_coupled (bool, optional): Whether to include
-                CoupledParamDim objects into the search (NotImplemented)
-        
-        Returns:
-            int: the number of the dimension
-        
-        Raises:
-            KeyError: If the ParamDim could not be found
-            NotImplementedError: Argument `include_coupled`
-            ValueError: If argument name was only a string, there can be
-                duplicates. In the case of duplicate entries, a ValueError is
-                raised.
-        
-        """
-        if include_coupled:
-            raise NotImplementedError("include_coupled")
-
-        pdim = None
-
-        if isinstance(name, str):
-            for dim_name, _pdim in self.dims.items():
-                if dim_name[-1] == name:
-                    if pdim is not None:
-                        # Was already set -> there was a duplicate
-                        raise ValueError("Duplicate dim name {} encountered "
-                                         "during access via the last key of "
-                                         "the dim name. To not get an "
-                                         "ambiguous result, pass the full dim "
-                                         "name as a tuple.".format(name))
-                    # Found one, save it
-                    pdim = _pdim
-
-        else:
-            for dim_name, _pdim in self.dims.items():
-                if dim_name[-len(name):] == name:
-                    # The last part of the sequence matches the given name
-                    if pdim is not None:
-                        # Was already set -> there was a duplicate
-                        raise ValueError("Access via '{}' was ambiguous. Give "
-                                         "the full sequence of strings as a "
-                                         "dim name to be sure to access the "
-                                         "right element.".format(name))
-                    # Found one, save it
-                    pdim = _pdim
-
-        if pdim is None:
-            raise KeyError("A ParamDim with name {} was not "
-                           "found in this ParamSpace.".format(name))
-
-        return pdim
-
-    def _gen_info_tuple(self, pt, *, with_info: Sequence) -> tuple:
-        """Is used during iteration to add additional information to the
-        return tuple.
+        Note that pt can also be None if all_points is a dry_run
         """
         if not with_info:
             return pt
@@ -634,14 +701,99 @@ class ParamSpace:
         for info in with_info:
             if info in ['state_no']:
                 info_tup += (self.state_no,)
+
             elif info in ['state_vector', 'state_vec']:
                 info_tup += (self.state_vector,)
-            elif info in ['progress']:
-                info_tup += ((self.state_no+1)/self.volume,)
+
             else:
                 raise ValueError("No such information '{}' available. "
                                  "Check the `with_info` argument!"
                                  "".format(info))
 
-        # Concatenate and return
-        return (pt,) + info_tup
+        # Return depending on whether a point was given or not
+        if pt is not None:
+            # Concatenate and return
+            return (pt,) + info_tup
+
+        elif len(info_tup) == 1:
+            # Return only the single info entry
+            return info_tup[0]
+
+        # else: return as tuple
+        return info_tup
+
+    def _dim_by_name(self, name: Union[str, Tuple[str]]) -> ParamDimBase:
+        """Get the ParamDim object with the given name.
+
+        Note that coupled parameter dimensions cannot be accessed via this
+        method.
+        
+        Args:
+            name (Union[str, Tuple[str]]): the name of the dim, which can be a
+                tuple of strings or a string. If name is a string, only the
+                last element of the dimension name tuple is considered.
+                If name is a tuple of strings, not the whole sequence needs
+                to be supplied but the last parts suffice; it just needs to be
+                enough to resolve the dimension names unambiguously.
+                For names at the root level that could be ambiguous, a leading
+                "/" can be added as first segement of the key sequence.
+                Also, the ParamDim's custom name attribute can be used to
+                identify it.
+        
+        Returns:
+            int: the number of the dimension
+        
+        Raises:
+            KeyError: If the ParamDim could not be found
+            ValueError: If the parameter dimension name was ambiguous
+        
+        """
+        pdim = None
+
+        # Make sure it's a sequence of strings
+        if isinstance(name, str):
+            name = (name,)        
+
+        # Need to check whether the given key sequence suggests an abs. path
+        is_abs = (name[0] == "/" and len(name) > 1)
+
+        # Assume `name` is a sequence of strings
+        for dim_name, _pdim in self.dims.items():
+            if (   (not is_abs and name == dim_name[-len(name):])
+                or (    is_abs and name[1:] == dim_name)
+                or (_pdim.name and name[-1] == _pdim.name)):
+                # The last part of the key sequence matches the given name
+                if pdim is not None:
+                    # Already set -> there was already one matching this name
+                    raise ValueError("Could not unambiguously find a "
+                                     "parameter dimension matching the name "
+                                     "{}! Pass a sequence of keys to select "
+                                     "the right dimension. To symbolize that "
+                                     "the key sequence is absolute, start "
+                                     "with an `/` entry in the key sequence.\n"
+                                     "Available parameter dimensions:\n"
+                                     " * {}"
+                                     "".format(name,
+                                               "\n * ".join(self._dim_names)))
+                # Found one, save it
+                pdim = _pdim
+
+        # If still None after all this, no such name was found
+        if pdim is None:
+            raise KeyError("A parameter dimension with name {} was not "
+                           "found in this ParamSpace."
+                           "Available parameter dimensions:\n"
+                           " * {}"
+                           "".format(name, "\n * ".join(self._dim_names)))
+
+        return pdim
+
+    @staticmethod
+    def _parse_dim_name(name: Tuple[str]) -> str:
+        """Returns a string representation of a parameter dimension name"""
+        return " -> ".join([str(e) for e in name])
+
+    @property
+    def _dim_names(self) -> List[str]:
+        """Returns a sequence of dimension names that can be joined together"""
+        return [self._parse_dim_name(n) for n in self.dims.keys()]

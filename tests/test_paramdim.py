@@ -7,7 +7,7 @@ import numpy as np
 import yaml
 
 from paramspace import ParamDim, CoupledParamDim
-from paramspace.paramdim import ParamDimBase
+from paramspace.paramdim import ParamDimBase, Masked, MaskedValueError
 
 # Setup methods ---------------------------------------------------------------
 
@@ -29,9 +29,6 @@ def various_pdims(request):
     pds['coupled2']  = CoupledParamDim(target_pdim=pds['two'],values=[1,2,3,4])
     pds['coupled3']  = CoupledParamDim(target_pdim=pds['range'], default=0)
 
-    # base
-    pds['base']      = ParamDimBase(default=0, values=[1,2,3])
-
     return pds
 
 
@@ -44,20 +41,20 @@ def test_init(various_pdims):
         ParamDim()
 
     # No values given
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError, match="Missing one of the following"):
         ParamDim(default=0)
     
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="need be a container of length >= 1"):
         ParamDim(default=0, values=[])
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError, match="Received invalid keyword argument"):
         ParamDim(default=0, foo="bar")
 
     # Multiple values or kwargs given
-    with pytest.warns(UserWarning):
+    with pytest.raises(TypeError, match="Received too many keyword arguments"):
         ParamDim(default=0, values=[1,2,3], linspace=[10,20,30])
     
-    with pytest.warns(UserWarning):
+    with pytest.raises(TypeError, match="Received too many keyword arguments"):
         ParamDim(default=0, range=[1,2], linspace=[10,20,30])
 
     # Assert correct range, linspace, logspace creation
@@ -77,9 +74,6 @@ def test_properties(various_pdims):
     with pytest.raises(AttributeError, match="can't set attribute"):
         vpd['two'].values = [1,2,3]
 
-    with pytest.raises(AttributeError, match="can't set attribute"):
-        vpd['base'].values = "baz"
-
     # Assert immutability of values
     with pytest.raises(TypeError, match="does not support item assignment"):
         vpd['one'].values[0] = "foo"
@@ -88,16 +82,24 @@ def test_properties(various_pdims):
         vpd['two'].values[1] = "bar"
 
     # Whether the state is restricted to the value bounds
-    with pytest.raises(ValueError, match="needs to be positive"):
+    with pytest.raises(ValueError, match="needs to be >= 0, was -1"):
         vpd['one'].state = -1
     
-    with pytest.raises(ValueError, match="cannot exceed the highest index"):
-        vpd['two'].state = 4
+    with pytest.raises(ValueError, match="needs to be <= 4, was 5"):
+        vpd['two'].state = 5
 
-    with pytest.raises(TypeError, match="can only be of type int or None"):
+    with pytest.raises(TypeError, match="can only be of type int"):
         vpd['two'].state = "foo"
 
-    # Misc
+    # current_value
+    assert vpd['one'].current_value == vpd['one'].default
+    assert vpd['two'].current_value == vpd['two'].default
+    
+    # number of values and length (same in unmasked case)
+    assert vpd['one'].num_values == 3 == len(vpd['one'])
+    assert vpd['two'].num_values == 4 == len(vpd['two'])
+
+    # target_of
     for pd in vpd.values():
         if isinstance(pd, ParamDim):
             # Can be a target of a coupled ParamDim
@@ -105,24 +107,27 @@ def test_properties(various_pdims):
 
 def test_iteration(various_pdims):
     """Tests whether the iteration over the span's state works."""
-    pd = ParamDim(default=0, values=[0,1,2])
+    pd = ParamDim(default=0, values=[1,2,3])
+
+    # Should start in default state
+    assert pd.state == 0
 
     # First iteration
-    assert pd.__next__() == 0
     assert pd.__next__() == 1
     assert pd.__next__() == 2
+    assert pd.__next__() == 3
     with pytest.raises(StopIteration):
         pd.__next__()
 
     # Should be able to iterate again
-    assert pd.__next__() == 0
     assert pd.__next__() == 1
     assert pd.__next__() == 2
+    assert pd.__next__() == 3
     with pytest.raises(StopIteration):
         pd.__next__()
 
-    # State should be None now
-    assert pd.state is None
+    # State should be reset to 0 now
+    assert pd.state is 0
 
     # And as a loop
     for _ in pd:
@@ -149,7 +154,76 @@ def test_np_methods_return_floats():
         print("Types: " + str(types))
         assert all([t is float for t in types])
 
-def test_coupled_init():
+def test_mask():
+    """Test that masking works"""
+    # Test initialization, property getter and setter, and type
+    pd = ParamDim(default=0, values=[1, 2, 3, 4], mask=False)
+    assert pd.mask is False
+    # NOTE not trivial to test because the .mask getter _computes_ the value
+    assert not any([isinstance(v, Masked) for v in pd.values])
+
+    pd.mask = True
+    assert pd.mask is True
+    assert all([isinstance(v, Masked) for v in pd.values])
+
+    # Check the string representation of masked values
+    assert str(pd.values[0]).find("(masked)") > -1
+    assert str(pd).find("with masked value") > -1
+
+    # Now to a more complex mask
+    pd.mask = (True, False, True, False)
+    assert pd.mask == (True, False, True, False)
+
+    # Test the properties that inform about the number of masked and unmasked
+    # values
+    assert len(pd) == 2
+    assert pd.num_masked == 2
+
+    # Setting one with a bad length should not work
+    with pytest.raises(ValueError, match="container of same length as the"):
+        pd.mask = (True, False)
+
+    # Check that iteration starts at first unmasked state
+    pd.enter_iteration()
+    assert pd.state == 2
+    assert pd.current_value == 2
+
+    # Iterate one step, this should jump to index and value 3
+    assert pd.__next__() == 4
+    assert pd.state == 4
+
+    # Setting the state manually to something masked should not work
+    with pytest.raises(MaskedValueError, match="Value at index 1 is masked"):
+        pd.state = 1
+
+    # No further iteration should be possible for this one
+    with pytest.raises(StopIteration):
+        pd.iterate_state()
+    assert pd.state is 0
+
+    # Check iteration again
+    assert list(pd) == [2, 4]
+
+    # For fully masked, the default value should be returned. Eff. length: 1
+    pd.mask = True
+    assert len(pd) == 1
+    assert pd.num_masked == pd.num_states - 1
+    assert list(pd) == [0]
+
+    # Try using a slice to set the mask
+    pd.mask = slice(2)
+    assert pd.mask == (True, True, False, False)
+    
+    pd.mask = slice(2, None)
+    assert pd.mask == (False, False, True, True)
+    
+    pd.mask = slice(None, None, 2)
+    assert pd.mask == (True, False, True, False)
+
+
+# CoupledParamDim -------------------------------------------------------------
+
+def test_cpd_init():
     """Test whether initialisation of CoupledParamDim works"""
     # These should work
     CoupledParamDim(target_name=("foo",))
@@ -157,12 +231,16 @@ def test_coupled_init():
     CoupledParamDim(target_name=("foo",), values=[1,2,3])
     CoupledParamDim(target_name="foo")
 
-    # These should fail
+    # These should fail due to wrong arguments given
+    with pytest.raises(TypeError, match="Expected either argument"):
+        # Neither target_pdim nor target_name given
+        CoupledParamDim()
+
     with pytest.raises(TypeError, match="missing 1 required"):
         # No default given
         CoupledParamDim(target_name=("foo",), use_coupled_default=False)
 
-    with pytest.raises(ValueError, match="No argument `values` or other"):
+    with pytest.raises(TypeError, match="Missing one of the following"):
         # No values given
         CoupledParamDim(target_name=("foo",), use_coupled_values=False)
 
@@ -170,9 +248,15 @@ def test_coupled_init():
         # Not coupled yet
         CoupledParamDim(target_name=("foo",)).default
 
-    with pytest.warns(UserWarning, match="Got both `target_pdim` and"):
+    with pytest.raises(TypeError, match="Got both `target_pdim` and"):
+        # Got both target_pdim and target_name
         CoupledParamDim(target_pdim=ParamDim(default=0, values=[1,2,3]),
                         target_name=["foo", "bar"])
+
+    with pytest.raises(TypeError, match="should be a tuple or list"):
+        # Bad target_name type
+        CoupledParamDim(target_name=dict(foo="bar"))
+
 
     # Set target
     pd = ParamDim(default=0, values=[1,2,3])
@@ -211,12 +295,12 @@ def test_coupled_init():
     with pytest.raises(AttributeError, match="Values already set; cannot be"):
         cpd._set_values([1,2,3])
 
-    # Test disabled has no state set
-    cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4], enabled=False)
-    assert cpd.state is None
+    # Test it has no state set
+    cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4])
+    assert cpd.state == 0
     assert cpd.current_value is 0 # that of the coupled ParamDim!
 
-def test_coupled_iteration():
+def test_cpd_iteration():
     """Tests iteration of CoupledParamDim"""
     # ParamDim to couple to for testing
     pd = ParamDim(default=0, values=[1,2,3])
@@ -230,6 +314,26 @@ def test_coupled_iteration():
                                                values=[2,3,4])):
         assert pval + 1 == cpval
 
+@pytest.mark.skip("Not working yet")
+def test_cpd_standalone_iteration():
+    """CoupledParamDim should be iterable standalone, too!"""
+    cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4])
+    assert list(cpd) == [2,3,4]  # FIXME infinite loop
+
+def test_coupled_mask():
+    """Test the masking features' effects on CoupledParamDim"""
+    pd = ParamDim(default=0, values=[1, 2, 3, 4], mask=(0, 1, 0, 1))
+    
+    # It should not be possible to mask a CPD
+    with pytest.raises(TypeError, match="Received invalid keyword argument"):
+        CoupledParamDim(target_pdim=pd, mask=True)
+
+    # Test that coupled iteration is masked accordingly
+    vals = []
+    for pval, cpval in zip(pd,CoupledParamDim(target_pdim=pd)):
+        assert pval == cpval
+        vals.append(pval)
+    assert vals == [1, 3]
 
 # YAML Dumping ----------------------------------------------------------------
 
