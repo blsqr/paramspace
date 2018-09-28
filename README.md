@@ -126,8 +126,11 @@ for params in pspace:
 ```
 
 #### Comments
-* The yaml constructors supply full functionality. It is highly recommended to use them.
-* There is the possibility to iterate and get information about the current state of the parameter space alongside the current value. For that, use the `ParamSpace.all_points` method.
+* The yaml constructors supply full functionality. It is highly recommended to use them. Additional constructors are:
+   * `!pdim-default`: returns the default value _instead_ of the `ParamDim` object; convenient to deactivate a dimension completely.
+   * `!coupled-pdim` and `!coupled-pdim-default` have the analogue behaviour, just with `CoupledParamDim`.
+* The `yaml` object can also be used to `yaml.dump` the configuration into a yaml file again.
+* There is the possibility to iterate and get information about the current state of the parameter space alongside the current value. For that, use the `ParamSpace.iterate` method.
 
 
 ## Known issues
