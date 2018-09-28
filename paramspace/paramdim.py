@@ -348,7 +348,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         """
         Args:
             representer (ruamel.yaml.representer): The representer module
-            node (type(self)): The current node, i.e.: this object
+            node (type(self)): The node, i.e. an instance of this class
         
         Returns:
             a yaml mapping that is able to recreate this object
@@ -369,9 +369,10 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         # Can now call the representer
         return representer.represent_mapping(cls.yaml_tag, d)
 
-    # @classmethod
-    # def from_yaml(cls, constructor, node):
-    #     return cls(*node.value.split('-'))
+    @classmethod
+    def from_yaml(cls, constructor, node):
+        """The default constructor for ParamDim-derived objects"""
+        return cls(**constructor.construct_mapping(node, deep=True))
 
 # -----------------------------------------------------------------------------
 
