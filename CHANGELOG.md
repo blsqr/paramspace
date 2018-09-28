@@ -16,6 +16,8 @@
    - All this is managed in the new `paramspace.yaml` module, which also supplies the `ruamel.yaml.YAML` object along which the new API revolves.
    - _For packages updating to this version,_ it is recommended to _not_ add custom constructors that trigger on a different tag; this might lead to confusion because the representer can only create mappings with the tag specified in the `paramspace` implementation.
 - #19: Update the README
+- #20: Add a new argument, `as_type`, to `ParamDim` to allow a type cast after the values have been parsed
+- #21: Refactor `ParamSpace.all_points` to `ParamSpace.iterator`
 
 ## v1.1.1
 - #17: Fix a bug that prohibited using nested `ParamSpace` objects
