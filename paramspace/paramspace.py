@@ -563,9 +563,11 @@ class ParamSpace:
                                "iteration over state space!\n state map:\n{}"
                                "".format(smap))
         
-        log.debug("Finished creating inverse mapping. Caching it...")
+        # Cache and make it read-only before returning
+        log.debug("Finished creating inverse mapping. Caching it and making "
+                  "the cache read-only ...")
         self._smap = smap
-        # TODO consider setting writable to False
+        self._smap.flags.writeable = False
 
         return self._smap
 
@@ -577,7 +579,7 @@ class ParamSpace:
         status of the ParamDim objects is not controlled by the ParamSpace and
         can change without notice.
         """
-        mmap = np.ma.MaskedArray(data=self.state_map, mask=True)
+        mmap = np.ma.MaskedArray(data=self.state_map.copy(), mask=True)
 
         # TODO could improve the below loop by checking what needs fewer
         #      iterations: unmasking falsely masked entries or vice versa ...
