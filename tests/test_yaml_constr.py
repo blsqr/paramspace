@@ -1,16 +1,16 @@
 """Tests the yaml constructors"""
 
 import pytest
-
 import numpy as np
 
 # Add the constructors using the paramspace package methods
-from paramspace import ParamSpace, ParamDim, yaml
+from paramspace import ParamSpace, ParamDim
+from paramspace.yaml import *
 
 # Fixtures --------------------------------------------------------------------
 
-@pytest.fixture(scope='module')
-def yamlstrs(request) -> dict:
+@pytest.fixture()
+def yamlstrs() -> dict:
     """Prepares a list of yaml strings to test agains"""
     strs = {}
 
@@ -96,6 +96,9 @@ too_many_args: !coupled-pdim
     """
    
     return strs
+
+# -----------------------------------------------------------------------------
+# Tests
 
 def test_loading(yamlstrs):
     """Tests whether the constructors loading works."""

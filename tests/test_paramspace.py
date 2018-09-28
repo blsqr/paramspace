@@ -7,9 +7,10 @@ import pytest
 import numpy as np
 import numpy.ma
 
-from paramspace import ParamSpace, ParamDim, CoupledParamDim, yaml
+from paramspace import ParamSpace, ParamDim, CoupledParamDim
+from paramspace.yaml import *
 
-# Setup methods ---------------------------------------------------------------
+# Fixtures --------------------------------------------------------------------
 
 @pytest.fixture()
 def small_psp():
@@ -555,10 +556,12 @@ def test_nested(psp_nested, basic_psp):
 
 # YAML Dumping ----------------------------------------------------------------
 
-def test_yaml_unsafe_dump_and_load(basic_psp, adv_psp, psp_with_coupled, tmpdir):
+def test_yaml_unsafe_dump_and_load(tmpdir, small_psp, adv_psp, psp_with_coupled):
     """Tests that YAML dumping and reloading works"""
-    for i, psp_out in enumerate([basic_psp, adv_psp, psp_with_coupled]):
-        psp_out = basic_psp
+    yaml = yaml_unsafe
+
+    for i, psp_out in enumerate([small_psp, adv_psp, psp_with_coupled]):
+        psp_out = small_psp
         path = tmpdir.join("out_{}.yml".format(i))
         
         # Dump it
@@ -572,8 +575,7 @@ def test_yaml_unsafe_dump_and_load(basic_psp, adv_psp, psp_with_coupled, tmpdir)
         # Check that the contents are equivalent
         assert psp_in == psp_out
 
-@pytest.mark.skip("Not yet working!")
-def test_yaml_safe_dump_and_load(basic_psp, tmpdir):
+def test_yaml_safe_dump_and_load(tmpdir, basic_psp):
     """Tests that YAML dumping and reloading works with both default dump and
     load methods as well as with the safe versions.
     """
@@ -593,21 +595,20 @@ def test_yaml_safe_dump_and_load(basic_psp, tmpdir):
             assert v_out == d_in[k_out]
 
     # Use the dict of ParamDim objects for testing
-    d_out = basic_psp
+    d_out = dict(pspace=basic_psp)
 
     # Test all possible combinations of dump and load methods
-    methods = [(yaml.dump, yaml.load),
-               (yaml.dump, yaml.safe_load),
-               (yaml.safe_dump, yaml.load),
-               (yaml.safe_dump, yaml.safe_load)]
+    methods = [("def-def",   yaml.dump,        yaml.load),
+               ("def-safe",  yaml.dump,        yaml_safe.load),
+               ("safe-def",  yaml_safe.dump,   yaml.load),
+               ("safe-safe", yaml_safe.dump,   yaml_safe.load)]
 
-    for dump_func, load_func in methods:
+    for prefix, dump_func, load_func in methods:
         # Generate file name and some output to know what went wrong ...
-        fname = "{}--{}.yml".format(dump_func.__name__, load_func.__name__)
+        fname = prefix + ".yml"
         path = tmpdir.join(fname)
 
-        print("Now testing combination:  {} + {}  ... "
-              "".format(dump_func.__name__, load_func.__name__), end="")
+        print("Now testing combination:  {}  ... ".format(prefix), end="")
 
         # Call the test function
         dump_load_assert_equal(d_out, path=path,
