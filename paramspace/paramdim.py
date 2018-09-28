@@ -570,7 +570,7 @@ class ParamDim(ParamDimBase):
         # Check equality of the objects' __dict__s, leaving out _mask_cache
         return all([self.__dict__[k] == other.__dict__[k]
                     for k in self.__dict__.keys()
-                    if k not in ('_mask_cache', '_inside_iter')])
+                    if k not in ('_mask_cache', '_inside_iter', '_target_of')])
 
     def __len__(self) -> int:
         """Returns the effective length of the parameter dimension, i.e. the
