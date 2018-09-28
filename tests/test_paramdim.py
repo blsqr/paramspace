@@ -17,7 +17,7 @@ def various_pdims():
     pds = {}
 
     pds['one']       = ParamDim(default=0, values=[1,2,3])
-    pds['two']       = ParamDim(default=0, values=[1., 2, 'three', (1,0,0)])
+    pds['two']       = ParamDim(default=0, values=[1., 2, 'three', [1,0,0]])
     pds['range']     = ParamDim(default=0, range=[1, 4, 1])
     pds['linspace']  = ParamDim(default=0, linspace=[1, 3, 3, True])
     pds['logspace']  = ParamDim(default=0, logspace=[-1, 1, 11])
@@ -266,14 +266,14 @@ def test_cpd_init():
     assert cpd.target_name is None
 
     # Test if the name behaviour is correct
-    with pytest.warns(UserWarning, match="A target ParamDim was already set;"):
-        cpd.target_name = ("foo",)
-
-    with pytest.raises(RuntimeError, match="Target name cannot be changed"):
+    with pytest.raises(ValueError, match="name cannot be changed after"):
         cpd.target_name = ("bar",)
 
     # Accessing coupling target without it having been set should raise errors
     cpd = CoupledParamDim(target_name=("foo",))
+
+    with pytest.raises(ValueError, match="name cannot be changed!"):
+        cpd.target_name = ("foo",)
 
     with pytest.raises(ValueError, match="The coupling target has not been"):
         cpd.target_pdim
@@ -282,7 +282,7 @@ def test_cpd_init():
         cpd.target_pdim = "foo"
 
     cpd.target_pdim = pd
-    with pytest.raises(RuntimeError, match="Cannot change target of"):
+    with pytest.raises(ValueError, match="Cannot change target of"):
         cpd.target_pdim = pd
     
     # Test lengths are matching
@@ -365,7 +365,6 @@ def test_yaml_unsafe_dump_and_load(tmpdir, various_pdims):
         assert k_out in d_in
         assert v_out == d_in[k_out]
 
-@pytest.mark.skip()
 def test_yaml_safe_dump_and_load(tmpdir, various_pdims):
     """Tests that YAML dumping and reloading works with both default dump and
     load methods as well as with the safe versions.

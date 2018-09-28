@@ -10,19 +10,18 @@ from .yaml_constructors import pdim, pdim_default
 from .yaml_constructors import coupled_pdim, coupled_pdim_default
 
 # -----------------------------------------------------------------------------
-# Define numerous ruamel.yaml YAML objects, safe and unsafe
-yaml_rt = YAML(typ='rt')
+# Define a safe and an unsafe ruamel.yaml YAML object
 yaml_safe = YAML(typ='safe')
 yaml_unsafe = YAML(typ='unsafe')
 
-# Define the default YAML object
+# Define the unsafe one as default, trading convenience for security
 yaml = yaml_unsafe
 
 
 # Attach representers .........................................................
 # ... to all YAML objects by registering the classes.
 
-for _yaml in (yaml_rt, yaml_safe, yaml_unsafe):
+for _yaml in (yaml_safe, yaml_unsafe):
     _yaml.register_class(ParamDim)
     _yaml.register_class(CoupledParamDim)
     _yaml.register_class(ParamSpace)
@@ -48,6 +47,5 @@ _constructors = [
 
 # Add the constructors to all YAML objects
 for tag, constr_func in _constructors:
-    yaml_rt.constructor.add_constructor(tag, constr_func)
     yaml_safe.constructor.add_constructor(tag, constr_func)
     yaml_unsafe.constructor.add_constructor(tag, constr_func)

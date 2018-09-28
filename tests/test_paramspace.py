@@ -560,7 +560,7 @@ def test_yaml_unsafe_dump_and_load(tmpdir, small_psp, adv_psp, psp_with_coupled)
     """Tests that YAML dumping and reloading works"""
     yaml = yaml_unsafe
 
-    d_out = dict(small=small_psp, adv=adv_psp, coupled=psp_with_coupled)    
+    d_out = dict(small=small_psp, adv=adv_psp, coupled=psp_with_coupled)
     path = tmpdir.join("out.yml")
     
     # Dump it
@@ -593,8 +593,7 @@ def test_yaml_unsafe_dump_and_load(tmpdir, small_psp, adv_psp, psp_with_coupled)
 
         assert v_out == psp
 
-@pytest.mark.skip()
-def test_yaml_safe_dump_and_load(tmpdir, basic_psp):
+def test_yaml_safe_dump_and_load(tmpdir, small_psp, adv_psp, psp_with_coupled):
     """Tests that YAML dumping and reloading works with both default dump and
     load methods as well as with the safe versions.
     """
@@ -609,18 +608,16 @@ def test_yaml_safe_dump_and_load(tmpdir, basic_psp):
             d_in = load_func(in_file)
 
         # Check that the contents are equivalent
-        for k_out, v_out in d_out.items():
-            assert k_out in d_in
-            assert v_out == d_in[k_out]
+        assert d_out == d_in
 
     # Use the dict of ParamDim objects for testing
-    d_out = dict(pspace=basic_psp)
+    d_out = dict(small=small_psp, adv=adv_psp, coupled=psp_with_coupled)
 
     # Test all possible combinations of dump and load methods
-    methods = [("def-def",   yaml.dump,        yaml.load),
-               ("def-safe",  yaml.dump,        yaml_safe.load),
-               ("safe-def",  yaml_safe.dump,   yaml.load),
-               ("safe-safe", yaml_safe.dump,   yaml_safe.load)]
+    methods = [("unsafe-unsafe",   yaml_unsafe.dump,  yaml_unsafe.load),
+               ("unsafe-safe",     yaml_unsafe.dump,  yaml_safe.load),
+               ("safe-unsafe",     yaml_safe.dump,    yaml_unsafe.load),
+               ("safe-safe",       yaml_safe.dump,    yaml_safe.load)]
 
     for prefix, dump_func, load_func in methods:
         # Generate file name and some output to know what went wrong ...

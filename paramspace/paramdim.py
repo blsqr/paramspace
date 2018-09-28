@@ -7,7 +7,7 @@ import abc
 import copy
 import logging
 import warnings
-from typing import Iterable, Union, Tuple, Hashable, Sequence
+from typing import Iterable, Union, Tuple, Hashable, Sequence, List
 
 import numpy as np
 
@@ -46,6 +46,14 @@ class MaskedValueError(ValueError):
 
 class ParamDimBase(metaclass=abc.ABCMeta):
     """The ParamDim base class."""
+
+    # Which __dict__ content to omit when checking for equivalence
+    _OMIT_ATTR_IN_EQ = tuple()
+
+    # Which additional attributes to use in __repr__
+    _REPR_ATTRS = tuple()
+
+    # .........................................................................
 
     def __init__(self, *, default, values: Iterable=None, order: float=None, name: str=None, **kwargs) -> None:
         """Initialise a parameter dimension object.
@@ -203,8 +211,10 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         if not isinstance(other, type(self)):
             return False
 
-        # Check equality of the objects' __dict__s
-        return self.__dict__ == other.__dict__
+        # Check equality of the objects' __dict__s, leaving out _mask_cache
+        return all([self.__dict__[k] == other.__dict__[k]
+                    for k in self.__dict__.keys()
+                    if k not in ('_init_kwargs',) + self._OMIT_ATTR_IN_EQ])
 
     @abc.abstractmethod
     def __len__(self) -> int:
@@ -232,8 +242,6 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         return ("<{} object at {} with {}>"
                 "".format(self.__class__.__name__, id(self),
                           repr(self._parse_repr_attrs())))
-
-    _REPR_ATTRS = []
 
     def _parse_repr_attrs(self) -> dict:
         """For the __repr__ method, collects some attributes into a dict"""
@@ -358,8 +366,11 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
         # Depending on the class variables, update some entries
         for k, attr_name in cls._YAML_UPDATE.items():
+            # Resolve the attribute and, if possible, call it
             attr = getattr(node, attr_name)
-            d[k] = attr if not callable(attr) else attr()
+            new_val = attr if not callable(attr) else attr()
+
+            d[k] = new_val
 
         # ... and remove some if they match the given value
         d = {k: v for k, v in d.items()
@@ -379,15 +390,18 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 class ParamDim(ParamDimBase):
     """The ParamDim class."""
 
+    # Which __dict__ content to omit when checking for equivalence
+    _OMIT_ATTR_IN_EQ = ('_mask_cache', '_inside_iter', '_target_of')
+
+    # Define the additional attribute names that are to be added to __repr__
+    _REPR_ATTRS = ('mask',)
+
     # Define the yaml tag to use
     yaml_tag = u'!pdim'
 
     # And the other yaml representer settings
     _YAML_UPDATE = dict(mask='mask')
     _YAML_REMOVE_IF = dict(name=(None,), order=(None,), mask=(None, False))
-
-    # Define the additional attribute names that are to be added to __repr__
-    _REPR_ATTRS = ['mask']
 
     # .........................................................................
 
@@ -555,23 +569,6 @@ class ParamDim(ParamDimBase):
 
     # Magic Methods ...........................................................
 
-    def __eq__(self, other) -> bool:
-        """Check for equality between self and other
-        
-        Args:
-            other: the object to compare to
-        
-        Returns:
-            bool: Whether the two objects are equivalent
-        """
-        if not isinstance(other, type(self)):
-            return False
-
-        # Check equality of the objects' __dict__s, leaving out _mask_cache
-        return all([self.__dict__[k] == other.__dict__[k]
-                    for k in self.__dict__.keys()
-                    if k not in ('_mask_cache', '_inside_iter', '_target_of')])
-
     def __len__(self) -> int:
         """Returns the effective length of the parameter dimension, i.e. the
         number of values that will be iterated over.
@@ -657,20 +654,23 @@ class CoupledParamDim(ParamDimBase):
     moves alongside with another ParamDim's state.
     """
 
+    # Which __dict__ content to omit when checking for equivalence
+    _OMIT_ATTR_IN_EQ = ('_init_finished',)
+    
+    # Define the additional attribute names that are to be added to __repr__
+    _REPR_ATTRS = ('target_pdim', 'target_name',
+                   'use_coupled_default', 'use_coupled_values')
+
     # Define the yaml tag to use
     yaml_tag = u'!coupled-pdim'
 
     # And the other yaml representer settings
-    _YAML_UPDATE = dict()
+    _YAML_UPDATE = dict(target_name='_target_name_as_list')
     _YAML_REMOVE_IF = dict(name=(None,), order=(None,),
                            default=(None,), values=(None, [None]),
                            use_coupled_default=(None,),
                            use_coupled_values=(None,),
                            target_name=(None,), target_pdim=(None,))
-
-    # Define the additional attribute names that are to be added to __repr__
-    _REPR_ATTRS = ['target_pdim', 'target_name',
-                   'use_coupled_default', 'use_coupled_values']
 
     # .........................................................................
 
@@ -800,12 +800,19 @@ class CoupledParamDim(ParamDimBase):
 
     @target_name.setter
     def target_name(self, target_name: Union[str, Sequence[str]]):
-        """Sets the target name, ensuring it to be a valid key sequence."""
+        """Sets the target name, ensuring it to be a valid string or key
+        sequence.
+        """
+        # Check if it is even reasonable to set it
         if self._target_name is not None:
-            raise RuntimeError("Target name cannot be changed!")
+            raise ValueError("Target name cannot be changed!")
+
+        elif self._target_pdim is not None:
+            raise ValueError("Target name cannot be changed after the target "
+                             "object is already set!")
 
         # Make sure it is of valid type
-        if not isinstance(target_name, (tuple, list, str)):
+        elif not isinstance(target_name, (tuple, list, str)):
             raise TypeError("Argument `target_name` should be a tuple or list "
                             "(i.e.: a key sequence) or a string! Was {}: {}"
                             "".format(type(target_name), target_name))
@@ -813,12 +820,17 @@ class CoupledParamDim(ParamDimBase):
         elif isinstance(target_name, list):
             target_name = tuple(target_name)
 
-        # Check if a pdim is already set
-        if self._target_pdim is not None:
-            warnings.warn("A target ParamDim was already set; setting the "
-                          "target_name will have no effect.", UserWarning)
-
         self._target_name = target_name
+
+    @property
+    def _target_name_as_list(self) -> Union[str, List[str]]:
+        """For the safe yaml representer, the target_name cannot be a tuple.
+        
+        This property returns it as str or list of strings.
+        """
+        if self.target_name is None or isinstance(self.target_name, str):
+            return self.target_name
+        return list(self.target_name)
 
     @property
     def target_pdim(self) -> ParamDim:
@@ -834,8 +846,9 @@ class CoupledParamDim(ParamDimBase):
 
     @target_pdim.setter
     def target_pdim(self, pdim: ParamDim):
+        """Set the target ParamDim, if it is not already set"""
         if self._target_pdim is not None:
-            raise RuntimeError("Cannot change target of CoupledParamDim!")
+            raise ValueError("Cannot change target of CoupledParamDim!")
 
         elif not isinstance(pdim, ParamDim):
             raise TypeError("Target of CoupledParamDim needs to be of type "
