@@ -560,20 +560,38 @@ def test_yaml_unsafe_dump_and_load(tmpdir, small_psp, adv_psp, psp_with_coupled)
     """Tests that YAML dumping and reloading works"""
     yaml = yaml_unsafe
 
-    for i, psp_out in enumerate([small_psp, adv_psp, psp_with_coupled]):
-        psp_out = small_psp
-        path = tmpdir.join("out_{}.yml".format(i))
+    d_out = dict(small=small_psp, adv=adv_psp, coupled=psp_with_coupled)    
+    path = tmpdir.join("out.yml")
+    
+    # Dump it
+    with open(path, "x") as out_file:
+        yaml.dump(d_out, stream=out_file)
+
+    # Read what was written
+    with open(path, "r") as in_file:
+        print("Content of written file:\n")
+        print("".join(in_file.readlines()))
+        print("--- end of file ---")
+
+    # Load it again
+    with open(path, "r") as in_file:
+        d_in = yaml.load(in_file)
+
+    # Check that the contents are equivalent
+    for k_out, v_out in d_out.items():
+        assert k_out in d_in
+        psp = d_in[k_out]
+
+        print(k_out, ":", )
+        print("  dims:   \n   ",
+              "\n    ".join(["{}: {}".format(k, v)
+                             for k,v in psp.dims.items()]))
         
-        # Dump it
-        with open(path, "x") as out_file:
-            yaml.dump(psp_out, stream=out_file)
+        print("  coupled:\n   ",
+              "\n    ".join(["{}: {}".format(k, v)
+                             for k,v in psp.coupled_dims.items()]))
 
-        # Read it in again
-        with open(path, "r") as in_file:
-            psp_in = yaml.load(in_file)
-
-        # Check that the contents are equivalent
-        assert psp_in == psp_out
+        assert v_out == psp
 
 @pytest.mark.skip()
 def test_yaml_safe_dump_and_load(tmpdir, basic_psp):

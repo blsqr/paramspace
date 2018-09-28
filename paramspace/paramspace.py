@@ -318,7 +318,10 @@ class ParamSpace:
 
     def __str__(self) -> str:
         """Returns a parsed, human-readable information string"""
-        return self.get_info_str()
+        return ("<{} object at {} with volume {}, shape {}>"
+                "".format(self.__class__.__name__, id(self),
+                          self.volume, self.shape)
+                )
 
     def __repr__(self) -> str:
         """Returns the raw string representation of the ParamSpace."""
