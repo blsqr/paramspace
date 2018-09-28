@@ -463,15 +463,15 @@ class ParamSpace:
         """
         if self._iter is None:
             # Associate with the iterate function
-            self._iter = self.iterate
+            self._iter = self.iterator
 
         # Let generator yield and given the return value, check how to proceed
         return self._iter()
         # NOTE the generator will also raise StopIteration once it ended
         
-    def iterate(self, *, with_info: Union[str, Tuple[str]]=None, omit_pt: bool=False) -> Generator[PStype, None, None]:
-        """Returns a generator yielding all unmasked points of the parameter
-        space, i.e. the space spanned open by the parameter dimensions.
+    def iterator(self, *, with_info: Union[str, Tuple[str]]=None, omit_pt: bool=False) -> Generator[PStype, None, None]:
+        """Returns an iterator (more precisely: a generator) yielding all
+        unmasked points of the parameter space.
 
         To control which information is returned at each point, the `with_info`
         and `omit_pt` arguments can be used. By default, the generator will
@@ -594,7 +594,7 @@ class ParamSpace:
         smap = np.ndarray(self.states_shape, dtype=int)
         smap.fill(-1) # i.e., not set yet
 
-        # As .iterate does not allow iterating over default states, iterate
+        # As .iterator does not allow iterating over default states, iterate
         # over the multi-index of the smap, set the state vector and get the
         # corresponding state number
         for midx in np.ndindex(smap.shape):
@@ -631,8 +631,8 @@ class ParamSpace:
         # TODO could improve the below loop by checking what needs fewer
         #      iterations: unmasking falsely masked entries or vice versa ...
         # Unmask the unmasked values
-        for s_no, s_vec in self.iterate(with_info=('state_no', 'state_vec'),
-                                           omit_pt=True):
+        for s_no, s_vec in self.iterator(with_info=('state_no', 'state_vec'),
+                                         omit_pt=True):
             # By assigning any value, the mask is removed
             mmap[s_vec] = s_no
             # TODO isn't there a better way than re-assigning the state no?!
