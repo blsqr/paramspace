@@ -1,18 +1,24 @@
-"""This module adds yaml constructors for ParamSpace and ParamDim generation"""
+"""This module defines the yaml constructors for ParamSpace and ParamDim
+generation during loading.
 
-import yaml
+Note that they are not added in this module but in the .yaml module.
+"""
+
 import logging
 import warnings
 from collections import OrderedDict
 from typing import Iterable, Union
+
+import ruamel.yaml
 
 from paramspace import ParamSpace, ParamDim, CoupledParamDim
 
 # Get logger
 log = logging.getLogger(__name__)
 
+
 # -----------------------------------------------------------------------------
-# The functions to be imported
+# The functions to be imported by the yaml module
 
 def pspace(loader, node) -> ParamSpace:
     """yaml constructor for creating a ParamSpace object from a mapping.
@@ -21,15 +27,15 @@ def pspace(loader, node) -> ParamSpace:
     """
     return _pspace_constructor(loader, node)
 
-def pspace_sorted(loader, node) -> ParamSpace:
+def pspace_unsorted(loader, node) -> ParamSpace:
     """yaml constructor for creating a ParamSpace object from a mapping.
 
-    Unlike the regular constructor, this one sorts the input before
+    Unlike the regular constructor, this one does NOT sort the input before
     instantiating ParamSpace.
 
-    Suggested tag: !pspace
+    Suggested tag: !pspace-unsorted
     """
-    return _pspace_constructor(loader, node, sort_if_mapping=True)
+    return _pspace_constructor(loader, node, sort_if_mapping=False)
 
 def pdim(loader, node) -> ParamDim:
     """constructor for creating a ParamDim object from a mapping
@@ -38,7 +44,7 @@ def pdim(loader, node) -> ParamDim:
     """
     return _pdim_constructor(loader, node)
 
-def pdim_get_default(loader, node) -> ParamDim:
+def pdim_default(loader, node) -> ParamDim:
     """constructor for creating a ParamDim object from a mapping, but only return the default value.
 
     Suggested tag: !pdim-default
@@ -54,23 +60,23 @@ def coupled_pdim(loader, node) -> CoupledParamDim:
     """
     return _coupled_pdim_constructor(loader, node)
 
-def coupled_pdim_get_default(loader, node) -> CoupledParamDim:
+def coupled_pdim_default(loader, node) -> CoupledParamDim:
     """constructor for creating a CoupledParamDim object from a mapping, but only return the default value.
 
     Suggested tag: !coupled-pdim-default
     """
     cpdim = _coupled_pdim_constructor(loader, node)
-    log.debug("Returning default value of constructed ParamDim.")
+    log.debug("Returning default value of constructed CoupledParamDim.")
     return cpdim.default
 
 # -----------------------------------------------------------------------------
 
-def _pspace_constructor(loader, node, sort_if_mapping: bool=False) -> ParamSpace:
+def _pspace_constructor(loader, node, sort_if_mapping: bool=True) -> ParamSpace:
     """constructor for instantiating ParamSpace from a mapping or a sequence"""
     log.debug("Encountered tag associated with ParamSpace.")
 
     # get fields as mapping or sequence
-    if isinstance(node, yaml.nodes.MappingNode):
+    if isinstance(node, ruamel.yaml.nodes.MappingNode):
         log.debug("Constructing mapping from node ...")
         d = loader.construct_mapping(node, deep=True)
 
@@ -79,7 +85,7 @@ def _pspace_constructor(loader, node, sort_if_mapping: bool=False) -> ParamSpace
             log.debug("Recursively sorting the mapping ...")
             d = recursively_sort_dict(OrderedDict(d))
 
-    elif isinstance(node, yaml.nodes.SequenceNode):
+    elif isinstance(node, ruamel.yaml.nodes.SequenceNode):
         log.debug("Constructing sequence from node ...")
         d = loader.construct_sequence(node, deep=True)
     
@@ -98,7 +104,7 @@ def _pdim_constructor(loader, node) -> ParamDim:
     """
     log.debug("Encountered tag associated with ParamDim.")
 
-    if isinstance(node, yaml.nodes.MappingNode):
+    if isinstance(node, ruamel.yaml.nodes.MappingNode):
         log.debug("Constructing mapping ...")
         mapping = loader.construct_mapping(node, deep=True)
         pdim = ParamDim(**mapping)
@@ -117,7 +123,7 @@ def _coupled_pdim_constructor(loader, node) -> ParamDim:
     """
     log.debug("Encountered tag associated with ParamDim.")
 
-    if isinstance(node, yaml.nodes.MappingNode):
+    if isinstance(node, ruamel.yaml.nodes.MappingNode):
         log.debug("Constructing mapping ...")
         mapping = loader.construct_mapping(node, deep=True)
         cpdim = CoupledParamDim(**mapping)
@@ -132,7 +138,8 @@ def _coupled_pdim_constructor(loader, node) -> ParamDim:
 # Helpers ---------------------------------------------------------------------
 
 def recursively_sort_dict(d: dict) -> OrderedDict:
-    """Recursively sorts a dictionary by its keys, transforming it to an OrderedDict in the process.
+    """Recursively sorts a dictionary by its keys, transforming it to an
+    OrderedDict in the process.
     
     From: http://stackoverflow.com/a/22721724/1827608
     
@@ -140,7 +147,7 @@ def recursively_sort_dict(d: dict) -> OrderedDict:
         d (dict): The dictionary to be sorted
     
     Returns:
-        OrderedDict: recursively sorted
+        OrderedDict: the recursively sorted dict
     """
     # Start with empty ordered dict for this recursion level
     res = OrderedDict()

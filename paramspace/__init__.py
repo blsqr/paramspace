@@ -6,8 +6,8 @@ create parameter dimensions. When passing this dict-like object to
 `ParamSpace`, it is possible to iterate over the points in parameter space ...
 """
 
-__version__ = "2.0.0-pre.0"  # NOTE also change the value in setup.py!
+__version__ = "2.0.0-pre.1"  # NOTE also change the value in setup.py!
 
 from paramspace.paramspace import ParamSpace
 from paramspace.paramdim import ParamDim, CoupledParamDim
-from paramspace import yaml_constructors
+from paramspace.yaml import yaml, yaml_safe, yaml_unsafe

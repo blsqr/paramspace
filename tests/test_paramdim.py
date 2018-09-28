@@ -4,20 +4,20 @@ import warnings
 
 import pytest
 import numpy as np
-import yaml
 
 from paramspace import ParamDim, CoupledParamDim
-from paramspace.paramdim import ParamDimBase, Masked, MaskedValueError
+from paramspace.paramdim import Masked, MaskedValueError
+from paramspace.yaml import *
 
 # Setup methods ---------------------------------------------------------------
 
-@pytest.fixture(scope='module')
-def various_pdims(request):
+@pytest.fixture()
+def various_pdims():
     """Used to setup various pspan objects to be tested on."""
     pds = {}
 
     pds['one']       = ParamDim(default=0, values=[1,2,3])
-    pds['two']       = ParamDim(default=0, values=[1., 2, 'three', (1,0,0)])
+    pds['two']       = ParamDim(default=0, values=[1., 2, 'three', [1,0,0]])
     pds['range']     = ParamDim(default=0, range=[1, 4, 1])
     pds['linspace']  = ParamDim(default=0, linspace=[1, 3, 3, True])
     pds['logspace']  = ParamDim(default=0, logspace=[-1, 1, 11])
@@ -30,7 +30,6 @@ def various_pdims(request):
     pds['coupled3']  = CoupledParamDim(target_pdim=pds['range'], default=0)
 
     return pds
-
 
 # Tests -----------------------------------------------------------------------
 
@@ -267,14 +266,14 @@ def test_cpd_init():
     assert cpd.target_name is None
 
     # Test if the name behaviour is correct
-    with pytest.warns(UserWarning, match="A target ParamDim was already set;"):
-        cpd.target_name = ("foo",)
-
-    with pytest.raises(RuntimeError, match="Target name cannot be changed"):
+    with pytest.raises(ValueError, match="name cannot be changed after"):
         cpd.target_name = ("bar",)
 
     # Accessing coupling target without it having been set should raise errors
     cpd = CoupledParamDim(target_name=("foo",))
+
+    with pytest.raises(ValueError, match="name cannot be changed!"):
+        cpd.target_name = ("foo",)
 
     with pytest.raises(ValueError, match="The coupling target has not been"):
         cpd.target_pdim
@@ -283,7 +282,7 @@ def test_cpd_init():
         cpd.target_pdim = "foo"
 
     cpd.target_pdim = pd
-    with pytest.raises(RuntimeError, match="Cannot change target of"):
+    with pytest.raises(ValueError, match="Cannot change target of"):
         cpd.target_pdim = pd
     
     # Test lengths are matching
@@ -337,8 +336,10 @@ def test_coupled_mask():
 
 # YAML Dumping ----------------------------------------------------------------
 
-def test_yaml_unsafe_dump_and_load(various_pdims, tmpdir):
+def test_yaml_unsafe_dump_and_load(tmpdir, various_pdims):
     """Tests yaml dumping and loading with the unsafe methods"""
+    yaml = yaml_unsafe
+
     d_out = various_pdims
     path = tmpdir.join("out.yml")
 
@@ -346,17 +347,25 @@ def test_yaml_unsafe_dump_and_load(various_pdims, tmpdir):
     with open(path, "x") as out_file:
         yaml.dump(d_out, stream=out_file)
 
-    # Read it in again
+    # Read what was written
+    with open(path, "r") as in_file:
+        print("Content of written file:\n")
+        print("".join(in_file.readlines()))
+        print("--- end of file ---")
+
+    # Now load it
     with open(path, "r") as in_file:
         d_in = yaml.load(in_file)
+
+    print("Loaded object:", type(d_in))
+    print(d_in)
 
     # Check that the contents are equivalent
     for k_out, v_out in d_out.items():
         assert k_out in d_in
         assert v_out == d_in[k_out]
 
-@pytest.mark.skip("Not yet working!")
-def test_yaml_safe_dump_and_load(various_pdims, tmpdir):
+def test_yaml_safe_dump_and_load(tmpdir, various_pdims):
     """Tests that YAML dumping and reloading works with both default dump and
     load methods as well as with the safe versions.
     """
@@ -379,18 +388,17 @@ def test_yaml_safe_dump_and_load(various_pdims, tmpdir):
     d_out = various_pdims
 
     # Test all possible combinations of dump and load methods
-    methods = [(yaml.dump, yaml.load),
-               (yaml.dump, yaml.safe_load),
-               (yaml.safe_dump, yaml.load),
-               (yaml.safe_dump, yaml.safe_load)]
+    methods = [("def-def",   yaml.dump,        yaml.load),
+               ("def-safe",  yaml.dump,        yaml_safe.load),
+               ("safe-def",  yaml_safe.dump,   yaml.load),
+               ("safe-safe", yaml_safe.dump,   yaml_safe.load)]
 
-    for dump_func, load_func in methods:
+    for prefix, dump_func, load_func in methods:
         # Generate file name and some output to know what went wrong ...
-        fname = "{}--{}.yml".format(dump_func.__name__, load_func.__name__)
+        fname = prefix + ".yml"
         path = tmpdir.join(fname)
 
-        print("Now testing combination:  {} + {}  ... "
-              "".format(dump_func.__name__, load_func.__name__), end="")
+        print("Now testing combination:  {}  ... ".format(prefix), end="")
 
         # Call the test function
         dump_load_assert_equal(d_out, path=path,

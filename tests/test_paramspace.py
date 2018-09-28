@@ -4,13 +4,13 @@ from functools import reduce
 from collections import OrderedDict
 
 import pytest
-import yaml
 import numpy as np
 import numpy.ma
 
 from paramspace import ParamSpace, ParamDim, CoupledParamDim
+from paramspace.yaml import *
 
-# Setup methods ---------------------------------------------------------------
+# Fixtures --------------------------------------------------------------------
 
 @pytest.fixture()
 def small_psp():
@@ -556,25 +556,44 @@ def test_nested(psp_nested, basic_psp):
 
 # YAML Dumping ----------------------------------------------------------------
 
-def test_yaml_unsafe_dump_and_load(basic_psp, adv_psp, psp_with_coupled, tmpdir):
+def test_yaml_unsafe_dump_and_load(tmpdir, small_psp, adv_psp, psp_with_coupled):
     """Tests that YAML dumping and reloading works"""
-    for i, psp_out in enumerate([basic_psp, adv_psp, psp_with_coupled]):
-        psp_out = basic_psp
-        path = tmpdir.join("out_{}.yml".format(i))
+    yaml = yaml_unsafe
+
+    d_out = dict(small=small_psp, adv=adv_psp, coupled=psp_with_coupled)
+    path = tmpdir.join("out.yml")
+    
+    # Dump it
+    with open(path, "x") as out_file:
+        yaml.dump(d_out, stream=out_file)
+
+    # Read what was written
+    with open(path, "r") as in_file:
+        print("Content of written file:\n")
+        print("".join(in_file.readlines()))
+        print("--- end of file ---")
+
+    # Load it again
+    with open(path, "r") as in_file:
+        d_in = yaml.load(in_file)
+
+    # Check that the contents are equivalent
+    for k_out, v_out in d_out.items():
+        assert k_out in d_in
+        psp = d_in[k_out]
+
+        print(k_out, ":", )
+        print("  dims:   \n   ",
+              "\n    ".join(["{}: {}".format(k, v)
+                             for k,v in psp.dims.items()]))
         
-        # Dump it
-        with open(path, "x") as out_file:
-            yaml.dump(psp_out, stream=out_file)
+        print("  coupled:\n   ",
+              "\n    ".join(["{}: {}".format(k, v)
+                             for k,v in psp.coupled_dims.items()]))
 
-        # Read it in again
-        with open(path, "r") as in_file:
-            psp_in = yaml.load(in_file)
+        assert v_out == psp
 
-        # Check that the contents are equivalent
-        assert psp_in == psp_out
-
-@pytest.mark.skip("Not yet working!")
-def test_yaml_safe_dump_and_load(basic_psp, tmpdir):
+def test_yaml_safe_dump_and_load(tmpdir, small_psp, adv_psp, psp_with_coupled):
     """Tests that YAML dumping and reloading works with both default dump and
     load methods as well as with the safe versions.
     """
@@ -589,26 +608,23 @@ def test_yaml_safe_dump_and_load(basic_psp, tmpdir):
             d_in = load_func(in_file)
 
         # Check that the contents are equivalent
-        for k_out, v_out in d_out.items():
-            assert k_out in d_in
-            assert v_out == d_in[k_out]
+        assert d_out == d_in
 
     # Use the dict of ParamDim objects for testing
-    d_out = basic_psp
+    d_out = dict(small=small_psp, adv=adv_psp, coupled=psp_with_coupled)
 
     # Test all possible combinations of dump and load methods
-    methods = [(yaml.dump, yaml.load),
-               (yaml.dump, yaml.safe_load),
-               (yaml.safe_dump, yaml.load),
-               (yaml.safe_dump, yaml.safe_load)]
+    methods = [("unsafe-unsafe",   yaml_unsafe.dump,  yaml_unsafe.load),
+               ("unsafe-safe",     yaml_unsafe.dump,  yaml_safe.load),
+               ("safe-unsafe",     yaml_safe.dump,    yaml_unsafe.load),
+               ("safe-safe",       yaml_safe.dump,    yaml_safe.load)]
 
-    for dump_func, load_func in methods:
+    for prefix, dump_func, load_func in methods:
         # Generate file name and some output to know what went wrong ...
-        fname = "{}--{}.yml".format(dump_func.__name__, load_func.__name__)
+        fname = prefix + ".yml"
         path = tmpdir.join(fname)
 
-        print("Now testing combination:  {} + {}  ... "
-              "".format(dump_func.__name__, load_func.__name__), end="")
+        print("Now testing combination:  {}  ... ".format(prefix), end="")
 
         # Call the test function
         dump_load_assert_equal(d_out, path=path,

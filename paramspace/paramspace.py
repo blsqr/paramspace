@@ -33,6 +33,11 @@ class ParamSpace:
     dict-like data is returned.
     """
 
+    # Define the yaml tag to use
+    yaml_tag = u'!pspace'
+
+    # .........................................................................
+
     def __init__(self, d: PStype):
         """Initialize a ParamSpace object from a given mapping or sequence.
         
@@ -309,16 +314,19 @@ class ParamSpace:
         #      content asserts that the _smap attributes will be equal, too.
         return all([self.__dict__[k] == other.__dict__[k]
                     for k in self.__dict__.keys()
-                    if k not in ['_smap', '_iter']])
+                    if k not in ('_smap', '_iter')])
 
     def __str__(self) -> str:
         """Returns a parsed, human-readable information string"""
-        return self.get_info_str()
+        return ("<{} object at {} with volume {}, shape {}>"
+                "".format(self.__class__.__name__, id(self),
+                          self.volume, self.shape)
+                )
 
     def __repr__(self) -> str:
         """Returns the raw string representation of the ParamSpace."""
         # TODO should actually be a string from which to re-create the object
-        return ("<{} object at {} with {}>"
+        return ("<paramspace.paramdim.{} object at {} with {}>"
                 "".format(self.__class__.__name__, id(self),
                           repr(dict(volume=self.volume,
                                     shape=self.shape,
@@ -383,6 +391,41 @@ class ParamSpace:
                 l += [""]
 
         return "\n".join(l)
+    
+    # YAML representation .....................................................
+
+    @classmethod
+    def to_yaml(cls, representer, node):
+        """In order to dump a ParamSpace as yaml, basically only the _dict
+        attribute needs to be saved. It can be plugged into a constructor
+        without any issues.
+        However, to make the string representation a bit simpler, the
+        OrderedDict is resolved to an unordered one.
+
+        Args:
+            representer (ruamel.yaml.representer): The representer module
+            node (type(self)): The node, i.e. an instance of this class
+        
+        Returns:
+            a yaml mapping that is able to recreate this object
+        """
+        # Get the objects _dict
+        d = copy.deepcopy(node._dict)
+
+        # Recursively go through it and cast dict on all OrderedDict entries
+        def to_dict(od: OrderedDict):
+            for k, v in od.items():
+                if isinstance(v, OrderedDict):
+                    od[k] = to_dict(v)
+            return dict(od)
+
+        # Can now call the representer
+        return representer.represent_mapping(cls.yaml_tag, to_dict(d))
+
+    @classmethod
+    def from_yaml(cls, constructor, node):
+        """The default constructor for a ParamSpace object"""
+        return cls(**constructor.construct_mapping(node, deep=True))
 
     # Item access .............................................................
     # This is a restricted interface for accessing items
@@ -797,3 +840,4 @@ class ParamSpace:
     def _dim_names(self) -> List[str]:
         """Returns a sequence of dimension names that can be joined together"""
         return [self._parse_dim_name(n) for n in self.dims.keys()]
+
