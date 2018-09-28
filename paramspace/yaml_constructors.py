@@ -108,6 +108,7 @@ def _pdim_constructor(loader, node) -> ParamDim:
         log.debug("Constructing mapping ...")
         mapping = loader.construct_mapping(node, deep=True)
         pdim = ParamDim(**mapping)
+        print("constructed pdim:", pdim)
 
     else:
         raise TypeError("ParamDim can only be constructed from a mapping node,"

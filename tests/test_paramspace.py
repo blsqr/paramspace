@@ -575,6 +575,7 @@ def test_yaml_unsafe_dump_and_load(tmpdir, small_psp, adv_psp, psp_with_coupled)
         # Check that the contents are equivalent
         assert psp_in == psp_out
 
+@pytest.mark.skip()
 def test_yaml_safe_dump_and_load(tmpdir, basic_psp):
     """Tests that YAML dumping and reloading works with both default dump and
     load methods as well as with the safe versions.

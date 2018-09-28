@@ -11,6 +11,8 @@ from typing import Iterable, Union, Tuple, Hashable, Sequence
 
 import numpy as np
 
+
+
 # Get logger
 log = logging.getLogger(__name__)
 
@@ -45,7 +47,7 @@ class MaskedValueError(ValueError):
 class ParamDimBase(metaclass=abc.ABCMeta):
     """The ParamDim base class."""
 
-    def __init__(self, *, default, values: Iterable=None, order: float=np.inf, name: str=None, **kwargs) -> None:
+    def __init__(self, *, default, values: Iterable=None, order: float=None, name: str=None, **kwargs) -> None:
         """Initialise a parameter dimension object.
         
         Args:
@@ -54,7 +56,8 @@ class ParamDimBase(metaclass=abc.ABCMeta):
                 dimension can take. This argument takes precedence over any
                 constructors given in the kwargs (like range, linspace, …).
             order (float, optional): If given, this allows to specify an order
-                within a ParamSpace that includes this ParamDim object
+                within a ParamSpace that includes this ParamDim object. If not,
+                will use np.inf instead.
             name (str, optional): If given, this is an *additional* name of
                 this ParamDim object, and can be used by the ParamSpace to
                 access this object.
@@ -71,11 +74,12 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         self._state = 0  # corresponding to the default state
 
         # Set attributes that need no further checks
-        self.name = name
-        self.order = order
+        self._name = name
+        self._order = order if order is not None else np.inf
         self._default = default
 
-        # Parse the keyword arguments, filtering out unallowed ones
+        # Parse the keyword arguments, filtering out unallowed ones and
+        # packaging values into the kwargs for easier handling ...
         vkwargs = ('values', 'range', 'linspace', 'logspace')
         if values is not None:
             kwargs['values'] = values
@@ -111,9 +115,26 @@ class ParamDimBase(metaclass=abc.ABCMeta):
                             "".format(self.__class__.__name__,
                                       ", ".join(vkwargs)))
 
+        # Store the initialization kwargs for use with the yaml representer
+        self._init_kwargs = dict(default=default,
+                                 order=order,
+                                 name=name,
+                                 **kwargs)
+        # Derived classes should add the necessary kwargs in their __init__s
+
         # Done.
             
     # Properties ..............................................................
+
+    @property
+    def name(self):
+        """The name value."""
+        return self._name
+
+    @property
+    def order(self):
+        """The order value."""
+        return self._order
 
     @property
     def default(self):
@@ -312,13 +333,62 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         # Now store it as tuple attribute
         self._vals = tuple(values)
 
+    # YAML representation .....................................................
+    # NOTE The `yaml_tag` class variable needs be set in the derived classes
+
+    # Define some settings needed for saving to yaml
+    # Which entries to update and with which attribute
+    _YAML_UPDATE = dict()
+
+    # Which entries to remove if they have a certain value
+    _YAML_REMOVE_IF = dict(name=(None,), order=(None,))
+
+    @classmethod
+    def to_yaml(cls, representer, node):
+        """
+        Args:
+            representer (ruamel.yaml.representer): The representer module
+            node (type(self)): The current node, i.e.: this object
+        
+        Returns:
+            a yaml mapping that is able to recreate this object
+        """
+        # Get the init_kwargs and use them as basis for the mapping
+        d = copy.deepcopy(node._init_kwargs) 
+
+        # Depending on the class variables, update some entries
+        for k, attr_name in cls._YAML_UPDATE.items():
+            attr = getattr(node, attr_name)
+            d[k] = attr if not callable(attr) else attr()
+
+        # ... and remove some if they match the given value
+        d = {k: v for k, v in d.items()
+             if k not in cls._YAML_REMOVE_IF
+                or v not in cls._YAML_REMOVE_IF[k]}
+
+        # Can now call the representer
+        return representer.represent_mapping(cls.yaml_tag, d)
+
+    # @classmethod
+    # def from_yaml(cls, constructor, node):
+    #     return cls(*node.value.split('-'))
+
 # -----------------------------------------------------------------------------
 
 class ParamDim(ParamDimBase):
     """The ParamDim class."""
 
+    # Define the yaml tag to use
+    yaml_tag = u'!pdim'
+
+    # And the other yaml representer settings
+    _YAML_UPDATE = dict(mask='mask')
+    _YAML_REMOVE_IF = dict(name=(None,), order=(None,), mask=(None, False))
+
     # Define the additional attribute names that are to be added to __repr__
     _REPR_ATTRS = ['mask']
+
+    # .........................................................................
 
     def __init__(self, *, mask: Union[bool, Tuple[bool]]=False, **kwargs):
         """Initialize a regular parameter dimension.
@@ -334,7 +404,8 @@ class ParamDim(ParamDimBase):
                     precedence over any constructors given in the kwargs
                     (like range, linspace, …).
                 order (float, optional): If given, this allows to specify an
-                    order within a ParamSpace that includes this ParamDim
+                    order within a ParamSpace that includes this ParamDim. If
+                    not given, np.inf will be used, i.e.: dimension is last.
                 name (str, optional): If given, this is an *additional* name of
                     this ParamDim object, and can be used by the ParamSpace to
                     access this object.
@@ -353,6 +424,9 @@ class ParamDim(ParamDimBase):
 
         self._mask_cache = None
         self.mask = mask
+
+        # Add further initialization kwargs, needed for yaml
+        self._init_kwargs['mask'] = mask
 
         log.debug("ParamDim initialised.")
 
@@ -582,9 +656,22 @@ class CoupledParamDim(ParamDimBase):
     moves alongside with another ParamDim's state.
     """
 
+    # Define the yaml tag to use
+    yaml_tag = u'!coupled-pdim'
+
+    # And the other yaml representer settings
+    _YAML_UPDATE = dict()
+    _YAML_REMOVE_IF = dict(name=(None,), order=(None,),
+                           default=(None,), values=(None, [None]),
+                           use_coupled_default=(None,),
+                           use_coupled_values=(None,),
+                           target_name=(None,), target_pdim=(None,))
+
     # Define the additional attribute names that are to be added to __repr__
     _REPR_ATTRS = ['target_pdim', 'target_name',
                    'use_coupled_default', 'use_coupled_values']
+
+    # .........................................................................
 
     def __init__(self, *, target_pdim: ParamDim=None, target_name: Union[str, Sequence[str]]=None, use_coupled_default: bool=None, use_coupled_values: bool=None, **kwargs):
         """
@@ -663,6 +750,13 @@ class CoupledParamDim(ParamDimBase):
             raise TypeError("Expected either argument `target_pdim` or "
                             "`target_name`, got neither.")
 
+        # Add further initialization kwargs, needed for yaml representation
+        self._init_kwargs['target_name'] = target_name
+        self._init_kwargs['target_pdim'] = target_pdim
+        self._init_kwargs['use_coupled_default'] = use_coupled_default
+        self._init_kwargs['use_coupled_values'] = use_coupled_values
+
+        # Done now.
         log.debug("CoupledParamDim initialised.")
         self._init_finished = True
 

@@ -2,6 +2,8 @@
 
 from ruamel.yaml import YAML
 
+from .paramdim import ParamDim, CoupledParamDim
+
 from .yaml_constructors import pspace, pspace_unsorted
 from .yaml_constructors import pdim, pdim_default
 from .yaml_constructors import coupled_pdim, coupled_pdim_default
@@ -15,8 +17,21 @@ yaml_unsafe = YAML(typ='unsafe')
 # Define the default YAML object
 yaml = yaml_unsafe
 
+
+# Attach representers .........................................................
+# ... to all YAML objects by registering the classes.
+
+for _yaml in (yaml_rt, yaml_safe, yaml_unsafe):
+    _yaml.register_class(ParamDim)
+    _yaml.register_class(CoupledParamDim)
+
+# NOTE It is important that this happens _before_ the custom constructors are
+#      added below, because otherwise it is tried to construct the classes
+#      using the (inherited) default constructor (which will not work)
+
+
 # Attach constructors .........................................................
-# Define (tag, constructor) pairs
+# Define list of (tag, constructor function) pairs
 _constructors = [
     (u'!pspace',                pspace),
     (u'!pspace-unsorted',       pspace_unsorted),
@@ -26,12 +41,8 @@ _constructors = [
     (u'!coupled-pdim-default',  coupled_pdim_default)
 ]
 
-# Iterate over the list to add the constructors to all the YAML objects
+# Add the constructors to all YAML objects
 for tag, constr_func in _constructors:
-    yaml.constructor.add_constructor(tag, constr_func)
     yaml_rt.constructor.add_constructor(tag, constr_func)
     yaml_safe.constructor.add_constructor(tag, constr_func)
     yaml_unsafe.constructor.add_constructor(tag, constr_func)
-
-
-# Attach representers .........................................................

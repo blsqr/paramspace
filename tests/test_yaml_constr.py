@@ -23,14 +23,21 @@ mapping: !pspace
   a: 1
   b: 2
   c: 3
-sequence_sorted: !pspace-unsorted
+sequence_sorted: !pspace
   - 1
   - 2
   - 3
   - foo:
     bar: 1
     baz: 2
-mapping_sorted: !pspace-unsorted
+mapping_sorted: !pspace
+  a: 1
+  c: 3
+  b: 2
+  foo:
+    bar: 1
+    baz: 2
+mapping_unsorted: !pspace-unsorted
   a: 1
   c: 3
   b: 2
