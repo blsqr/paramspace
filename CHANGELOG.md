@@ -15,6 +15,7 @@
    - This leads to a much nicer and future-proof way of storing the objects while remaining human-readable.
    - All this is managed in the new `paramspace.yaml` module, which also supplies the `ruamel.yaml.YAML` object along which the new API revolves.
    - _For packages updating to this version,_ it is recommended to _not_ add custom constructors that trigger on a different tag; this might lead to confusion because the representer can only create mappings with the tag specified in the `paramspace` implementation.
+- #19: Update the README
 
 ## v1.1.1
 - #17: Fix a bug that prohibited using nested `ParamSpace` objects
