@@ -263,7 +263,7 @@ def test_state_no(small_psp, basic_psp, adv_psp, psp_with_coupled):
         assert psp.state_no is 0
         
         # Get all points, then check them
-        nos = [n for _, n in psp.all_points(with_info=("state_no",))]
+        nos = [n for _, n in psp.iterate(with_info=("state_no",))]
         print("state numbers: ", nos)
 
         # Interval is correct
@@ -334,7 +334,7 @@ def test_basic_iteration(small_psp, basic_psp, adv_psp):
     """Tests whether the iteration goes through all points"""
     # Test on the __iter__ and __next__ level
     psp = small_psp
-    it = psp.all_points()  # is a generator now
+    it = psp.iterate()  # is a generator now
     assert it.__next__() == dict(p0=1, p1=1, p2=1)
     assert psp.state_vector == (1, 1, 1)
     assert psp.state_no == 16 # == 1 + 3 + 12  # 16
@@ -374,7 +374,7 @@ def test_basic_iteration(small_psp, basic_psp, adv_psp):
 
     # Check the dry run
     psp.reset()
-    snos = list([s for s in psp.all_points(with_info='state_no',omit_pt=True)])
+    snos = list([s for s in psp.iterate(with_info='state_no',omit_pt=True)])
     assert snos[:4] == [16, 17, 19, 20]
     
     # Check that the counts match using a helper function . . . . . . . . . . .
@@ -387,7 +387,7 @@ def test_basic_iteration(small_psp, basic_psp, adv_psp):
             assert cntrs[it_no] == count
 
     # For the explicit call
-    check_counts((basic_psp.all_points(), adv_psp.all_points()),
+    check_counts((basic_psp.iterate(), adv_psp.iterate()),
                  (basic_psp.volume, adv_psp.volume))
 
     # For the call via __iter__ and __next__
@@ -396,13 +396,13 @@ def test_basic_iteration(small_psp, basic_psp, adv_psp):
 
     # Also test all information tuples and the dry run
     info = ("state_no", "state_vec")
-    check_counts((small_psp.all_points(with_info=info),),
+    check_counts((small_psp.iterate(with_info=info),),
                  (small_psp.volume,))
 
     # ... and whether invalid values lead to failure
     with pytest.raises(ValueError):
         info = ("state_no", "foo bar")
-        check_counts((small_psp.all_points(with_info=info),),
+        check_counts((small_psp.iterate(with_info=info),),
                      (small_psp.volume,))
 
 
@@ -464,7 +464,7 @@ def test_masked_iteration(small_psp):
 
     # This should return only one entry: the default ParamSpace
     iter_res = {state_no:d
-                for d, state_no in psp.all_points(with_info='state_no')}
+                for d, state_no in psp.iterate(with_info='state_no')}
     print("fully masked array: ", iter_res)
     
     assert len(iter_res) == 1
@@ -475,7 +475,7 @@ def test_masked_iteration(small_psp):
     psp.set_mask('p0', (1, 0))  # length 1
     assert psp.shape == (1, 1, 1)
     iter_res = {state_no:d
-                for d, state_no in psp.all_points(with_info='state_no')}
+                for d, state_no in psp.iterate(with_info='state_no')}
     print("p0 mask (True, False): ", iter_res)
     assert len(iter_res) == 1 == psp.volume
     assert 2 in iter_res
@@ -485,7 +485,7 @@ def test_masked_iteration(small_psp):
     psp.set_mask('p1', (0, 1, 0))
     assert psp.shape == (1, 2, 1)
     iter_res = {state_no:d
-                for d, state_no in psp.all_points(with_info='state_no')}
+                for d, state_no in psp.iterate(with_info='state_no')}
     print("+ p1 mask (False, True, False): ", iter_res)
     assert len(iter_res) == 1 * 2 == psp.volume
     assert (3 + 2) in iter_res
