@@ -2,7 +2,7 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
-## v2.0 (WIP)
+## v2.0
 - #18: Calculate the `ParamSpace.state_no` instead of incrementing; this leads to higher reliability and allows more flexible iteration schemes.
 - #3: Include the ability to restrict `ParamSpace` to a subspace for iteration by introducing `ParamDim.mask`.
    - This required changing the `state` property of the dimension and parameter space classes to include the default value as state 0. It is one of many changes to the public interface of this package that is introduced in version 2.0 and makes the whole state numbering more 
@@ -15,6 +15,9 @@
    - This leads to a much nicer and future-proof way of storing the objects while remaining human-readable.
    - All this is managed in the new `paramspace.yaml` module, which also supplies the `ruamel.yaml.YAML` object along which the new API revolves.
    - _For packages updating to this version,_ it is recommended to _not_ add custom constructors that trigger on a different tag; this might lead to confusion because the representer can only create mappings with the tag specified in the `paramspace` implementation.
+- #19: Update the README
+- #20: Add a new argument, `as_type`, to `ParamDim` to allow a type cast after the values have been parsed
+- #21: Refactor `ParamSpace.all_points` to `ParamSpace.iterator`
 
 ## v1.1.1
 - #17: Fix a bug that prohibited using nested `ParamSpace` objects
