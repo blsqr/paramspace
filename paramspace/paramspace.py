@@ -233,6 +233,11 @@ class ParamSpace:
             Tuple[int]: The shape tuple
         """
         return tuple([pdim.num_states for pdim in self.dims.values()])
+
+    @property
+    def max_state_no(self) -> int:
+        """Returns the highest possible state number"""
+        return reduce(lambda x, y: x*y, self.states_shape) - 1
     
     @property
     def state_vector(self) -> Tuple[int]:

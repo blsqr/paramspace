@@ -234,6 +234,11 @@ def test_shape(small_psp, basic_psp, adv_psp):
     assert basic_psp.states_shape == (4, 4, 4, 4, 4, 4)
     assert adv_psp.states_shape ==   (4, 4, 4, 4, 4, 4)
 
+    # And that the maximum state number is correct
+    assert small_psp.max_state_no == 71
+    assert basic_psp.max_state_no == 4095
+    assert adv_psp.max_state_no == 4095
+
 def test_dim_order(basic_psp, adv_psp):
     """Tests whether the dimension order is correct."""
     basic_psp_names = (# alphabetically sorted
