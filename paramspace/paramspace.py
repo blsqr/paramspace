@@ -485,7 +485,7 @@ class ParamSpace:
         Args:
             with_info (Union[str, Tuple[str]], optional): Can pass strings
                 here that are to be returned as the second value. Possible
-                values are: 'state_no', 'state_vector'.
+                values are: 'state_no', 'state_vector', 'state_no_str'.
                 To get multiple, add them to a tuple.
             omit_pt (bool, optional): If true, the current value is omitted and
                 only the information is returned.
@@ -753,6 +753,11 @@ class ParamSpace:
         for info in with_info:
             if info in ['state_no']:
                 info_tup += (self.state_no,)
+            
+            elif info in ['state_no_str', 'padded_state_no']:
+                info_tup += ("{sno:0{digs:d}d}"
+                             "".format(sno=self.state_no,
+                                       digs=len(str(self.max_state_no))),)
 
             elif info in ['state_vector', 'state_vec']:
                 info_tup += (self.state_vector,)

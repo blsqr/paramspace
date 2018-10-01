@@ -400,7 +400,7 @@ def test_basic_iteration(small_psp, basic_psp, adv_psp):
                  (basic_psp.volume, adv_psp.volume))
 
     # Also test all information tuples and the dry run
-    info = ("state_no", "state_vec")
+    info = ("state_no", "state_vec", "state_no_str")
     check_counts((small_psp.iterator(with_info=info),),
                  (small_psp.volume,))
 
