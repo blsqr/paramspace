@@ -8,6 +8,7 @@ from .paramspace import ParamSpace
 from .yaml_constructors import pspace, pspace_unsorted
 from .yaml_constructors import pdim, pdim_default
 from .yaml_constructors import coupled_pdim, coupled_pdim_default
+from .yaml_constructors import _slice_constructor, _range_constructor
 
 # -----------------------------------------------------------------------------
 # Define a safe and an unsafe ruamel.yaml YAML object
@@ -39,7 +40,12 @@ _constructors = [
     (u'!pdim',                  pdim),          # ***
     (u'!pdim-default',          pdim_default),
     (u'!coupled-pdim',          coupled_pdim),  # ***
-    (u'!coupled-pdim-default',  coupled_pdim_default)
+    (u'!coupled-pdim-default',  coupled_pdim_default),
+    #
+    # additional constructors for Python objects
+    (u'!slice',                 _slice_constructor),
+    (u'!range',                 _range_constructor)
+
 ]
 # NOTE entries marked with '***' overwrite a default constructor. Thus, they
 #      need to be defined down here, after the classes and their tags were
