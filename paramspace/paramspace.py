@@ -357,7 +357,7 @@ class ParamSpace:
                                  stop_recursion_types=(ParamSpace,))
 
     
-    # Dimensions and dimension names . . . . . . . . . . . . . . . . . . . . .
+    # Dimensions: by names or locations . . . . . . . . . . . . . . . . . . . .
 
     @property
     def dims(self) -> Dict[str, ParamDim]:
@@ -365,14 +365,6 @@ class ParamSpace:
         dictionary are the unique names of the dimensions, created during
         initialization."""
         return self._dims
-
-    @property
-    def coupled_dims(self) -> Dict[str, CoupledParamDim]:
-        """Returns the CoupledParamDim objects of this ParamSpace. The keys of
-        this dictionary are the unique names of the dimensions, created during
-        initialization.
-        """
-        return self._cdims
     
     @property
     def dims_by_loc(self) -> Dict[Tuple[str], ParamDim]:
@@ -382,15 +374,38 @@ class ParamSpace:
         return self._dims_by_loc
 
     @property
+    def coupled_dims(self) -> Dict[str, CoupledParamDim]:
+        """Returns the CoupledParamDim objects of this ParamSpace. The keys of
+        this dictionary are the unique names of the dimensions, created during
+        initialization.
+        """
+        return self._cdims
+
+    @property
     def coupled_dims_by_loc(self) -> Dict[Tuple[str], CoupledParamDim]:
         """Returns the CoupledParamDim objects found in this ParamSpace, keys
         being the paths to the objects in the dictionary."""
         return self._cdims_by_loc
 
-    # TODO property for the _by_loc attributes
-    
 
-    # Shape, volume, and states . . . . . . . . . . . . . . . . . . . . . . . .
+    # Coordinates . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+    # TODO
+
+
+    # Shape, volume, states . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+    @property
+    def num_dims(self) -> int:
+        """Returns the number of parameter space dimensions. Coupled
+        dimensions are not counted here!
+        """
+        return len(self.dims)
+
+    @property
+    def num_coupled_dims(self) -> int:
+        """Returns the number of coupled parameter space dimensions."""
+        return len(self.coupled_dims)
 
     @property
     def volume(self) -> int:
@@ -456,7 +471,7 @@ class ParamSpace:
     def max_state_no(self) -> int:
         """Returns the highest possible state number"""
         return reduce(lambda x, y: x*y, self.states_shape) - 1
-    
+
     @property
     def state_vector(self) -> Tuple[int]:
         """Returns a tuple of all current parameter dimension states"""
@@ -480,18 +495,6 @@ class ParamSpace:
                                  "".format(name, new_state)) from err
 
         log.debug("Successfully set state vector to %s.", vec)
-
-    @property
-    def num_dims(self) -> int:
-        """Returns the number of parameter space dimensions. Coupled
-        dimensions are not counted here!
-        """
-        return len(self.dims)
-
-    @property
-    def num_coupled_dims(self) -> int:
-        """Returns the number of coupled parameter space dimensions."""
-        return len(self.coupled_dims)
 
     @property
     def state_no(self) -> Union[int, None]:
@@ -523,6 +526,15 @@ class ParamSpace:
         log.debug("  state no:     %s", state_no)
 
         return state_no
+
+    @state_no.setter
+    def state_no(self, state_no: int):
+        """Set the state number.
+
+        This will first calculate the state vector from the number and then
+        apply it.
+        """
+        self.state_vector = self.get_state_vector(state_no=state_no)
 
 
     # Magic methods ...........................................................
@@ -904,9 +916,8 @@ class ParamSpace:
                                "".format(smap))
 
         # Convert to DataArray
-        dims = [str(k) for k in self.dims.keys()]  # TODO make prettier!
         coords = [[d.default] + list(d.values) for d in self.dims.values()]
-        smap = xr.DataArray(smap, dims=dims, coords=coords)
+        smap = xr.DataArray(smap, dims=self.dims.keys(), coords=coords)
         
         # Cache and make it read-only before returning
         log.debug("Finished creating inverse mapping. Caching it and making "
@@ -949,7 +960,11 @@ class ParamSpace:
             Tuple[int]: the state vector corresponding to the state number
         """
         try:
-            return tuple(np.argwhere(self.state_map.data == state_no)[0])
+            # Get it from the state map data ...
+            vec = np.argwhere(self.state_map.data == state_no)[0]
+
+            # Convert entries to integers, as they might be np.int64 ...
+            return tuple([int(idx) for idx in vec])
 
         except IndexError as err:
             raise ValueError("Did not find state number {} in inverse "

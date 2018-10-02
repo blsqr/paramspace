@@ -167,6 +167,16 @@ class ParamDimBase(metaclass=abc.ABCMeta):
                 values are not yet set.
         """
         return self._vals
+    
+    @property
+    def coords(self) -> tuple:
+        """Returns the coordinates of this parameter dimension, i.e.: the
+        combined default value and the sequence of iteration values.
+        
+        Returns:
+            tuple: coordinates associated with the indices of this dimension
+        """
+        return (self.default,) + self._vals
 
     @property
     def num_values(self) -> int:

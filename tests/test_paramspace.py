@@ -363,14 +363,19 @@ def test_state_no(small_psp, basic_psp, adv_psp, psp_with_coupled):
                                              psp.states_shape) - 1
         assert len(nos) == psp.volume
 
-        # All ok
-        return True
+        # Try setting the state number
+        psp.state_no = 1
+        assert psp.state_no == 1
+
+        # Reset
+        psp.reset()
+        assert psp.state_no == 0
 
     # Call the test function on the given parameter spaces
-    assert test_state_nos(small_psp)
-    assert test_state_nos(basic_psp)
-    assert test_state_nos(adv_psp)
-    assert test_state_nos(psp_with_coupled)
+    test_state_nos(small_psp)
+    test_state_nos(basic_psp)
+    test_state_nos(adv_psp)
+    test_state_nos(psp_with_coupled)
     # TODO add a masked one
 
 def test_state_map(small_psp, basic_psp, adv_psp):
