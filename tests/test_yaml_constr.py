@@ -80,6 +80,25 @@ pdims:
    default: 0
     """
 
+    strs['slice'] = """
+slices:
+ - !slice 5
+ - !slice [5]
+ - !slice [0, ~]
+ - !slice [~, 0]
+ - !slice [0, 10, 2]
+ - !slice [0, 10, None]
+ - !slice [2, None, 2]
+    """
+    
+    strs['range'] = """
+ranges:
+ - !range 10
+ - !range [10]
+ - !range [5, 10]
+ - !range [5, 10, 2]
+    """
+
     strs[('pspace', TypeError)] = """not_a_mapping_or_sequence: !pspace 1 """
 
     strs[('_pdim1', TypeError)]  = """not_a_mapping: !pdim 1 """

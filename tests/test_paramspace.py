@@ -225,6 +225,11 @@ def test_dim_name_creation():
                     (("d", "p0"),           ".d.p0",        None),
                     (("d", "d", "p0"),      "d.d.p0",       "p1"),
                     (("d", "d", "d", "p0"), "d.d.d.p0",     "p1"))
+    
+    # Pathological case where no unique names can be found; should abort
+    with pytest.raises(ValueError, match="Could not automatically find"):
+        check_names((("d", "p0"),           ".d.p0",        None),
+                    (("d", "p0"),           ".d.p0",        None))
 
 def test_dim_access(basic_psp, adv_psp):
     """Test the _get_dim helper"""
@@ -241,9 +246,12 @@ def test_dim_access(basic_psp, adv_psp):
     assert get_dim(('d', 'pp1',)) == psp._dict['d']['pp1']
     assert get_dim(('d', 'dd', 'ppp1')) == psp._dict['d']['dd']['ppp1']
 
-    # Non-existant dim should fail
+    # Non-existant name or location should fail
     with pytest.raises(KeyError, match="A parameter dimension with name"):
         get_dim('foo')
+
+    with pytest.raises(KeyError, match="A parameter dimension matching locat"):
+        get_dim(('foo',))
 
     # More complicated setup, e.g. with ambiguous and custom names
     psp = adv_psp
@@ -252,6 +260,9 @@ def test_dim_access(basic_psp, adv_psp):
     # p1 is now ambiguous
     with pytest.raises(KeyError, match="A parameter dimension with name 'p1'"):
         get_dim('p1')
+    
+    with pytest.raises(ValueError, match="Could not unambiguously find a"):
+        get_dim(('p1',))
 
     # Thus, the unique name is different
     assert get_dim('.p1') == psp._dict['p1']

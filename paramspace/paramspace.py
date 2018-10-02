@@ -197,6 +197,7 @@ class ParamSpace:
 
         # Extract paths and pdims
         paths = [("",) + path for path, _ in kv_pairs]
+        plens = [len(p) for p in paths]
         pdims = [pdim for _, pdim in kv_pairs]
 
         # First, check the custom names
@@ -232,20 +233,19 @@ class ParamSpace:
                         continue
 
                     # else: may change this name
-                    # Try to get the path segement, starting from the back
-                    try:
-                        path_seg = paths[cidx][-(i+1):]
+                    # Get the path segement, starting from the back
+                    path_seg = paths[cidx][-(i+1):]
 
-                    except IndexError as err:
+                    # Make sure the while loop has a break condition
+                    if i > max(plens):
                         raise ValueError("Could not automatically find a "
                                          "unique string representation for "
                                          "path {}! You should set a custom "
                                          "name for the parameter dimension."
-                                         "".format(paths[cidx])
-                                         ) from err
+                                         "".format(paths[cidx]))
 
                     # Check there is no '.' in the (relevant!) path segement
-                    if any(['.' in seg for seg in path_seg]):
+                    elif any(['.' in seg for seg in path_seg]):
                         raise ValueError("A path segement of {} contains a "
                                          "'.' character which interferes with "
                                          "automatically creating unambiguous "

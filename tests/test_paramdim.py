@@ -306,6 +306,9 @@ def test_cpd_init():
     assert cpd.state == 0
     assert cpd.current_value is 0 # that of the coupled ParamDim!
 
+    # Check that it can access the target's mask
+    assert cpd.mask is cpd.target_pdim.mask
+
 def test_cpd_iteration():
     """Tests iteration of CoupledParamDim"""
     # ParamDim to couple to for testing

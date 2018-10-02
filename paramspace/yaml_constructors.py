@@ -144,10 +144,10 @@ def _slice_constructor(loader, node):
     log.debug("Encountered !slice tag.")
 
     # get slice arguments either from a scalar or from a sequence
-    if isinstance(node, yaml.nodes.SequenceNode):
+    if isinstance(node, ruamel.yaml.nodes.SequenceNode):
         args = loader.construct_sequence(node, deep=True)
     else:
-        args = [loader.construct_scalar(node)]
+        args = [loader.construct_yaml_int(node)]
 
     log.debug("  args:  %s", args)
     slc = slice(*args)
@@ -160,10 +160,10 @@ def _range_constructor(loader, node):
     log.debug("Encountered !range tag.")
 
     # get range arguments either from a scalar or from a sequence
-    if isinstance(node, yaml.nodes.SequenceNode):
+    if isinstance(node, ruamel.yaml.nodes.SequenceNode):
         args = loader.construct_sequence(node, deep=True)
     else:
-        args = [loader.construct_scalar(node)]
+        args = [loader.construct_yaml_int(node)]
 
     log.debug("  args:  %s", args)
     rg = range(*args)
