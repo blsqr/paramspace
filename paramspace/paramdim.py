@@ -399,7 +399,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         if not all([hashable(v) for v in values]):
             raise ValueError("All values need be hashable, but the following "
                              "were not: {}"
-                             "".format(", ".join([v for v in values
+                             "".format(", ".join([str(v) for v in values
                                                   if not hashable(v)])))
 
         if self._UNIQUE_VALS and (len(set(values)) != len(values)):

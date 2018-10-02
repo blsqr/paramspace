@@ -461,7 +461,7 @@ def test_mapping_funcs(small_psp):
     with pytest.raises(TypeError, match="Expected only one of the arguments"):
         psp.get_dim_values(state_no=123, state_vector=(1,2,3))
 
-def test_basic_iteration(small_psp, basic_psp, adv_psp):
+def test_basic_iteration(small_psp, adv_psp):
     """Tests whether the iteration goes through all points"""
     # Test on the __iter__ and __next__ level
     psp = small_psp
@@ -518,16 +518,18 @@ def test_basic_iteration(small_psp, basic_psp, adv_psp):
             assert cntrs[it_no] == count
 
     # For the explicit call
-    check_counts((basic_psp.iterator(), adv_psp.iterator()),
-                 (basic_psp.volume, adv_psp.volume))
+    check_counts((small_psp.iterator(), adv_psp.iterator()),
+                 (small_psp.volume, adv_psp.volume))
 
     # For the call via __iter__ and __next__
-    check_counts((basic_psp, adv_psp),
-                 (basic_psp.volume, adv_psp.volume))
+    check_counts((small_psp, adv_psp),
+                 (small_psp.volume, adv_psp.volume))
 
     # Also test all information tuples and the dry run
     info = ("state_no", "state_vec", "state_no_str")
     check_counts((small_psp.iterator(with_info=info),),
+                 (small_psp.volume,))
+    check_counts((small_psp.iterator(with_info="state_no"),),
                  (small_psp.volume,))
 
     # ... and whether invalid values lead to failure

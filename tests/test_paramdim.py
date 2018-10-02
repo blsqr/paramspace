@@ -72,6 +72,10 @@ def test_init(various_pdims):
     with pytest.raises(ValueError, match="need to be unique, but there were"):
         ParamDim(default=0, values=[1,1,2])
 
+    # And hashable
+    with pytest.raises(ValueError, match="All values need be hashable"):
+        ParamDim(default=0, values=[1,1,[1,2,3]])
+
 def test_properties(various_pdims):
     """Test all properties and whether they are write-protected."""
     vpd = various_pdims
