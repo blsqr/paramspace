@@ -105,16 +105,22 @@ def test_init(basic_psp, adv_psp):
         with pytest.warns(UserWarning, match="Got unusual type"):
             ParamSpace(lambda x: None)
 
-def test_default(basic_psp, adv_psp):
+def test_default(small_psp, adv_psp):
     """Tests whether the default values can be retrieved."""
-    d1 = basic_psp.default
+    d1 = small_psp.default
+
+    # Test for correct values
+    assert d1['p0'] == 0
     assert d1['p1'] == 0
     assert d1['p2'] == 0
-    assert d1['d']['pp1'] == 0
-    assert d1['d']['pp2'] == 0
-    assert d1['d']['dd']['ppp1'] == 0
-    assert d1['d']['dd']['ppp2'] == 0
 
+    # ...and type
+    assert not isinstance(d1['p0'], Masked)
+    assert not isinstance(d1['p1'], Masked)
+    assert not isinstance(d1['p2'], Masked)
+
+
+    # Same for the deeper array
     d2 = adv_psp.default
     assert d2['p1'] == 0
     assert d2['p2'] == 0
@@ -122,6 +128,14 @@ def test_default(basic_psp, adv_psp):
     assert d2['d']['p2'] == 0
     assert d2['d']['d']['p1'] == 0
     assert d2['d']['d']['p2'] == 0
+    
+    # ...and type
+    assert not isinstance(d2['p1'], Masked)
+    assert not isinstance(d2['p2'], Masked)
+    assert not isinstance(d2['d']['p1'], Masked)
+    assert not isinstance(d2['d']['p2'], Masked)
+    assert not isinstance(d2['d']['d']['p1'], Masked)
+    assert not isinstance(d2['d']['d']['p2'], Masked)
 
 def test_strings(basic_psp, adv_psp, psp_with_coupled):
     """Test whether the string generation works correctly."""
@@ -653,7 +667,7 @@ def test_active_state_map(small_psp):
     amap = psp.active_state_map
     print("\nactive state map (of fully masked pspace):\n", amap)
     assert amap.shape == psp.shape
-    
+
 
 # Complicated content ---------------------------------------------------------
 

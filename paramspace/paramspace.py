@@ -339,10 +339,17 @@ class ParamSpace:
     def default(self) -> dict:
         """Returns the dictionary with all parameter dimensions resolved to
         their default values.
+
+        If an object is Masked, it will resolve it.
         """
+        def get_unmasked_default(pdim):
+            if isinstance(pdim.default, Masked):
+                return pdim.default.value
+            return pdim.default
+
         return recursive_replace(copy.deepcopy(self._dict),
                                  select_func=lambda v: isinstance(v, ParamDimBase),
-                                 replace_func=lambda pdim: pdim.default,
+                                 replace_func=get_unmasked_default,
                                  stop_recursion_types=(ParamSpace,))
 
     @property
@@ -350,6 +357,9 @@ class ParamSpace:
         """Returns the dictionary with all parameter dimensions resolved to
         the values, depending on the point in parameter space at which the
         iteration is.
+
+        Note that unlike .default, this does not resolve the value if it is
+        Masked.
         """
         return recursive_replace(copy.deepcopy(self._dict),
                                  select_func=lambda v: isinstance(v, ParamDimBase),
