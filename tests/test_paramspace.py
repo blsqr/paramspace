@@ -9,6 +9,7 @@ import numpy.ma
 
 from paramspace import ParamSpace, ParamDim, CoupledParamDim
 from paramspace.yaml import *
+from paramspace.paramdim import Masked
 
 # Fixtures --------------------------------------------------------------------
 
@@ -393,6 +394,8 @@ def test_state_map(small_psp, basic_psp, adv_psp):
     # With specific pspace, do more explicit tests
     psp = small_psp
     imap = psp.state_map
+    print("Got state map:\n", imap)
+
     assert imap.dtype == int
     assert imap.shape == psp.states_shape
     assert imap[0,0,0] == 0
@@ -404,7 +407,21 @@ def test_state_map(small_psp, basic_psp, adv_psp):
     assert list(imap[0,0,:]) == [0, 12, 24, 36, 48, 60]  # multiplier:  12
 
     # Test the xarray features
-    # assert imap['p0'] == [0, 1, 2]  # TODO
+    # Make sure all coordinate values are unmasked
+    print("coords:", [v for v in imap.coords["p0"].to_series()])
+    assert all([not isinstance(v, Masked)
+                for v in imap.coords["p0"].to_series()])
+    assert all([not isinstance(v, Masked)
+                for v in imap.coords["p1"].to_series()])
+    assert all([not isinstance(v, Masked)
+                for v in imap.coords["p2"].to_series()])
+
+
+    # Check the coordinate dtype is not object
+    print("coords dtypes: ", {k: c.dtype for k, c in imap.coords.items()})
+    assert imap.coords["p0"].dtype != "object"
+    assert imap.coords["p1"].dtype != "object"
+    assert imap.coords["p2"].dtype != "object"
 
 def test_mapping_funcs(small_psp):
     """Tests other mapping functions"""
@@ -593,18 +610,50 @@ def test_masked_iteration(small_psp):
     assert (9 + 2) in iter_res
     assert iter_res[11] == dict(p0=2, p1=3, p2=0)
 
-def test_masked_mapping_funcs(small_psp):
-    """Test the mapping methods for masked parameter spaces"""
+def test_active_state_map(small_psp):
+    """Test the state map method for masked parameter spaces"""
     psp = small_psp
 
-    # Compare the default array to a reference masked array
-    ref_ma = np.ma.MaskedArray(data=small_psp.state_map)
-    ref_ma[:,0,0] = np.ma.masked
-    ref_ma[0,:,0] = np.ma.masked
-    ref_ma[0,0,:] = np.ma.masked
-    mmap = psp.get_masked_smap()
-    print("masked state map:\n", mmap)
-    assert np.array_equal(mmap, ref_ma)
+    # Get the unmasked version
+    amap = psp.active_state_map
+    print("\nactive state map (of fully unmasked pspace):\n", amap)
+    
+    # ... which should be of same shape as the parameter space
+    assert amap.shape == psp.shape
+
+    # Assert that it does not have any Masked objects left on the dimensions
+    print("coords:", [v for v in amap.coords["p0"].to_series()])
+    assert all([not isinstance(v, Masked)
+                for v in amap.coords["p0"].to_series()])
+    assert all([not isinstance(v, Masked)
+                for v in amap.coords["p1"].to_series()])
+    assert all([not isinstance(v, Masked)
+                for v in amap.coords["p2"].to_series()])
+
+
+    # Now set a mask and check again
+    psp.set_mask('p1', (0, 1, 0))
+    
+    amap = psp.active_state_map
+    print("\nactive state map (of partly masked pspace):\n", amap)
+    assert amap.shape == psp.shape
+
+    # Check the coordinate dtype is not object
+    print("coords dtypes: ", {k: c.dtype for k, c in amap.coords.items()})
+    assert amap.coords["p0"].dtype != "object"
+    assert amap.coords["p1"].dtype != "object"
+    assert amap.coords["p2"].dtype != "object"
+
+
+    # Now mask fully, which should still work
+    psp.set_mask('p0', True)
+    psp.set_mask('p1', True)
+    psp.set_mask('p2', True)
+
+    amap = psp.active_state_map
+    print("\nactive state map (of fully masked pspace):\n", amap)
+    assert amap.shape == psp.shape
+    
 
 # Complicated content ---------------------------------------------------------
 

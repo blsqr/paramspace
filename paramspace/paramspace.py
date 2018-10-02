@@ -13,7 +13,7 @@ import numpy as np
 import numpy.ma
 import xarray as xr
 
-from .paramdim import ParamDimBase, ParamDim, CoupledParamDim
+from .paramdim import ParamDimBase, ParamDim, CoupledParamDim, Masked
 from .tools import recursive_collect, recursive_update, recursive_replace
 
 # Get logger
@@ -390,8 +390,34 @@ class ParamSpace:
 
     # Coordinates . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
-    # TODO
+    @property
+    def coords(self) -> Dict[str, tuple]:
+        """Returns the coordinates of all parameter dimensions as dict.
+        This does not include the coupled dimensions!
 
+        As the coordinates are merely collected from the parameter dimensions,
+        they may include Masked objects.
+
+        Note that the coordinates are converted to lists to make interfacing
+        with xarray.DataArray easier.
+        """
+        return {name: list(pdim.coords) for name, pdim in self.dims.items()}
+
+    @property
+    def pure_coords(self) -> Dict[str, tuple]:
+        """Returns the pure coordinates of all parameter dimensions as dict.
+        This does not include the coupled dimensions!
+
+        Unlike the .coords property, the pure coordinates are cleaned of any
+        Masked values.
+
+        Note that the coordinates are converted to lists to make interfacing
+        with xarray.DataArray easier.
+        """
+        return {name: list(pdim.pure_coords)
+                for name, pdim in self.dims.items()}
+
+    # TODO coupled coordinates?
 
     # Shape, volume, states . . . . . . . . . . . . . . . . . . . . . . . . . .
 
@@ -501,31 +527,7 @@ class ParamSpace:
         """Returns the current state number by visiting the active parameter
         dimensions and querying their state numbers.
         """
-        log.debug("Calculating state number ...")
-
-        # Go over all parameter dimensions and extract the state values
-        states = self.state_vector
-        log.debug("  states:       %s", states)
-
-        # Now need the full shape of the parameter space, i.e. ignoring masked
-        # values but including the default values
-        states_shape = self.states_shape
-        log.debug("  states shape: %s  (volume: %s)",
-                  states_shape, reduce(lambda x, y: x*y, states_shape))
-
-        # The lengths will now be used to calculate the multipliers, starting
-        # with 1 for the 0th pdim.
-        # For example, given lengths [10, 10,  20,    5], the corresponding
-        # multipliers are:           [ 1, 10, 100, 2000]
-        mults = [reduce(lambda x, y: x*y, states_shape[:i], 1)
-                 for i in range(self.num_dims)]
-        log.debug("  multipliers:  %s", mults)
-
-        # Now, calculate the state number
-        state_no = sum([(s * m) for s, m in zip(states, mults)])
-        log.debug("  state no:     %s", state_no)
-
-        return state_no
+        return self._calc_state_no(self.state_vector)
 
     @state_no.setter
     def state_no(self, state_no: int):
@@ -689,13 +691,10 @@ class ParamSpace:
 
 
     # Dict access .............................................................
-    # This is a restricted interface for accessing items
+    # This is a restricted interface for accessing dictionary items
     # It ensures that the ParamSpace remains in a valid state: items are only
     # returned by copy or, if popping them, it is ensured that the item was not
     # a parameter dimension.
-    
-    # FIXME Resolve misconception: storing key sequences as tuples, but a
-    #       tuple could be a key itself as it is hashable...
 
     def get(self, key, default=None):
         """Returns a _copy_ of the item in the underlying dict"""
@@ -884,10 +883,20 @@ class ParamSpace:
         """Returns an inverse mapping, i.e. an n-dimensional array where the
         indices along the dimensions relate to the states of the parameter
         dimensions and the content of the array relates to the state numbers.
+        
+        Returns:
+            xr.DataArray: A mapping of indices and coordinates to the state
+                number. Note that it is not ensured that the coordinates are
+                unique, so it _might_ not be possible to use location-based
+                indexing.
+        
+        Raises:
+            RuntimeError: If -- for an unknown reason -- the iteration did not
+                cover all of the state mapping. Should not occur.
         """
         # Check if the cached result can be returned
         if self._smap is not None:
-            log.debug("Using previously cached inverse mapping ...")
+            log.debug("Returning previously cached inverse mapping ...")
             return self._smap
         
         # else: need to calculate the inverse mapping
@@ -897,27 +906,17 @@ class ParamSpace:
         smap.fill(-1) # i.e., not set yet
 
         # As .iterator does not allow iterating over default states, iterate
-        # over the multi-index of the smap, set the state vector and get the
-        # corresponding state number
+        # over the multi-index of the smap, which is equivalent to a valid
+        # state vector, and get the corresponding state number
         for midx in np.ndindex(smap.shape):
-            # Set the state vector ( == midx) of the paramspace
-            self.state_vector = midx
-
-            # Resolve the corresponding state number and store at this midx
-            smap[tuple(midx)] = self.state_no
-
-        # Reset back to default
-        self.reset()
-
-        # Make sure there are no unset values
-        if np.min(smap) < 0:
-            raise RuntimeError("Did (somehow) not visit all points during "
-                               "iteration over state space!\n state map:\n{}"
-                               "".format(smap))
+            # Resolve the corresponding state number from the multi-index
+            # (which is equivalent to a state vector) and store at this midx
+            smap[tuple(midx)] = self._calc_state_no(midx)
 
         # Convert to DataArray
-        coords = [[d.default] + list(d.values) for d in self.dims.values()]
-        smap = xr.DataArray(smap, dims=self.dims.keys(), coords=coords)
+        smap = xr.DataArray(smap,
+                            dims=self.pure_coords.keys(),
+                            coords=self.pure_coords.values())
         
         # Cache and make it read-only before returning
         log.debug("Finished creating inverse mapping. Caching it and making "
@@ -927,28 +926,32 @@ class ParamSpace:
 
         return self._smap
 
-    def get_masked_smap(self) -> np.ma.MaskedArray:
-        """Returns a masked array based on the inverse mapping, where masked
-        states are also masked in the array.
-
+    @property
+    def active_state_map(self) -> xr.DataArray:
+        """Returns a subset of the state map, where masked coordinates are
+        removed and only the active coordinates are present.
+        
         Note that this array has to be re-calculated every time, as the mask
         status of the ParamDim objects is not controlled by the ParamSpace and
         can change without notice.
+        
+        Also: the indices will no longer match the states of the dimensions!
+        Values of the DataArray should only be accessed via the coordinates!
+        
+        Returns:
+            xr.DataArray: A reduced state map which only includes active, i.e.:
+                unmasked coordinates.
         """
-        mmap = np.ma.MaskedArray(data=self.state_map.copy(), mask=True)
+        # Work on a copy of the state map
+        amap = self.state_map.copy()
 
-        # TODO could improve the below loop by checking what needs fewer
-        #      iterations: unmasking falsely masked entries or vice versa ...
-        # Unmask the unmasked values
-        for s_no, s_vec in self.iterator(with_info=('state_no', 'state_vec'),
-                                         omit_pt=True):
-            # By assigning any value, the mask is removed
-            mmap[s_vec] = s_no
-            # TODO isn't there a better way than re-assigning the state no?!
+        # Create a dict of (dimension names, indices to keep)
+        indcs = {dim: [i for i, coord in enumerate(coords)
+                       if not isinstance(coord, Masked)]
+                 for dim, coords in self.coords.items()}
 
-        # TODO should also be an xr.DataArray
-
-        return mmap
+        # Apply the selection and return
+        return amap.isel(indcs)
 
     def get_state_vector(self, *, state_no: int) -> Tuple[int]:
         """Returns the state vector that corresponds to a state number
@@ -991,12 +994,38 @@ class ParamSpace:
         elif state_no is not None:
             state_vector = self.get_state_vector(state_no=state_no)
 
-        # Can now assume that state_vector is set
-        return OrderedDict([(name, pdim.values[s-1])
+        # Can now assume that state_vector variable (not the property!) is set
+        return OrderedDict([(name, pdim.coords[s])
                             for (name, pdim), s
                             in zip(self.dims.items(), state_vector)])
 
-    
+    def _calc_state_no(self, state_vector: Tuple[int]) -> int:
+        log.debug("Calculating state number from state vector ...")
+
+        # Use the given state vector
+        log.debug("  state vector: %s", state_vector)
+
+        # Now need the full shape of the parameter space, i.e. ignoring masked
+        # values but including the default values
+        states_shape = self.states_shape
+        log.debug("  states shape: %s  (volume: %s)",
+                  states_shape, reduce(lambda x, y: x*y, states_shape))
+
+        # The lengths will now be used to calculate the multipliers, starting
+        # with 1 for the 0th pdim.
+        # For example, given lengths [10, 10,  20,    5], the corresponding
+        # multipliers are:           [ 1, 10, 100, 2000]
+        mults = [reduce(lambda x, y: x*y, states_shape[:i], 1)
+                 for i in range(self.num_dims)]
+        log.debug("  multipliers:  %s", mults)
+
+        # Now, calculate the state number
+        state_no = sum([(s * m) for s, m in zip(state_vector, mults)])
+        log.debug("  state no:     %s", state_no)
+
+        return state_no
+
+
     # Masking .................................................................
 
     def set_mask(self, name: Union[str, Tuple[str]], mask: Union[bool, Tuple[bool]], invert: bool=False) -> None:
