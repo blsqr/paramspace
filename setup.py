@@ -3,7 +3,7 @@
 from setuptools import setup
 
 # Dependency lists
-install_deps = ['numpy>=1.15', 'ruamel.yaml>=0.15.71']
+install_deps = ['numpy>=1.15', 'xarray>=0.10.9', 'ruamel.yaml>=0.15.71']
 test_deps    = ['tox>=3.1', 'pytest>=3.4', 'pytest-cov>=2.6']
 
 

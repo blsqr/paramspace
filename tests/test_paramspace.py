@@ -127,8 +127,14 @@ def test_strings(basic_psp, adv_psp, psp_with_coupled):
     for psp in [basic_psp, adv_psp, psp_with_coupled]:
         str(psp)
         repr(psp)
+
         psp.get_info_str()
-        psp._dim_names
+
+        psp._parse_dims(mode="names")
+        psp._parse_dims(mode="locs")
+        psp._parse_dims(mode="both")
+        with pytest.raises(ValueError, match="Invalid mode: foo"):
+            psp._parse_dims(mode="foo")
 
 def test_eq(adv_psp):
     """Test that __eq__ works"""
@@ -161,13 +167,76 @@ def test_item_access(psp_with_coupled):
     with pytest.raises(KeyError, match="Cannot remove item with key"):
         psp.pop("c1")
 
-def test_dim_access(basic_psp, adv_psp):
-    """Test the _dim_by_name helper"""
-    psp = basic_psp
-    get_dim = psp._dim_by_name
+def test_dim_name_creation():
+    """Asserts that creation of unique dimension names works"""
+    create_names = ParamSpace._unique_dim_names
 
-    # Get existing parameter dimensions
+    def check_names(*name_check_pdim):
+        """Create the necessary input data for the create_names function, then
+        perform it and assert equality to the expected values ...
+        """
+        kv_pairs = [(path, ParamDim(default=0, values=[1,2], name=pd_name))
+                    if pdim is not None
+                    else (path, ParamDim(default=0, values=[1,2]))
+                    for path, _, pd_name in name_check_pdim]
+        names_out = [name_out for _, name_out, _ in name_check_pdim]
+        assert names_out == [k for k, _ in create_names(kv_pairs)]
+
+    # Start with the tests
+    # Some basics
+    check_names((("foo", "bar"),        "bar",         None),
+                (("foo", "baz"),        "foo.baz",     None),
+                (("bar", "baz"),        "bar.baz",     None),
+                (("abc", "def"),        "spam",        "spam"))
+    
+    # Repeating pattern -> resolved up unto root
+    check_names((("p0",),               ".p0",          None),
+                (("d", "p0"),           ".d.p0",        None),
+                (("d", "d", "p0"),      "d.d.p0",       None),
+                (("d", "d", "d", "p0"), "p1",           "p1"))
+    
+    # Custom names
+    check_names((("p0",),               "p0",           "p0"),
+                (("d", "p0"),           "p1",           "p1"),
+                (("d", "d", "p0"),      "p2",           "p2"),
+                (("d", "d", "d", "p0"), "p3",           "p3"))
+    
+    # Custom names have priority over existing paths
+    check_names((("p0",),               ".p0",          None),
+                (("d", "p0"),           "p0",           "p0"),
+                (("d", "d", "p0"),      ".d.d.p0",      None),
+                (("d", "d", "d", "p0"), "d.d.d.p0",     None))
+    
+    # Paths cannot include '.', require a custom name
+    with pytest.raises(ValueError, match="select a custom name for"):
+        check_names((("foo.bar", "baz"),    "baz",          None),
+                    (("foo", "bar.baz"),    "bar.baz",      None))
+
+    # Path separator in custom names is not allowed
+    with pytest.raises(ValueError, match="cannot contain the hierarchy-sep"):
+        check_names((("p0",),               ".p0",          None),
+                    (("d", "p0"),           ".d.p0",        None),
+                    (("d", "d", "p0"),      "d.d.p0",       None),
+                    (("d", "d", "d", "p0"), "d.d.d.p0",     "d.p0"))
+    
+    # Colliding custom names -> ValueError
+    with pytest.raises(ValueError, match="There were duplicates among"):
+        check_names((("p0",),               ".p0",          None),
+                    (("d", "p0"),           ".d.p0",        None),
+                    (("d", "d", "p0"),      "d.d.p0",       "p1"),
+                    (("d", "d", "d", "p0"), "d.d.d.p0",     "p1"))
+
+def test_dim_access(basic_psp, adv_psp):
+    """Test the _get_dim helper"""
+    psp = basic_psp
+    get_dim = psp._get_dim
+
+    # Get existing parameter dimensions by name
     assert get_dim('p1') == psp._dict['p1']
+    assert get_dim('pp1') == psp._dict['d']['pp1']
+    assert get_dim('ppp1') == psp._dict['d']['dd']['ppp1']
+
+    # And by location
     assert get_dim(('p1',)) == psp._dict['p1']
     assert get_dim(('d', 'pp1',)) == psp._dict['d']['pp1']
     assert get_dim(('d', 'dd', 'ppp1')) == psp._dict['d']['dd']['ppp1']
@@ -178,21 +247,27 @@ def test_dim_access(basic_psp, adv_psp):
 
     # More complicated setup, e.g. with ambiguous and custom names
     psp = adv_psp
-    get_dim = psp._dim_by_name
+    get_dim = psp._get_dim
 
     # p1 is now ambiguous
-    with pytest.raises(ValueError, match="Could not unambiguously find"):
+    with pytest.raises(KeyError, match="A parameter dimension with name 'p1'"):
         get_dim('p1')
 
-    # Need to add a "/" in front
-    assert get_dim(('/', 'p1',)) == psp._dict['p1']
+    # Thus, the unique name is different
+    assert get_dim('.p1') == psp._dict['p1']
+    assert get_dim(('', 'p1',)) == psp._dict['p1']
 
-    # Also test the others, but with subsequences
-    assert get_dim(('d', 'd', 'p1')) == psp._dict['d']['d']['p1']
+    # Also test the next level
+    assert get_dim('d.p1') == psp._dict['d']['p1']
+    assert get_dim(('', 'd', 'p1')) == psp._dict['d']['p1']
 
-    # Test access via name
+    # On the third level, there are custom names
     assert get_dim('ppp1') == psp._dict['d']['d']['p1']
+    assert get_dim('ppp2') == psp._dict['d']['d']['p2']
 
+    # Access via path should still be possible ...
+    assert get_dim(('d', 'd', 'p1')) == psp._dict['d']['d']['p1']
+    assert get_dim(('d', 'd', 'p2')) == psp._dict['d']['d']['p2']
 
 def test_volume(small_psp, basic_psp, adv_psp):
     """Asserts that the volume calculation is correct"""
@@ -241,24 +316,24 @@ def test_shape(small_psp, basic_psp, adv_psp):
 
 def test_dim_order(basic_psp, adv_psp):
     """Tests whether the dimension order is correct."""
-    basic_psp_names = (# alphabetically sorted
-                       ('d', 'dd', 'ppp1',),
-                       ('d', 'dd', 'ppp2',),
-                       ('d', 'pp1',),
-                       ('d', 'pp2',),
-                       ('p1',),
-                       ('p2',))
-    for name_is, name_should in zip(basic_psp.dims, basic_psp_names):
+    basic_psp_locs = (# alphabetically sorted
+                      ('d', 'dd', 'ppp1',),
+                      ('d', 'dd', 'ppp2',),
+                      ('d', 'pp1',),
+                      ('d', 'pp2',),
+                      ('p1',),
+                      ('p2',))
+    for name_is, name_should in zip(basic_psp.dims_by_loc, basic_psp_locs):
         assert name_is == name_should
 
-    adv_psp_names = (# sorted by order parameter
-                    ('d', 'p1'),
-                    ('d', 'p2'),
-                    ('p1',),
-                    ('p2',),
-                    ('d', 'd', 'p1'),
-                    ('d', 'd', 'p2'))
-    for name_is, name_should in zip(adv_psp.dims, adv_psp_names):
+    adv_psp_locs = (# sorted by order parameter
+                   ('d', 'p1'),
+                   ('d', 'p2'),
+                   ('p1',),
+                   ('p2',),
+                   ('d', 'd', 'p1'),
+                   ('d', 'd', 'p2'))
+    for name_is, name_should in zip(adv_psp.dims_by_loc, adv_psp_locs):
         assert name_is == name_should    
 
 def test_state_no(small_psp, basic_psp, adv_psp, psp_with_coupled):
@@ -302,6 +377,7 @@ def test_state_map(small_psp, basic_psp, adv_psp):
     # With specific pspace, do more explicit tests
     psp = small_psp
     imap = psp.state_map
+    assert imap.dtype == int
     assert imap.shape == psp.states_shape
     assert imap[0,0,0] == 0
     assert np.max(imap) == reduce(lambda x, y: x*y, psp.states_shape) - 1
@@ -310,6 +386,9 @@ def test_state_map(small_psp, basic_psp, adv_psp):
     assert list(imap[:,0,0]) == [0, 1, 2]                # multiplier:  1
     assert list(imap[0,:,0]) == [0, 3, 6, 9]             # multiplier:  3
     assert list(imap[0,0,:]) == [0, 12, 24, 36, 48, 60]  # multiplier:  12
+
+    # Test the xarray features
+    # assert imap['p0'] == [0, 1, 2]  # TODO
 
 def test_mapping_funcs(small_psp):
     """Tests other mapping functions"""
@@ -324,9 +403,9 @@ def test_mapping_funcs(small_psp):
 
     # Test the get_dim_values method
     psp.state_vector = (0, 0, 0)
-    assert psp.get_dim_values() == OrderedDict([(('p0',), 0),
-                                                (('p1',), 0),
-                                                (('p2',), 0)])
+    assert psp.get_dim_values() == OrderedDict([('p0', 0),
+                                                ('p1', 0),
+                                                ('p2', 0)])
     
     assert list(psp.get_dim_values(state_no=16).values()) == [1, 1, 1]
     assert list(psp.get_dim_values(state_vector=(1,2,3)).values()) == [1, 2, 3]
@@ -520,7 +599,7 @@ def test_coupled(psp_with_coupled):
 
     def assert_coupling(src: tuple, target: tuple):
         """Asserts that the CoupledParamDim at keyseq src is coupled to the target ParamDim at keyseq target."""
-        assert psp.coupled_dims[src].target_pdim == psp.dims[target]
+        assert psp.coupled_dims_by_loc[src].target_pdim == psp.dims_by_loc[target]
 
     # Assert correct coupling
     assert_coupling(('c1',), ('a',))
