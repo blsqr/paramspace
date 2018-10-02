@@ -33,10 +33,16 @@ class Masked:
         return self._val
 
     def __str__(self) -> str:
-        return "{} (masked)".format(self.value)
+        return "<{}>".format(self.value)
 
     def __repr__(self) -> str:
-        return "<paramspace.paramdim.Masked object with masked value: {}>".format(repr(self.value))
+        return "<Masked object, value: {}>".format(repr(self.value))
+
+    def __hash__(self) -> str:
+        return hash(("paramspace.paramdim.Masked", self.value))
+
+    def __eq__(self, other) -> bool:
+        return self.value == other
 
 class MaskedValueError(ValueError):
     """Raised when trying to set the state of a ParamDim to a masked value"""
@@ -52,6 +58,9 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
     # Which additional attributes to use in __repr__
     _REPR_ATTRS = tuple()
+
+    # Whether to check for values being unique
+    _UNIQUE_VALS = True
 
     # .........................................................................
 
@@ -177,6 +186,18 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             tuple: coordinates associated with the indices of this dimension
         """
         return (self.default,) + self._vals
+
+    @property
+    def pure_coords(self) -> tuple:
+        """Returns the pure coordinates of this parameter dimension, i.e.: the
+        combined default value and the sequence of iteration values, but with
+        masked values resolved.
+        
+        Returns:
+            tuple: coordinates associated with the indices of this dimension
+        """
+        return tuple([c if not isinstance(c, Masked) else c.value
+                      for c in self.coords])
 
     @property
     def num_values(self) -> int:
@@ -350,6 +371,14 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             as_float (bool, optional): If given, makes sure that values are
                 of type float; this is needed for the numpy initializers
         """
+        def hashable(v) -> bool:
+            """Tests whether a value is hashable"""
+            try:
+                hash(v)
+            except:
+                return False
+            return True
+
         if self._vals is not None:
             # Was already set
             raise AttributeError("Values already set; cannot be set again!")
@@ -363,8 +392,24 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             t = dict(str=str, int=int, float=float, bool=bool)[as_type]
             values = [t(v) for v in values]
 
-        # Now store it as tuple attribute
-        self._vals = tuple(values)
+        # Convert it to a tuple
+        values = tuple(values)
+
+        # Make sure it is hashable
+        if not all([hashable(v) for v in values]):
+            raise ValueError("All values need be hashable, but the following "
+                             "were not: {}"
+                             "".format(", ".join([v for v in values
+                                                  if not hashable(v)])))
+
+        if self._UNIQUE_VALS and (len(set(values)) != len(values)):
+            raise ValueError("Values need to be unique, but there were "
+                             "duplicates: {}\nThis would create problems when "
+                             "creating the hashes for coordinates ..."
+                             "".format(values))
+
+        # Now store it as attribute
+        self._vals = values
 
     # YAML representation .....................................................
     # NOTE The `yaml_tag` class variable needs be set in the derived classes
@@ -583,8 +628,11 @@ class ParamDim(ParamDimBase):
         # the mask getter is accessed the next time
         self._mask_cache = None
 
-        # Now build a new values container and store as attributes
+        # Now build a new values container and store as attribute
         self._vals = tuple([set_val(m, v) for m, v in zip(mask, self.values)])
+
+        # Mask the default value, if all other values are masked
+        self._default = set_val(not all(mask), self.default)
 
     @property
     def num_masked(self) -> int:
@@ -685,6 +733,9 @@ class CoupledParamDim(ParamDimBase):
     # Define the additional attribute names that are to be added to __repr__
     _REPR_ATTRS = ('target_pdim', 'target_name',
                    'use_coupled_default', 'use_coupled_values')
+
+    # The values need not be unique here
+    _UNIQUE_VALS = False
 
     # Define the yaml tag to use
     yaml_tag = u'!coupled-pdim'
@@ -943,7 +994,6 @@ class CoupledParamDim(ParamDimBase):
         if self.state is 0:
             return self.default
         return self.values[self.state - 1]
-
 
     @property
     def mask(self) -> Union[bool, Tuple[bool]]:
