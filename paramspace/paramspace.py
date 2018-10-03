@@ -429,6 +429,14 @@ class ParamSpace:
 
     # TODO coupled coordinates?
 
+    @property
+    def current_coords(self) -> OrderedDict:
+        """Returns the current coordinates of all parameter dimensions.
+
+        This is a shortcut for the get_dim_values method without arguments.
+        """
+        return self.get_dim_values()
+
     # Shape, volume, states . . . . . . . . . . . . . . . . . . . . . . . . . .
 
     @property
@@ -751,7 +759,8 @@ class ParamSpace:
         Args:
             with_info (Union[str, Tuple[str]], optional): Can pass strings
                 here that are to be returned as the second value. Possible
-                values are: 'state_no', 'state_vector', 'state_no_str'.
+                values are: 'state_no', 'state_vector', 'state_no_str', and
+                'current_coords'.
                 To get multiple, add them to a tuple.
             omit_pt (bool, optional): If true, the current value is omitted and
                 only the information is returned.
@@ -867,6 +876,9 @@ class ParamSpace:
 
             elif info in ['state_vector', 'state_vec']:
                 info_tup += (self.state_vector,)
+            
+            elif info in ['current_coords', 'coords']:
+                info_tup += (self.current_coords,)
 
             else:
                 raise ValueError("No such information '{}' available. "

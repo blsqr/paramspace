@@ -44,6 +44,7 @@ class Masked:
     def __eq__(self, other) -> bool:
         return self.value == other
 
+
 class MaskedValueError(ValueError):
     """Raised when trying to set the state of a ParamDim to a masked value"""
     pass

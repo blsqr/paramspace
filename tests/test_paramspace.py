@@ -340,6 +340,21 @@ def test_shape(small_psp, basic_psp, adv_psp):
     assert basic_psp.max_state_no == 4095
     assert adv_psp.max_state_no == 4095
 
+def test_coords(small_psp):
+    """Tests coordinate-related properts"""
+    psp = small_psp
+
+    # Retrieve and check coordinate properties against reference arrays.
+    # NOTE That Masked.__eq__ compares its _value_ to other, thus it is not
+    #      necessary to include Masked objects here; is checked below
+    assert psp.coords == dict(p0=[0,1,2], p1=[0,1,2,3], p2=[0,1,2,3,4,5])
+    assert psp.pure_coords == dict(p0=[0,1,2], p1=[0,1,2,3], p2=[0,1,2,3,4,5])
+    assert psp.current_coords == dict(p0=0, p1=0, p2=0)
+
+    # Check the Masked state. Outside of iteration, index 0 should be Masked
+    assert all(isinstance(v[0], Masked) for v in psp.coords.values())
+    assert all(isinstance(v, Masked) for v in psp.current_coords.values())
+
 def test_dim_order(basic_psp, adv_psp):
     """Tests whether the dimension order is correct."""
     basic_psp_locs = (# alphabetically sorted
@@ -526,7 +541,7 @@ def test_basic_iteration(small_psp, adv_psp):
                  (small_psp.volume, adv_psp.volume))
 
     # Also test all information tuples and the dry run
-    info = ("state_no", "state_vec", "state_no_str")
+    info = ("state_no", "state_vec", "state_no_str", "current_coords")
     check_counts((small_psp.iterator(with_info=info),),
                  (small_psp.volume,))
     check_counts((small_psp.iterator(with_info="state_no"),),
