@@ -10,13 +10,17 @@
       - Accessing a parameter dimension by name
       - Calculating the state mapping; indices now relate directly and unambiguously to the state vector of the parameter space.
       - Accessing single states via number or vector
-- #12: Test coverage is now up to 99% and the existing tests have been extended in order to more explicitly test the behaviour of the package. 
+- !18 introduced `xarray.DataArray` functionality for the `ParamSpace`. With this, the state mapping supports not only labelled dimensions but also coordinates. With it, a number of interface changes came about:
+   - When initializing `ParamSpace`, each `ParamDim` in it is assigned a unique name, generated from its path. This is used for internal identification instead of the path. (The path is still accessible as fallback, though ...)
+   - There are some restrictions on the values a `ParamDim` can take: they now have to be unique and hashable. This is necessary in order to use them as coordinates for the state map.
+   - The `yaml` module now supports `!slice!` and `!range` tags.
 - #13: Migrate to the better-maintained [`ruamel.yaml`](https://pypi.org/project/ruamel.yaml/) and implement representers for all implemented classes.
    - This leads to a much nicer and future-proof way of storing the objects while remaining human-readable.
    - All this is managed in the new `paramspace.yaml` module, which also supplies the `ruamel.yaml.YAML` object along which the new API revolves.
    - _For packages updating to this version,_ it is recommended to _not_ add custom constructors that trigger on a different tag; this might lead to confusion because the representer can only create mappings with the tag specified in the `paramspace` implementation.
+- #12: Test coverage is now up to 99% and the existing tests have been extended in order to more explicitly test the behaviour of the package. 
 - #19: Update the README
-- #20: Add a new argument, `as_type`, to `ParamDim` to allow a type cast after the values have been parsed
+- #20: Add a new argument, `as_type`, to `ParamDim.__init__` to allow a type cast after the values have been parsed.
 - #21: Refactor `ParamSpace.all_points` to `ParamSpace.iterator`
 
 ## v1.1.1

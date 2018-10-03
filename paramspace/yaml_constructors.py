@@ -17,8 +17,7 @@ from paramspace import ParamSpace, ParamDim, CoupledParamDim
 log = logging.getLogger(__name__)
 
 
-# -----------------------------------------------------------------------------
-# The functions to be imported by the yaml module
+# Top-level functions for the yaml-module to import ---------------------------
 
 def pspace(loader, node) -> ParamSpace:
     """yaml constructor for creating a ParamSpace object from a mapping.
@@ -69,7 +68,8 @@ def coupled_pdim_default(loader, node) -> CoupledParamDim:
     log.debug("Returning default value of constructed CoupledParamDim.")
     return cpdim.default
 
-# -----------------------------------------------------------------------------
+
+# The actual constructor functions --------------------------------------------
 
 def _pspace_constructor(loader, node, sort_if_mapping: bool=True) -> ParamSpace:
     """constructor for instantiating ParamSpace from a mapping or a sequence"""
@@ -134,6 +134,44 @@ def _coupled_pdim_constructor(loader, node) -> ParamDim:
                         "with value:\n{}".format(type(node), node))
 
     return cpdim
+
+
+# Some other constructors -----------------------------------------------------
+
+# ...for constructing slice objects
+def _slice_constructor(loader, node):
+    """pyyaml constructor for slices"""
+    log.debug("Encountered !slice tag.")
+
+    # get slice arguments either from a scalar or from a sequence
+    if isinstance(node, ruamel.yaml.nodes.SequenceNode):
+        args = loader.construct_sequence(node, deep=True)
+    else:
+        args = [loader.construct_yaml_int(node)]
+
+    log.debug("  args:  %s", args)
+    slc = slice(*args)
+    log.debug("  slice object created: %s", slc)
+
+    return slc
+
+def _range_constructor(loader, node):
+    """pyyaml constructor for range"""
+    log.debug("Encountered !range tag.")
+
+    # get range arguments either from a scalar or from a sequence
+    if isinstance(node, ruamel.yaml.nodes.SequenceNode):
+        args = loader.construct_sequence(node, deep=True)
+    else:
+        args = [loader.construct_yaml_int(node)]
+
+    log.debug("  args:  %s", args)
+    rg = range(*args)
+    log.debug("  range object created: %s", rg)
+
+    return rg
+
+
 
 # Helpers ---------------------------------------------------------------------
 

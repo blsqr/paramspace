@@ -18,20 +18,20 @@ for params in pspace:
 The `params` object is then a dictionary that holds the configuration of the simulation at one specific point in parameter space.  
 In other words: each point in this parameter space refers to a specific state of the given dictionary of simulation parameters.
 
-Further features of the `paramspace` package:
+#### Further features of the `paramspace` package
 * With the `default` argument to `ParamDim`, it is possible to define a default position in parameter space that is used when not iterating over the parameter space
 * The `order` argument allows ordering the `ParamDim` objects, such that it can be decided which dimensions are iterated over most frequently.
 * `ParamDim` values can be created from `range`, `np.linspace`, and `np.logspace`
 * With `ParamDim.mask` and `ParamSpace.set_mask`, a subspace of a parameter space can be selected for iteration.
-* `CoupledParamDim` allows coupling one parameter in an iteration to another
-* The `paramspace.yaml` object (based on `ruamel.yaml.YAML`) supplies the constructors and representers necessary to load or dump `paramspace` objects in YAML format. Defining parameter spaces via this interface is much more convenient than it is directly in Python.
+* Via `ParamSpace.state_map`, an [`xarray.DataArray`](http://xarray.pydata.org/en/stable/data-structures.html#dataarray) with labelled dimensions and coordinates is returned.
+* `CoupledParamDim` objects allow coupling one parameter in an iteration to another parameter dimension.
+* The `paramspace.yaml` object (based on [`ruamel.yaml.YAML`](https://yaml.readthedocs.io/en/latest/)) supplies the constructors and representers necessary to load or dump `paramspace` objects in YAML format. Defining parameter spaces via this interface is much more convenient than it is directly in Python.
 
-The rest of this README contains the following:
-* Short [installation instructions](#install)
-* A few usage examples are given [below](#usage). Note that a full documentation does not yet exist, but the docstrings are quite informative.
-Thus, please refer to them for more information on how the `paramspace` classes and functions can be used.
-* For an overview over the changes, see the [changelog](CHANGELOG.md).
-* 
+#### Contents of this README and further reading
+* Short [__installation instructions__](#install)
+* A few __usage examples__ are given [below](#usage). Note that a full documentation does not yet exist... but the docstrings are quite informative :)
+* For an overview over the __changes,__ see the [changelog](CHANGELOG.md).
+* A list of [__known issues__](#known-issues) with some classes
 
 
 ## Install
@@ -134,4 +134,7 @@ for params in pspace:
 
 
 ## Known issues
-* `CoupledParamDim` objects cannot currently be iterated on their own.
+* `CoupledParamDim` objects might be implemented a bit inconsistently:
+   * They behave in some cases not equivalent to regular `ParamDim` objects, e.g., they cannot be iterated over on their own (in fact, this will lead to an infinite loop).
+   * Their `mask` behaviour might be unexpected.
+   * Within a `ParamSpace`, they are mostly hidden from the user. The iteration over parameter space works reliably, but they are, e.g., not accessible within the state maps.

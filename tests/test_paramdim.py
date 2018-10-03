@@ -17,11 +17,11 @@ def various_pdims():
     pds = {}
 
     pds['one']       = ParamDim(default=0, values=[1,2,3])
-    pds['two']       = ParamDim(default=0, values=[1., 2, 'three', [1,0,0]])
+    pds['two']       = ParamDim(default=0, values=[1., 2, 'three', np.inf])
     pds['range']     = ParamDim(default=0, range=[1, 4, 1])
     pds['linspace']  = ParamDim(default=0, linspace=[1, 3, 3, True])
     pds['logspace']  = ParamDim(default=0, logspace=[-1, 1, 11])
-    pds['typed']     = ParamDim(default=0, range=[3], as_type='bool')
+    pds['typed']     = ParamDim(default=0, range=[3], as_type='float')
     pds['named']     = ParamDim(default=0, values=[1,2,3], name="named_span")
     pds['with_order']= ParamDim(default=0, values=[1,2,3], order=42)
 
@@ -64,10 +64,17 @@ def test_init(various_pdims):
     assert all(vpd['logspace'].values == np.logspace(-1, 1, 11))
 
     # Test the as_type argument
-    assert vpd['typed'].values == (False, True, True)
+    assert isinstance(vpd['typed'].values[0], float)
     with pytest.raises(KeyError, match="some_type"):
         ParamDim(default=0, range=[10], as_type="some_type")
 
+    # Assert that values are unique
+    with pytest.raises(ValueError, match="need to be unique, but there were"):
+        ParamDim(default=0, values=[1,1,2])
+
+    # And hashable
+    with pytest.raises(ValueError, match="All values need be hashable"):
+        ParamDim(default=0, values=[1,1,[1,2,3]])
 
 def test_properties(various_pdims):
     """Test all properties and whether they are write-protected."""
@@ -110,6 +117,9 @@ def test_properties(various_pdims):
         if isinstance(pd, ParamDim):
             # Can be a target of a coupled ParamDim
             pd.target_of
+
+    # Check that the default value is masked:
+    assert isinstance(vpd['one'].default, Masked)
 
 def test_iteration(various_pdims):
     """Tests whether the iteration over the span's state works."""
@@ -173,8 +183,8 @@ def test_mask():
     assert all([isinstance(v, Masked) for v in pd.values])
 
     # Check the string representation of masked values
-    assert str(pd.values[0]).find("(masked)") > -1
-    assert str(pd).find("with masked value") > -1
+    assert str(pd.values[0]).find("<1>") > -1
+    assert str(pd).find("Masked object, value:") > -1
 
     # Now to a more complex mask
     pd.mask = (True, False, True, False)
@@ -304,7 +314,10 @@ def test_cpd_init():
     # Test it has no state set
     cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4])
     assert cpd.state == 0
-    assert cpd.current_value is 0 # that of the coupled ParamDim!
+    assert cpd.current_value == 0 # that of the coupled ParamDim!
+
+    # Check that it can access the target's mask
+    assert cpd.mask is cpd.target_pdim.mask
 
 def test_cpd_iteration():
     """Tests iteration of CoupledParamDim"""

@@ -9,6 +9,7 @@ import numpy.ma
 
 from paramspace import ParamSpace, ParamDim, CoupledParamDim
 from paramspace.yaml import *
+from paramspace.paramdim import Masked
 
 # Fixtures --------------------------------------------------------------------
 
@@ -104,16 +105,22 @@ def test_init(basic_psp, adv_psp):
         with pytest.warns(UserWarning, match="Got unusual type"):
             ParamSpace(lambda x: None)
 
-def test_default(basic_psp, adv_psp):
+def test_default(small_psp, adv_psp):
     """Tests whether the default values can be retrieved."""
-    d1 = basic_psp.default
+    d1 = small_psp.default
+
+    # Test for correct values
+    assert d1['p0'] == 0
     assert d1['p1'] == 0
     assert d1['p2'] == 0
-    assert d1['d']['pp1'] == 0
-    assert d1['d']['pp2'] == 0
-    assert d1['d']['dd']['ppp1'] == 0
-    assert d1['d']['dd']['ppp2'] == 0
 
+    # ...and type
+    assert not isinstance(d1['p0'], Masked)
+    assert not isinstance(d1['p1'], Masked)
+    assert not isinstance(d1['p2'], Masked)
+
+
+    # Same for the deeper array
     d2 = adv_psp.default
     assert d2['p1'] == 0
     assert d2['p2'] == 0
@@ -121,14 +128,28 @@ def test_default(basic_psp, adv_psp):
     assert d2['d']['p2'] == 0
     assert d2['d']['d']['p1'] == 0
     assert d2['d']['d']['p2'] == 0
+    
+    # ...and type
+    assert not isinstance(d2['p1'], Masked)
+    assert not isinstance(d2['p2'], Masked)
+    assert not isinstance(d2['d']['p1'], Masked)
+    assert not isinstance(d2['d']['p2'], Masked)
+    assert not isinstance(d2['d']['d']['p1'], Masked)
+    assert not isinstance(d2['d']['d']['p2'], Masked)
 
 def test_strings(basic_psp, adv_psp, psp_with_coupled):
     """Test whether the string generation works correctly."""
     for psp in [basic_psp, adv_psp, psp_with_coupled]:
         str(psp)
         repr(psp)
+
         psp.get_info_str()
-        psp._dim_names
+
+        psp._parse_dims(mode="names")
+        psp._parse_dims(mode="locs")
+        psp._parse_dims(mode="both")
+        with pytest.raises(ValueError, match="Invalid mode: foo"):
+            psp._parse_dims(mode="foo")
 
 def test_eq(adv_psp):
     """Test that __eq__ works"""
@@ -161,38 +182,118 @@ def test_item_access(psp_with_coupled):
     with pytest.raises(KeyError, match="Cannot remove item with key"):
         psp.pop("c1")
 
-def test_dim_access(basic_psp, adv_psp):
-    """Test the _dim_by_name helper"""
-    psp = basic_psp
-    get_dim = psp._dim_by_name
+def test_dim_name_creation():
+    """Asserts that creation of unique dimension names works"""
+    create_names = ParamSpace._unique_dim_names
 
-    # Get existing parameter dimensions
+    def check_names(*name_check_pdim):
+        """Create the necessary input data for the create_names function, then
+        perform it and assert equality to the expected values ...
+        """
+        kv_pairs = [(path, ParamDim(default=0, values=[1,2], name=pd_name))
+                    if pdim is not None
+                    else (path, ParamDim(default=0, values=[1,2]))
+                    for path, _, pd_name in name_check_pdim]
+        names_out = [name_out for _, name_out, _ in name_check_pdim]
+        assert names_out == [k for k, _ in create_names(kv_pairs)]
+
+    # Start with the tests
+    # Some basics
+    check_names((("foo", "bar"),        "bar",         None),
+                (("foo", "baz"),        "foo.baz",     None),
+                (("bar", "baz"),        "bar.baz",     None),
+                (("abc", "def"),        "spam",        "spam"))
+    
+    # Repeating pattern -> resolved up unto root
+    check_names((("p0",),               ".p0",          None),
+                (("d", "p0"),           ".d.p0",        None),
+                (("d", "d", "p0"),      "d.d.p0",       None),
+                (("d", "d", "d", "p0"), "p1",           "p1"))
+    
+    # Custom names
+    check_names((("p0",),               "p0",           "p0"),
+                (("d", "p0"),           "p1",           "p1"),
+                (("d", "d", "p0"),      "p2",           "p2"),
+                (("d", "d", "d", "p0"), "p3",           "p3"))
+    
+    # Custom names have priority over existing paths
+    check_names((("p0",),               ".p0",          None),
+                (("d", "p0"),           "p0",           "p0"),
+                (("d", "d", "p0"),      ".d.d.p0",      None),
+                (("d", "d", "d", "p0"), "d.d.d.p0",     None))
+    
+    # Paths cannot include '.', require a custom name
+    with pytest.raises(ValueError, match="select a custom name for"):
+        check_names((("foo.bar", "baz"),    "baz",          None),
+                    (("foo", "bar.baz"),    "bar.baz",      None))
+
+    # Path separator in custom names is not allowed
+    with pytest.raises(ValueError, match="cannot contain the hierarchy-sep"):
+        check_names((("p0",),               ".p0",          None),
+                    (("d", "p0"),           ".d.p0",        None),
+                    (("d", "d", "p0"),      "d.d.p0",       None),
+                    (("d", "d", "d", "p0"), "d.d.d.p0",     "d.p0"))
+    
+    # Colliding custom names -> ValueError
+    with pytest.raises(ValueError, match="There were duplicates among"):
+        check_names((("p0",),               ".p0",          None),
+                    (("d", "p0"),           ".d.p0",        None),
+                    (("d", "d", "p0"),      "d.d.p0",       "p1"),
+                    (("d", "d", "d", "p0"), "d.d.d.p0",     "p1"))
+    
+    # Pathological case where no unique names can be found; should abort
+    with pytest.raises(ValueError, match="Could not automatically find"):
+        check_names((("d", "p0"),           ".d.p0",        None),
+                    (("d", "p0"),           ".d.p0",        None))
+
+def test_dim_access(basic_psp, adv_psp):
+    """Test the _get_dim helper"""
+    psp = basic_psp
+    get_dim = psp._get_dim
+
+    # Get existing parameter dimensions by name
     assert get_dim('p1') == psp._dict['p1']
+    assert get_dim('pp1') == psp._dict['d']['pp1']
+    assert get_dim('ppp1') == psp._dict['d']['dd']['ppp1']
+
+    # And by location
     assert get_dim(('p1',)) == psp._dict['p1']
     assert get_dim(('d', 'pp1',)) == psp._dict['d']['pp1']
     assert get_dim(('d', 'dd', 'ppp1')) == psp._dict['d']['dd']['ppp1']
 
-    # Non-existant dim should fail
+    # Non-existant name or location should fail
     with pytest.raises(KeyError, match="A parameter dimension with name"):
         get_dim('foo')
 
+    with pytest.raises(KeyError, match="A parameter dimension matching locat"):
+        get_dim(('foo',))
+
     # More complicated setup, e.g. with ambiguous and custom names
     psp = adv_psp
-    get_dim = psp._dim_by_name
+    get_dim = psp._get_dim
 
     # p1 is now ambiguous
-    with pytest.raises(ValueError, match="Could not unambiguously find"):
+    with pytest.raises(KeyError, match="A parameter dimension with name 'p1'"):
         get_dim('p1')
+    
+    with pytest.raises(ValueError, match="Could not unambiguously find a"):
+        get_dim(('p1',))
 
-    # Need to add a "/" in front
-    assert get_dim(('/', 'p1',)) == psp._dict['p1']
+    # Thus, the unique name is different
+    assert get_dim('.p1') == psp._dict['p1']
+    assert get_dim(('', 'p1',)) == psp._dict['p1']
 
-    # Also test the others, but with subsequences
-    assert get_dim(('d', 'd', 'p1')) == psp._dict['d']['d']['p1']
+    # Also test the next level
+    assert get_dim('d.p1') == psp._dict['d']['p1']
+    assert get_dim(('', 'd', 'p1')) == psp._dict['d']['p1']
 
-    # Test access via name
+    # On the third level, there are custom names
     assert get_dim('ppp1') == psp._dict['d']['d']['p1']
+    assert get_dim('ppp2') == psp._dict['d']['d']['p2']
 
+    # Access via path should still be possible ...
+    assert get_dim(('d', 'd', 'p1')) == psp._dict['d']['d']['p1']
+    assert get_dim(('d', 'd', 'p2')) == psp._dict['d']['d']['p2']
 
 def test_volume(small_psp, basic_psp, adv_psp):
     """Asserts that the volume calculation is correct"""
@@ -239,26 +340,41 @@ def test_shape(small_psp, basic_psp, adv_psp):
     assert basic_psp.max_state_no == 4095
     assert adv_psp.max_state_no == 4095
 
+def test_coords(small_psp):
+    """Tests coordinate-related properts"""
+    psp = small_psp
+
+    # Retrieve and check coordinate properties against reference arrays.
+    # NOTE That Masked.__eq__ compares its _value_ to other, thus it is not
+    #      necessary to include Masked objects here; is checked below
+    assert psp.coords == dict(p0=[0,1,2], p1=[0,1,2,3], p2=[0,1,2,3,4,5])
+    assert psp.pure_coords == dict(p0=[0,1,2], p1=[0,1,2,3], p2=[0,1,2,3,4,5])
+    assert psp.current_coords == dict(p0=0, p1=0, p2=0)
+
+    # Check the Masked state. Outside of iteration, index 0 should be Masked
+    assert all(isinstance(v[0], Masked) for v in psp.coords.values())
+    assert all(isinstance(v, Masked) for v in psp.current_coords.values())
+
 def test_dim_order(basic_psp, adv_psp):
     """Tests whether the dimension order is correct."""
-    basic_psp_names = (# alphabetically sorted
-                       ('d', 'dd', 'ppp1',),
-                       ('d', 'dd', 'ppp2',),
-                       ('d', 'pp1',),
-                       ('d', 'pp2',),
-                       ('p1',),
-                       ('p2',))
-    for name_is, name_should in zip(basic_psp.dims, basic_psp_names):
+    basic_psp_locs = (# alphabetically sorted
+                      ('d', 'dd', 'ppp1',),
+                      ('d', 'dd', 'ppp2',),
+                      ('d', 'pp1',),
+                      ('d', 'pp2',),
+                      ('p1',),
+                      ('p2',))
+    for name_is, name_should in zip(basic_psp.dims_by_loc, basic_psp_locs):
         assert name_is == name_should
 
-    adv_psp_names = (# sorted by order parameter
-                    ('d', 'p1'),
-                    ('d', 'p2'),
-                    ('p1',),
-                    ('p2',),
-                    ('d', 'd', 'p1'),
-                    ('d', 'd', 'p2'))
-    for name_is, name_should in zip(adv_psp.dims, adv_psp_names):
+    adv_psp_locs = (# sorted by order parameter
+                   ('d', 'p1'),
+                   ('d', 'p2'),
+                   ('p1',),
+                   ('p2',),
+                   ('d', 'd', 'p1'),
+                   ('d', 'd', 'p2'))
+    for name_is, name_should in zip(adv_psp.dims_by_loc, adv_psp_locs):
         assert name_is == name_should    
 
 def test_state_no(small_psp, basic_psp, adv_psp, psp_with_coupled):
@@ -277,14 +393,19 @@ def test_state_no(small_psp, basic_psp, adv_psp, psp_with_coupled):
                                              psp.states_shape) - 1
         assert len(nos) == psp.volume
 
-        # All ok
-        return True
+        # Try setting the state number
+        psp.state_no = 1
+        assert psp.state_no == 1
+
+        # Reset
+        psp.reset()
+        assert psp.state_no == 0
 
     # Call the test function on the given parameter spaces
-    assert test_state_nos(small_psp)
-    assert test_state_nos(basic_psp)
-    assert test_state_nos(adv_psp)
-    assert test_state_nos(psp_with_coupled)
+    test_state_nos(small_psp)
+    test_state_nos(basic_psp)
+    test_state_nos(adv_psp)
+    test_state_nos(psp_with_coupled)
     # TODO add a masked one
 
 def test_state_map(small_psp, basic_psp, adv_psp):
@@ -302,6 +423,9 @@ def test_state_map(small_psp, basic_psp, adv_psp):
     # With specific pspace, do more explicit tests
     psp = small_psp
     imap = psp.state_map
+    print("Got state map:\n", imap)
+
+    assert imap.dtype == int
     assert imap.shape == psp.states_shape
     assert imap[0,0,0] == 0
     assert np.max(imap) == reduce(lambda x, y: x*y, psp.states_shape) - 1
@@ -310,6 +434,23 @@ def test_state_map(small_psp, basic_psp, adv_psp):
     assert list(imap[:,0,0]) == [0, 1, 2]                # multiplier:  1
     assert list(imap[0,:,0]) == [0, 3, 6, 9]             # multiplier:  3
     assert list(imap[0,0,:]) == [0, 12, 24, 36, 48, 60]  # multiplier:  12
+
+    # Test the xarray features
+    # Make sure all coordinate values are unmasked
+    print("coords:", [v for v in imap.coords["p0"].to_series()])
+    assert all([not isinstance(v, Masked)
+                for v in imap.coords["p0"].to_series()])
+    assert all([not isinstance(v, Masked)
+                for v in imap.coords["p1"].to_series()])
+    assert all([not isinstance(v, Masked)
+                for v in imap.coords["p2"].to_series()])
+
+
+    # Check the coordinate dtype is not object
+    print("coords dtypes: ", {k: c.dtype for k, c in imap.coords.items()})
+    assert imap.coords["p0"].dtype != "object"
+    assert imap.coords["p1"].dtype != "object"
+    assert imap.coords["p2"].dtype != "object"
 
 def test_mapping_funcs(small_psp):
     """Tests other mapping functions"""
@@ -324,9 +465,9 @@ def test_mapping_funcs(small_psp):
 
     # Test the get_dim_values method
     psp.state_vector = (0, 0, 0)
-    assert psp.get_dim_values() == OrderedDict([(('p0',), 0),
-                                                (('p1',), 0),
-                                                (('p2',), 0)])
+    assert psp.get_dim_values() == OrderedDict([('p0', 0),
+                                                ('p1', 0),
+                                                ('p2', 0)])
     
     assert list(psp.get_dim_values(state_no=16).values()) == [1, 1, 1]
     assert list(psp.get_dim_values(state_vector=(1,2,3)).values()) == [1, 2, 3]
@@ -335,7 +476,7 @@ def test_mapping_funcs(small_psp):
     with pytest.raises(TypeError, match="Expected only one of the arguments"):
         psp.get_dim_values(state_no=123, state_vector=(1,2,3))
 
-def test_basic_iteration(small_psp, basic_psp, adv_psp):
+def test_basic_iteration(small_psp, adv_psp):
     """Tests whether the iteration goes through all points"""
     # Test on the __iter__ and __next__ level
     psp = small_psp
@@ -392,16 +533,18 @@ def test_basic_iteration(small_psp, basic_psp, adv_psp):
             assert cntrs[it_no] == count
 
     # For the explicit call
-    check_counts((basic_psp.iterator(), adv_psp.iterator()),
-                 (basic_psp.volume, adv_psp.volume))
+    check_counts((small_psp.iterator(), adv_psp.iterator()),
+                 (small_psp.volume, adv_psp.volume))
 
     # For the call via __iter__ and __next__
-    check_counts((basic_psp, adv_psp),
-                 (basic_psp.volume, adv_psp.volume))
+    check_counts((small_psp, adv_psp),
+                 (small_psp.volume, adv_psp.volume))
 
     # Also test all information tuples and the dry run
-    info = ("state_no", "state_vec", "state_no_str")
+    info = ("state_no", "state_vec", "state_no_str", "current_coords")
     check_counts((small_psp.iterator(with_info=info),),
+                 (small_psp.volume,))
+    check_counts((small_psp.iterator(with_info="state_no"),),
                  (small_psp.volume,))
 
     # ... and whether invalid values lead to failure
@@ -498,18 +641,50 @@ def test_masked_iteration(small_psp):
     assert (9 + 2) in iter_res
     assert iter_res[11] == dict(p0=2, p1=3, p2=0)
 
-def test_masked_mapping_funcs(small_psp):
-    """Test the mapping methods for masked parameter spaces"""
+def test_active_state_map(small_psp):
+    """Test the state map method for masked parameter spaces"""
     psp = small_psp
 
-    # Compare the default array to a reference masked array
-    ref_ma = np.ma.MaskedArray(data=small_psp.state_map)
-    ref_ma[:,0,0] = np.ma.masked
-    ref_ma[0,:,0] = np.ma.masked
-    ref_ma[0,0,:] = np.ma.masked
-    mmap = psp.get_masked_smap()
-    print("masked state map:\n", mmap)
-    assert np.array_equal(mmap, ref_ma)
+    # Get the unmasked version
+    amap = psp.active_state_map
+    print("\nactive state map (of fully unmasked pspace):\n", amap)
+    
+    # ... which should be of same shape as the parameter space
+    assert amap.shape == psp.shape
+
+    # Assert that it does not have any Masked objects left on the dimensions
+    print("coords:", [v for v in amap.coords["p0"].to_series()])
+    assert all([not isinstance(v, Masked)
+                for v in amap.coords["p0"].to_series()])
+    assert all([not isinstance(v, Masked)
+                for v in amap.coords["p1"].to_series()])
+    assert all([not isinstance(v, Masked)
+                for v in amap.coords["p2"].to_series()])
+
+
+    # Now set a mask and check again
+    psp.set_mask('p1', (0, 1, 0))
+    
+    amap = psp.active_state_map
+    print("\nactive state map (of partly masked pspace):\n", amap)
+    assert amap.shape == psp.shape
+
+    # Check the coordinate dtype is not object
+    print("coords dtypes: ", {k: c.dtype for k, c in amap.coords.items()})
+    assert amap.coords["p0"].dtype != "object"
+    assert amap.coords["p1"].dtype != "object"
+    assert amap.coords["p2"].dtype != "object"
+
+
+    # Now mask fully, which should still work
+    psp.set_mask('p0', True)
+    psp.set_mask('p1', True)
+    psp.set_mask('p2', True)
+
+    amap = psp.active_state_map
+    print("\nactive state map (of fully masked pspace):\n", amap)
+    assert amap.shape == psp.shape
+
 
 # Complicated content ---------------------------------------------------------
 
@@ -520,7 +695,7 @@ def test_coupled(psp_with_coupled):
 
     def assert_coupling(src: tuple, target: tuple):
         """Asserts that the CoupledParamDim at keyseq src is coupled to the target ParamDim at keyseq target."""
-        assert psp.coupled_dims[src].target_pdim == psp.dims[target]
+        assert psp.coupled_dims_by_loc[src].target_pdim == psp.dims_by_loc[target]
 
     # Assert correct coupling
     assert_coupling(('c1',), ('a',))
