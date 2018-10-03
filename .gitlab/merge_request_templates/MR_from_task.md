@@ -8,13 +8,12 @@ This MR ...
 - [ ] Tests added or adjusted
 - [ ] Pipeline passes
 - [ ] Changelog entry added
-- [ ] Approved by @... <!-- mention reviewers here -->
+- [ ] Version number incremented
+<!-- NOTE Keep in mind: semantic versioning! -->
+<!-- Also, don't forget to adjust the badge after the merge. -->
 
-
-#### Anything to double-check?
-<!-- Should the reviewer(s) look at some parts of the implementation especially thoroughly? If yes, mention them here. -->
 
 
 ### Related issues
-Closes #...
+Closes 
 <!-- IMPORTANT Mention the corresponding issue here to use auto-closing -->
