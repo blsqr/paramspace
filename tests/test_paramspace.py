@@ -431,9 +431,9 @@ def test_state_map(small_psp, basic_psp, adv_psp):
     assert np.max(imap) == reduce(lambda x, y: x*y, psp.states_shape) - 1
 
     # Test that the slices of the different dimensions are correct
-    assert list(imap[:,0,0]) == [0, 1, 2]                # multiplier:  1
-    assert list(imap[0,:,0]) == [0, 3, 6, 9]             # multiplier:  3
-    assert list(imap[0,0,:]) == [0, 12, 24, 36, 48, 60]  # multiplier:  12
+    assert list(imap[0,0,:]) == [0, 1, 2, 3, 4, 5]  # multiplier:  1
+    assert list(imap[0,:,0]) == [0, 6, 12, 18]      # multiplier:  6
+    assert list(imap[:,0,0]) == [0, 24, 48]         # multiplier:  24
 
     # Test the xarray features
     # Make sure all coordinate values are unmasked
@@ -458,7 +458,8 @@ def test_mapping_funcs(small_psp):
 
     # Test the get_state_vector method
     assert psp.get_state_vector(state_no=0) == (0, 0, 0)
-    assert psp.get_state_vector(state_no=16) == (1, 1, 1)
+    assert psp.get_state_vector(state_no=16) == (0, 2, 4)
+    assert psp.get_state_vector(state_no=31) == (1, 1, 1)
 
     with pytest.raises(ValueError, match="Did not find state number -1"):
         psp.get_state_vector(state_no=-1)
@@ -469,7 +470,7 @@ def test_mapping_funcs(small_psp):
                                                 ('p1', 0),
                                                 ('p2', 0)])
     
-    assert list(psp.get_dim_values(state_no=16).values()) == [1, 1, 1]
+    assert list(psp.get_dim_values(state_no=31).values()) == [1, 1, 1]
     assert list(psp.get_dim_values(state_vector=(1,2,3)).values()) == [1, 2, 3]
 
     # Should not work for both arguments given
@@ -483,19 +484,21 @@ def test_basic_iteration(small_psp, adv_psp):
     it = psp.iterator()  # is a generator now
     assert it.__next__() == dict(p0=1, p1=1, p2=1)
     assert psp.state_vector == (1, 1, 1)
-    assert psp.state_no == 16 # == 1 + 3 + 12  # 16
+    assert psp.state_no == 31 # == 24 + 6 + 1
 
-    assert it.__next__() == dict(p0=2, p1=1, p2=1)
-    assert psp.state_vector == (2, 1, 1)
-    assert psp.state_no == 16 + 1
+    assert it.__next__() == dict(p0=1, p1=1, p2=2)
+    assert psp.state_vector == (1, 1, 2)
+    assert psp.state_no == 31 + 1
 
+    assert it.__next__() == dict(p0=1, p1=1, p2=3)
+    assert psp.state_vector == (1, 1, 3)
+    assert psp.state_no == 31 + 2
+
+    assert it.__next__() == dict(p0=1, p1=1, p2=4)
+    assert it.__next__() == dict(p0=1, p1=1, p2=5)
     assert it.__next__() == dict(p0=1, p1=2, p2=1)
     assert psp.state_vector == (1, 2, 1)
-    assert psp.state_no == 16 + 3
-
-    assert it.__next__() == dict(p0=2, p1=2, p2=1)
-    assert psp.state_vector == (2, 2, 1)
-    assert psp.state_no == 16 + 3 + 1
+    assert psp.state_no == 31 + 6
     
     # ... and so on
     psp.reset()
@@ -521,7 +524,7 @@ def test_basic_iteration(small_psp, adv_psp):
     # Check the dry run
     psp.reset()
     snos = list([s for s in psp.iterator(with_info='state_no',omit_pt=True)])
-    assert snos[:4] == [16, 17, 19, 20]
+    assert snos[:4] == [31, 32, 33, 34]
     
     # Check that the counts match using a helper function . . . . . . . . . . .
     def check_counts(iters, counts):
@@ -626,8 +629,8 @@ def test_masked_iteration(small_psp):
                 for d, state_no in psp.iterator(with_info='state_no')}
     print("p0 mask (True, False): ", iter_res)
     assert len(iter_res) == 1 == psp.volume
-    assert 2 in iter_res
-    assert iter_res[2] == dict(p0=2, p1=0, p2=0)
+    assert 48 in iter_res
+    assert iter_res[48] == dict(p0=2, p1=0, p2=0)
 
     # ... and an even more complex one
     psp.set_mask('p1', (0, 1, 0))
@@ -636,10 +639,8 @@ def test_masked_iteration(small_psp):
                 for d, state_no in psp.iterator(with_info='state_no')}
     print("+ p1 mask (False, True, False): ", iter_res)
     assert len(iter_res) == 1 * 2 == psp.volume
-    assert (3 + 2) in iter_res
-    assert iter_res[5] == dict(p0=2, p1=1, p2=0)
-    assert (9 + 2) in iter_res
-    assert iter_res[11] == dict(p0=2, p1=3, p2=0)
+    assert iter_res[54] == dict(p0=2, p1=1, p2=0)
+    assert iter_res[66] == dict(p0=2, p1=3, p2=0)
 
 def test_active_state_map(small_psp):
     """Test the state map method for masked parameter spaces"""
