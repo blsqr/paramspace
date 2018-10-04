@@ -686,6 +686,85 @@ def test_active_state_map(small_psp):
     print("\nactive state map (of fully masked pspace):\n", amap)
     assert amap.shape == psp.shape
 
+def test_subspace(small_psp):
+    """Test the many ways a subspace can be selected."""
+    psp = small_psp
+
+    # Test different invocation signatures
+    # Via index only
+    psp.activate_subspace(p0=dict(idx=1),
+                          p1=dict(idx=[2,3]),
+                          p2=dict(idx=[3,4,5]))
+    assert psp.volume == 1 * 2 * 3
+    assert list(psp.active_state_map.coords['p0']) == [1]
+    assert list(psp.active_state_map.coords['p1']) == [2, 3]
+    assert list(psp.active_state_map.coords['p2']) == [3, 4, 5]
+
+    # By default, all others masks should have been reset, such that another
+    # application would _not_ result in a fully masked parameter space
+    psp.activate_subspace(p0=dict(idx=2))
+    assert psp.volume == 1 * 3 * 5
+    assert list(psp.active_state_map.coords['p0']) == [2]
+
+    # Via location. Looks the same here due to small_psp pdim values
+    # Can use the shorthand here ...
+    psp.activate_subspace(p0=1,
+                          p1=[2,3],
+                          p2=[3,4,5])
+    assert psp.volume == 1 * 2 * 3
+    assert list(psp.active_state_map.coords['p0']) == [1]
+    assert list(psp.active_state_map.coords['p1']) == [2, 3]
+    assert list(psp.active_state_map.coords['p2']) == [3, 4, 5]
+
+    # Test slicing
+    psp.activate_subspace(p0=slice(2),             # -> 1
+                          p1=slice(1.5, 3.1),      # -> 2, 3
+                          p2=slice(None, None, 2)) # -> 1, 3, 5
+    assert psp.volume == 1 * 2 * 3
+    assert list(psp.active_state_map.coords['p0']) == [1]
+    assert list(psp.active_state_map.coords['p1']) == [2, 3]
+    assert list(psp.active_state_map.coords['p2']) == [1, 3, 5]
+    
+    psp.activate_subspace(p0=dict(idx=slice(2)),             # -> 1, 2
+                          p1=dict(idx=slice(1, 3)),          # -> 2, 3
+                          p2=dict(idx=slice(None, None, 2))) # -> 1, 3, 5
+    assert psp.volume == 2 * 2 * 3
+    assert list(psp.active_state_map.coords['p0']) == [1, 2]
+    assert list(psp.active_state_map.coords['p1']) == [2, 3]
+    assert list(psp.active_state_map.coords['p2']) == [1, 3, 5]
+
+    # Test the error messages
+    # Bad argument combination
+    with pytest.raises(ValueError, match="accepting _either_ of the argument"):
+        psp.activate_subspace(p0=dict(idx=1, loc=1))
+    
+    with pytest.raises(ValueError, match="Missing one of the required"):
+        psp.activate_subspace(p0=dict())
+
+    # Bad paramdim name
+    with pytest.raises(KeyError, match="foo"):
+        psp.activate_subspace(foo=1)
+
+    # Bad index values
+    with pytest.raises(IndexError, match="Encountered index 0 in list of"):
+        psp.activate_subspace(p0=dict(idx=0))
+    
+    with pytest.raises(IndexError, match="exceeds the highest index, 2."):
+        psp.activate_subspace(p0=dict(idx=10))
+    
+    with pytest.raises(ValueError, match="at least one duplicate element"):
+        psp.activate_subspace(p0=dict(idx=[1, 1, 2]))
+
+    # Bad loc values
+    with pytest.raises(KeyError, match="not available as coordinate of this"):
+        psp.activate_subspace(p0=[3.14])
+    
+    with pytest.raises(ValueError, match="at least one duplicate item!"):
+        psp.activate_subspace(p0=[1, 1, 2])
+
+    # allow_default
+    with pytest.raises(ValueError, match="'p0' would be totally masked, thus"):
+        psp.activate_subspace(p0=[])
 
 # Complicated content ---------------------------------------------------------
 
