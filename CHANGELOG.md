@@ -23,6 +23,7 @@
 - #20: Add a new argument, `as_type`, to `ParamDim.__init__` to allow a type cast after the values have been parsed.
 - #21: Refactor `ParamSpace.all_points` to `ParamSpace.iterator`
 - #24: Change iteration order to match the numpy default ("C-style")
+- #25: Implement `ParamSpace.activate_subspace` to conveniently select a subspace of the whole parameter space, not only by masks (negative selection) but by indices or coordinate labels (positive selection).
 
 ## v1.1.1
 - #17: Fix a bug that prohibited using nested `ParamSpace` objects
