@@ -609,7 +609,7 @@ class ParamSpace:
 
         # ParamDim information
         l += ["", "Parameter Dimensions"]
-        l += ["  (First mentioned are iterated over most often)", ""]
+        l += ["  (First dimensions are iterated over least often)", ""]
 
         for name, pdim in self.dims.items():
             l += ["  * {}".format(name)]
@@ -824,7 +824,10 @@ class ParamSpace:
         """
         log.debug("ParamSpace._next_state called")
 
-        for pdim in self.dims.values():
+        # Iterate at least one parameter dimensions' state.
+        # Do this in reverse such that the last dimensions are iterated over
+        # most frequently.
+        for pdim in reversed(self.dims.values()):
             try:
                 pdim.iterate_state()
 
@@ -1033,11 +1036,11 @@ class ParamSpace:
         log.debug("  states shape: %s  (volume: %s)",
                   states_shape, reduce(lambda x, y: x*y, states_shape))
 
-        # The lengths will now be used to calculate the multipliers, starting
-        # with 1 for the 0th pdim.
-        # For example, given lengths [10, 10,  20,    5], the corresponding
-        # multipliers are:           [ 1, 10, 100, 2000]
-        mults = [reduce(lambda x, y: x*y, states_shape[:i], 1)
+        # The lengths will now be used to calculate the multipliers, where the
+        # _last_ dimension will have the multiplier 1.
+        # For example, given lengths [   5,  20, 10, 10], the corresponding
+        # multipliers are:           [2000, 100, 10,  1]
+        mults = [reduce(lambda x, y: x*y, states_shape[i+1:], 1)
                  for i in range(self.num_dims)]
         log.debug("  multipliers:  %s", mults)
 
