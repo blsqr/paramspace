@@ -1105,3 +1105,149 @@ class ParamSpace:
                 self.set_mask(**ms)
             else:
                 self.set_mask(*ms)
+
+    # TODO consider using the xarray interface here? i.e.: sel and isel
+    def activate_subspace(self, *, allow_default: bool=False, reset_all_others: bool=True, **selector) -> None:
+        """Selects a subspace of the parameter space and makes only that part
+        active for iteration.
+        
+        This is a wrapper around set_mask, implementing more arguments and also
+        checking if any dimension is reduced to a default value, which might
+        cause problems elsewhere.
+        
+        Args:
+            allow_default (bool, optional): If True, a ValueError is raised
+                when any of the dimensions is completely masked or when the
+                index 0 is used during selecting of a mask.
+            reset_all_others (bool, optional): If True, resets all masks before
+                activating the subspace. If False, the previously applied masks
+                are untouched.
+            **selector: A dict specifying the _active_ states. A key of the
+                key: value pairs should be the name of the dimension, the
+                value should be a dict with one of the following keys.
+                    idx: to select by index
+                    loc: to select by coordinate values
+                Non-sequence values will be put into lists. Alternatively,
+                slices can be specified, which are applied on the list of all
+                available indices or coordinates, respectively.
+                As a shorthand, not specifying a dict but directly a list or a
+                slice defaults to "loc"-behaviour.
+        
+        Raises:
+            ValueError: Description
+        """
+        def calc_mask(name, *, idx=None, loc=None) -> List[bool]:
+            """Calculates the mask to use such that the given indices or
+            locations are _un_masked.
+            """
+            if idx is not None and loc is not None:
+                raise ValueError("Only accepting _either_ of the arguments "
+                                 "idx and loc, but got both!.")
+
+            pdim = self.dims[name]
+
+            # Distinguish idx and loc
+            if idx is not None:
+                if isinstance(idx, slice):
+                    # Apply it to the list of possible indices
+                    idcs = list(range(1, 1+pdim.num_values))[idx]
+                    
+                    # Done.
+
+                else:
+                    # Indices explicitly given.
+                    # Only need to check for invalid values
+                    if not isinstance(idx, (list, tuple)):
+                        idx = [idx]
+
+                    if 0 in idx:
+                        raise IndexError("Encountered index 0 in list of "
+                                         "indices to be selected! This is an "
+                                         "invalid value when selecting a "
+                                         "subspace, as that index corresponds "
+                                         "to the default state of a parameter "
+                                         "dimension; indices for iteration "
+                                         "values start at 1!")
+
+                    elif max(idx) > pdim.num_values:
+                        raise IndexError("Given indices {} contained a value "
+                                         "that exceeds the highest index, {}!"
+                                         "".format(idx, pdim.num_values))
+
+                    elif len(set(idx)) != len(idx):
+                        raise ValueError("Given indices {} contained at least "
+                                         "one duplicate element!".format(idx))
+
+                    # Everything ok.
+                    idcs = idx
+
+            elif loc is not None:
+                # Get the coordinates (without the default, thus +1s below)
+                coords = pdim.pure_coords[1:]
+
+                if isinstance(loc, slice):
+                    # From the slice, extract start, stop and step
+                    start = loc.start if loc.start is not None else -np.inf
+                    stop = loc.stop if loc.stop is not None else +np.inf
+
+                    # Filter out those that are not within start, stop
+                    idcs = [(idx + 1) for idx, val in enumerate(coords)
+                            if start <= val < stop]
+
+                    # If a step was given, apply it in a second step
+                    if loc.step is not None:
+                        idcs = idcs[slice(None, None, loc.step)]
+
+                    # Done.
+
+                else:
+                    # Got a list of explicit coordinates to use.
+                    # Only need to make a few checks.
+                    if not isinstance(loc, (list, tuple)):
+                        loc = [loc]
+
+                    if any([val not in coords for val in loc]):
+                        raise KeyError("At least one of the labels in {} is "
+                                       "not available as coordinate of this "
+                                       "parameter dimension, {}!"
+                                       "".format(loc, coords))
+
+                    elif len(set(loc)) != len(loc):
+                        raise ValueError("Given labels {} contained at least "
+                                         "one duplicate item!".format(loc))
+
+                    # Everything ok.
+                    idcs = loc
+
+            else:
+                raise ValueError("Missing one of the required keyword "
+                                 "arguments `idx` or `loc`!")
+
+            # Given the indices, create and return the mask
+            return [bool(i not in idcs) for i in range(1, 1+pdim.num_values)]
+
+        # Determine whether to reset all masks
+        if reset_all_others:
+            for dim_name in self.dims:
+                self.set_mask(dim_name, False)
+
+        # Calculate all the masks
+        masks = {k:      calc_mask(k, **v) if isinstance(v, dict)
+                    else calc_mask(k, loc=v)
+                 for k, v in selector.items()}
+
+        # Apply the masks, checking if it would result in defaulting
+        for dim_name, mask in masks.items():
+            if not allow_default and all(mask):
+                raise ValueError("With the given selector, parameter "
+                                 "dimension '{}' would be totally masked, "
+                                 "thus resulting in shifting to its default "
+                                 "state in iteration. If you want to permit "
+                                 "this, set the allow_default argument.\n"
+                                 "Selector:\n{}".format(dim_name, selector))
+
+            # Everything ok, set the mask now.
+            self.set_mask(dim_name, mask)
+
+        log.debug("Selected subspace. New volume: %d,  shape: %s.",
+                  self.volume, self.shape)
