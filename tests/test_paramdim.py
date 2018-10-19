@@ -22,6 +22,9 @@ def various_pdims():
     pds['linspace']  = ParamDim(default=0, linspace=[1, 3, 3, True])
     pds['logspace']  = ParamDim(default=0, logspace=[-1, 1, 11])
     pds['typed']     = ParamDim(default=0, range=[3], as_type='float')
+    pds['a_list']    = ParamDim(default=0, values=[[1,2], [3,4]])
+    pds['as_tuple']  = ParamDim(default=0, values=[1, [2], [3,4,[5]]],
+                                as_type='tuple')
     pds['named']     = ParamDim(default=0, values=[1,2,3], name="named_span")
     pds['with_order']= ParamDim(default=0, values=[1,2,3], order=42)
 
@@ -64,17 +67,16 @@ def test_init(various_pdims):
     assert all(vpd['logspace'].values == np.logspace(-1, 1, 11))
 
     # Test the as_type argument
+    assert isinstance(vpd['a_list'].values[0], list)
     assert isinstance(vpd['typed'].values[0], float)
+    assert vpd['as_tuple'].values == (1, (2,), (3,4,(5,)))
+
     with pytest.raises(KeyError, match="some_type"):
         ParamDim(default=0, range=[10], as_type="some_type")
 
     # Assert that values are unique
     with pytest.raises(ValueError, match="need to be unique, but there were"):
         ParamDim(default=0, values=[1,1,2])
-
-    # And hashable
-    with pytest.raises(ValueError, match="All values need be hashable"):
-        ParamDim(default=0, values=[1,1,[1,2,3]])
 
 def test_properties(various_pdims):
     """Test all properties and whether they are write-protected."""
@@ -309,7 +311,7 @@ def test_cpd_init():
     # Assure values cannot be changed
     cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4])
     with pytest.raises(AttributeError, match="Values already set; cannot be"):
-        cpd._set_values([1,2,3])
+        cpd._set_values([1,2,3], assert_unique=False)
 
     # Test it has no state set
     cpd = CoupledParamDim(target_pdim=pd, values=[2,3,4])
