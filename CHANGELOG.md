@@ -12,7 +12,7 @@
       - Accessing single states via number or vector
 - !18 introduced `xarray.DataArray` functionality for the `ParamSpace`. With this, the state mapping supports not only labelled dimensions but also coordinates. With it, a number of interface changes came about:
    - When initializing `ParamSpace`, each `ParamDim` in it is assigned a unique name, generated from its path. This is used for internal identification instead of the path. (The path is still accessible as fallback, though ...)
-   - There are some restrictions on the values a `ParamDim` can take: they now have to be unique and hashable. This is necessary in order to use them as coordinates for the state map.
+   - There are some restrictions on the values a `ParamDim` can take: they now have to be unique and hashable. This is necessary in order to use them as coordinates for the state map. (!21 alleviates the need for hashable values again.)
    - The `yaml` module now supports `!slice!` and `!range` tags.
 - #13: Migrate to the better-maintained [`ruamel.yaml`](https://pypi.org/project/ruamel.yaml/) and implement representers for all implemented classes.
    - This leads to a much nicer and future-proof way of storing the objects while remaining human-readable.
@@ -24,6 +24,7 @@
 - #21: Refactor `ParamSpace.all_points` to `ParamSpace.iterator`
 - #24: Change iteration order to match the numpy default ("C-style")
 - #25: Implement `ParamSpace.activate_subspace` to conveniently select a subspace of the whole parameter space, not only by masks (negative selection) but by indices or coordinate labels (positive selection).
+- !21: Alleviate need for values to be hashable.
 
 ## v1.1.1
 - #17: Fix a bug that prohibited using nested `ParamSpace` objects
