@@ -38,9 +38,6 @@ class Masked:
     def __repr__(self) -> str:
         return "<Masked object, value: {}>".format(repr(self.value))
 
-    def __hash__(self) -> str:
-        return hash(("paramspace.paramdim.Masked", self.value))
-
     def __eq__(self, other) -> bool:
         return self.value == other
 
@@ -60,12 +57,9 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     # Which additional attributes to use in __repr__
     _REPR_ATTRS = tuple()
 
-    # Whether to check for values being unique
-    _UNIQUE_VALS = True
-
     # .........................................................................
 
-    def __init__(self, *, default, values: Iterable=None, order: float=None, name: str=None, as_type: str=None, **kwargs) -> None:
+    def __init__(self, *, default, values: Iterable=None, order: float=None, name: str=None, as_type: str=None, assert_unique: bool=True, **kwargs) -> None:
         """Initialise a parameter dimension object.
         
         Args:
@@ -82,16 +76,15 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             as_type (str, optional): If given, casts the individual created
                 values to a certain python type. The following string values
                 are possible: str, int, bool, float
+            assert_unique (bool, optional): Whether to assert uniqueness of
+                the values among them.
             **kwargs: Constructors for the `values` argument, valid keys are
                 `range`, `linspace`, and `logspace`; corresponding values are
                 expected to be iterables and are passed to `range(*args)`,
                 `np.linspace(*args)`, or `np.logspace(*args)`, respectively.
         
         Raises:
-            TypeError: Description
-        
-        No Longer Raises:
-            ValueError: Description
+            TypeError: For invalid arguments
         """
         # Initialize attributes that are managed by properties or methods
         self._vals = None
@@ -100,7 +93,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         # Set attributes that need no further checks
         self._name = name
         self._order = order if order is not None else np.inf
-        self._default = default
+        self._default = self._parse_value(default, as_type=as_type)
 
         # Parse the keyword arguments, filtering out unallowed ones and
         # packaging values into the kwargs for easier handling ...
@@ -122,17 +115,23 @@ class ParamDimBase(metaclass=abc.ABCMeta):
                             "of:  {}".format(", ".join(vkwargs)))
 
         elif 'values' in kwargs:
-            self._set_values(kwargs['values'], as_type=as_type)
+            self._set_values(kwargs['values'],
+                             assert_unique=assert_unique,
+                             as_type=as_type)
 
         elif 'range' in kwargs:
-            self._set_values(range(*kwargs['range']), as_type=as_type)
+            self._set_values(range(*kwargs['range']),
+                             assert_unique=assert_unique,
+                             as_type=as_type)
 
         elif 'linspace' in kwargs:
             self._set_values(np.linspace(*kwargs['linspace']),
+                             assert_unique=assert_unique,
                              as_type='float' if as_type is None else as_type)
 
         elif 'logspace' in kwargs:
             self._set_values(np.logspace(*kwargs['logspace']),
+                             assert_unique=assert_unique,
                              as_type='float' if as_type is None else as_type)
 
         else:
@@ -146,6 +145,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
                                  order=order,
                                  name=name,
                                  as_type=as_type,
+                                 assert_unique=assert_unique,
                                  **kwargs)
         # Derived classes should add the necessary kwargs in their __init__s
 
@@ -353,13 +353,27 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
     # Non-public API ..........................................................
 
-    def _set_values(self, values: Iterable, as_type: str=None):
+    def _parse_value(self, val, *, as_type: str=None):
+        """Parses a single value and ensures it is of correct type."""
+
+        # Map of available type conversions
+        type_convs = dict(str=str, int=int, float=float, bool=bool,
+                          tuple=self._rec_tuple_conv)
+
+        # Apply type conversion
+        if as_type is not None:
+            val = type_convs[as_type](val)
+
+        return val
+
+    def _set_values(self, values: Iterable, *, assert_unique: bool, as_type: str=None):
         """This function sets the values attribute; it is needed for the
         values setter function that is overwritten when changing the property
         in a derived class.
         
         Args:
             values (Iterable): The iterable to set the values with
+            assert_unique (bool): Whether to assert uniqueness of the values
             as_type (str, optional): The following values are possible:
                 str, int, bool, float. If not given, will leave the values
                 as they are.
@@ -372,14 +386,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             as_float (bool, optional): If given, makes sure that values are
                 of type float; this is needed for the numpy initializers
         """
-        def hashable(v) -> bool:
-            """Tests whether a value is hashable"""
-            try:
-                hash(v)
-            except:
-                return False
-            return True
-
+        # Check the values
         if self._vals is not None:
             # Was already set
             raise AttributeError("Values already set; cannot be set again!")
@@ -388,29 +395,33 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             raise ValueError("{} values need be a container of length >= 1, "
                              "was {}".format(self.__class__.__name__, values))
         
-        # Resolve iterator as tuple, optionally ensuring it is a float
-        if as_type is not None:
-            t = dict(str=str, int=int, float=float, bool=bool)[as_type]
-            values = [t(v) for v in values]
+        # Parse each individual value, changing type if configured to do so
+        values = [self._parse_value(v, as_type=as_type) for v in values]
 
         # Convert it to a tuple
         values = tuple(values)
 
-        # Make sure it is hashable
-        if not all([hashable(v) for v in values]):
-            raise ValueError("All values need be hashable, but the following "
-                             "were not: {}"
-                             "".format(", ".join([str(v) for v in values
-                                                  if not hashable(v)])))
-
-        if self._UNIQUE_VALS and (len(set(values)) != len(values)):
+        # Assert that values are unique
+        if assert_unique and any([values.count(v) > 1 for v in values]):
             raise ValueError("Values need to be unique, but there were "
-                             "duplicates: {}\nThis would create problems when "
-                             "creating the hashes for coordinates ..."
-                             "".format(values))
+                             "duplicates: {}".format(values))
 
         # Now store it as attribute
         self._vals = values
+
+    def _rec_tuple_conv(self, obj: list):
+        """Recursively converts a list-like object into a tuple, replacing
+        all occurences of lists with tuples.
+        """
+        # Recursive branch
+        if isinstance(obj, list):
+            return tuple([o if not isinstance(o, list)
+                          else self._rec_tuple_conv(o)
+                          for o in obj])
+        
+        # End of recursion
+        return obj
+
 
     # YAML representation .....................................................
     # NOTE The `yaml_tag` class variable needs be set in the derived classes
@@ -735,19 +746,18 @@ class CoupledParamDim(ParamDimBase):
     _REPR_ATTRS = ('target_pdim', 'target_name',
                    'use_coupled_default', 'use_coupled_values')
 
-    # The values need not be unique here
-    _UNIQUE_VALS = False
-
     # Define the yaml tag to use
     yaml_tag = u'!coupled-pdim'
 
     # And the other yaml representer settings
     _YAML_UPDATE = dict(target_name='_target_name_as_list')
     _YAML_REMOVE_IF = dict(name=(None,), order=(None,),
+                           assert_unique=(True, False),
                            default=(None,), values=(None, [None]),
                            use_coupled_default=(None,),
                            use_coupled_values=(None,),
-                           target_name=(None,), target_pdim=(None,))
+                           target_name=(None,), target_pdim=(None,),
+                           )
 
     # .........................................................................
 
@@ -808,7 +818,7 @@ class CoupledParamDim(ParamDimBase):
         # placeholders to comply with the parent signature
 
         # Initialise via parent 
-        super().__init__(**kwargs)
+        super().__init__(assert_unique=False, **kwargs)
 
         # Check and set the target-related attributes
         if target_pdim is not None and target_name is not None:
