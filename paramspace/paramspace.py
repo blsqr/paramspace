@@ -181,7 +181,8 @@ class ParamSpace:
             ValueError: For invalid names, i.e.: failure to find a unique
                 representation.
         """
-        def unique(names) -> bool:
+        def unique(names: List[str]) -> bool:
+            """Check for uniqueness of the given list of names"""
             return len(set(names)) == len(names)
 
         def collisions(names) -> List[List[int]]:
@@ -214,17 +215,22 @@ class ParamSpace:
                              "names of parameter dimensions!\n"
                              "List of names: {}".format(pdim_names))
 
-        # Set the custom names; all others are empty tuples at this stage
-        names = [pdim.name if pdim.name else tuple() for pdim in pdims]
+        # Set the custom names; with the others, start with the end of the path
+        # segment, such that a name is given for all dimensions
+        names = [pdim.name if pdim.name else paths[cidx][-1]
+                 for cidx, pdim in enumerate(pdims)]
 
         # Set a list of locks, which specifies which names are fixed and should
-        # not change throughout the rest of the process
-        locks = [bool(n) for n in names]
+        # not change throughout the rest of the process. These are initialized
+        # with locks for the explicitly given names.
+        locks = [bool(pdim.name) for pdim in pdims]
 
         # With the remaining names, use path segments to generate a name,
-        # starting in the back and adding more entries, if there are collisions
+        # starting in the back and adding more entries, if there are
+        # collisions. By requiring at least one iteration, some pathological
+        # cases can be resolved.
         i = 0
-        while not unique(names):
+        while i == 0 or not unique(names):
             # Go over the collisions and resolve them
             for colls in collisions(names):
                 for cidx in colls:
@@ -324,7 +330,7 @@ class ParamSpace:
         # If still None after all this, no such name was found
         if pdim is None:
             raise KeyError("A parameter dimension matching location {} was "
-                           "not found in this ParamSpace."
+                           "not found in this ParamSpace. "
                            "Available parameter dimensions:\n"
                            "{}"
                            "".format(name, self._parse_dims(mode='both')))
@@ -1228,7 +1234,7 @@ class ParamSpace:
 
         # Determine whether to reset all masks
         if reset_all_others:
-            for dim_name in self.dims:
+            for dim_name in self.dims.keys():
                 self.set_mask(dim_name, False)
 
         # Calculate all the masks

@@ -198,6 +198,7 @@ def test_dim_name_creation():
         assert names_out == [k for k, _ in create_names(kv_pairs)]
 
     # Start with the tests
+    # Arguments for check_names: (input path, expected name, custom name)
     # Some basics
     check_names((("foo", "bar"),        "bar",         None),
                 (("foo", "baz"),        "foo.baz",     None),
@@ -215,6 +216,12 @@ def test_dim_name_creation():
                 (("d", "p0"),           "p1",           "p1"),
                 (("d", "d", "p0"),      "p2",           "p2"),
                 (("d", "d", "d", "p0"), "p3",           "p3"))
+
+    # Single non-custom name at root level
+    check_names((("p0",),               "p0",           "p0"),
+                (("d", "p0"),           "p1",           "p1"),
+                (("d", "d", "p0"),      "p2",           "p2"),
+                (("v0",),               "v0",           None))
     
     # Custom names have priority over existing paths
     check_names((("p0",),               ".p0",          None),
@@ -223,7 +230,7 @@ def test_dim_name_creation():
                 (("d", "d", "d", "p0"), "d.d.d.p0",     None))
     
     # Paths cannot include '.', require a custom name
-    with pytest.raises(ValueError, match="select a custom name for"):
+    with pytest.raises(ValueError, match="Please select a custom name for"):
         check_names((("foo.bar", "baz"),    "baz",          None),
                     (("foo", "bar.baz"),    "bar.baz",      None))
 
