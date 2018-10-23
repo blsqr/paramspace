@@ -1223,7 +1223,8 @@ class ParamSpace:
                                          "one duplicate item!".format(loc))
 
                     # Everything ok.
-                    idcs = loc
+                    idcs = [(idx + 1) for idx, val in enumerate(coords)
+                            if val in loc]
 
             else:
                 raise ValueError("Missing one of the required keyword "
@@ -1241,6 +1242,7 @@ class ParamSpace:
         masks = {k:      calc_mask(k, **v) if isinstance(v, dict)
                     else calc_mask(k, loc=v)
                  for k, v in selector.items()}
+        log.debug("Calculated masks: %s", masks)
 
         # Apply the masks, checking if it would result in defaulting
         for dim_name, mask in masks.items():

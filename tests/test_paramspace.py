@@ -693,7 +693,7 @@ def test_active_state_map(small_psp):
     print("\nactive state map (of fully masked pspace):\n", amap)
     assert amap.shape == psp.shape
 
-def test_subspace(small_psp):
+def test_subspace(small_psp, basic_psp):
     """Test the many ways a subspace can be selected."""
     psp = small_psp
 
@@ -739,6 +739,13 @@ def test_subspace(small_psp):
     assert list(psp.active_state_map.coords['p0']) == [1, 2]
     assert list(psp.active_state_map.coords['p1']) == [2, 3]
     assert list(psp.active_state_map.coords['p2']) == [1, 3, 5]
+
+    # Empty arguments
+    psp.activate_subspace(**{})
+    assert psp.volume == 2 * 3 * 5
+
+    basic_psp.activate_subspace(**{})
+    assert basic_psp.volume == 3**6
 
     # Test the error messages
     # Bad argument combination
