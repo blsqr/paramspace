@@ -2,7 +2,7 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
-## v2.0
+## v2.0.0
 - #18: Calculate the `ParamSpace.state_no` instead of incrementing; this leads to higher reliability and allows more flexible iteration schemes.
 - #3: Include the ability to restrict `ParamSpace` to a subspace for iteration by introducing `ParamDim.mask`.
    - This required changing the `state` property of the dimension and parameter space classes to include the default value as state 0. It is one of many changes to the public interface of this package that is introduced in version 2.0 and makes the whole state numbering more 
