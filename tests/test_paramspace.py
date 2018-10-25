@@ -523,10 +523,9 @@ def test_basic_iteration(small_psp, adv_psp):
     with pytest.raises(ValueError, match="Could not set the state of "):
         psp.state_vector = (-1, 42, 123.45)
 
-    # A paramspace without volume should raise an error
+    # A paramspace without volume should still be iterable
     empty_psp = ParamSpace(dict(foo="bar"))
-    with pytest.raises(ValueError, match="Cannot iterate over ParamSpace of"):
-        list(iter(empty_psp))
+    assert list(iter(empty_psp)) == [dict(foo="bar")]
 
     # Check the dry run
     psp.reset()
@@ -552,8 +551,10 @@ def test_basic_iteration(small_psp, adv_psp):
 
     # Also test all information tuples and the dry run
     info = ("state_no", "state_vec", "state_no_str", "current_coords")
-    check_counts((small_psp.iterator(with_info=info),),
-                 (small_psp.volume,))
+    check_counts((small_psp.iterator(with_info=info),
+                  empty_psp.iterator(with_info=info)),
+                 (small_psp.volume,
+                  1))
     check_counts((small_psp.iterator(with_info="state_no"),),
                  (small_psp.volume,))
 

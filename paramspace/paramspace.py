@@ -520,7 +520,9 @@ class ParamSpace:
     @property
     def max_state_no(self) -> int:
         """Returns the highest possible state number"""
-        return reduce(lambda x, y: x*y, self.states_shape) - 1
+        if self.states_shape:
+            return reduce(lambda x, y: x*y, self.states_shape) - 1
+        return 0
 
     @property
     def state_vector(self) -> Tuple[int]:
@@ -762,6 +764,9 @@ class ParamSpace:
         and `omit_pt` arguments can be used. By default, the generator will
         return a single dictionary.
         
+        Note that an iteration is also possible for zero-volume parameter
+        spaces, i.e. where no parameter dimensions were defined.
+
         Args:
             with_info (Union[str, Tuple[str]], optional): Can pass strings
                 here that are to be returned as the second value. Possible
@@ -774,21 +779,18 @@ class ParamSpace:
         Returns:
             Generator[PStype, None, None]: yields point after point of the
                 ParamSpace and the corresponding information
-        
-        Raises:
-            ValueError: If the ParamSpace volume is zero and no iteration can
-                be performed
         """
-
-        if self.volume < 1:
-            raise ValueError("Cannot iterate over ParamSpace of zero volume.")
 
         # Parse the with_info argument, making sure it is a tuple
         if isinstance(with_info, str):
             with_info = (with_info,)
 
-        log.debug("Starting iteration over %d points in ParamSpace ...",
-                  self.volume)
+        if self.volume > 0:
+            log.debug("Starting iteration over %d points in ParamSpace ...",
+                      self.volume)
+        else:
+            log.debug("Starting iteration over zero-volume ParamSpace, i.e.: "
+                      "will return only the current state of the dict.")
 
         # Prepare parameter dimensions: set them to state 0
         for pdim in self.dims.values():
@@ -805,7 +807,7 @@ class ParamSpace:
                                     with_info=with_info)
 
         else:
-            log.debug("Visited every point in ParamSpace.")
+            log.debug("Iteration finished.")
             self.reset()
             return
 
@@ -1040,7 +1042,8 @@ class ParamSpace:
         # values but including the default values
         states_shape = self.states_shape
         log.debug("  states shape: %s  (volume: %s)",
-                  states_shape, reduce(lambda x, y: x*y, states_shape))
+                  states_shape,
+                  reduce(lambda x,y: x*y, states_shape) if states_shape else 0)
 
         # The lengths will now be used to calculate the multipliers, where the
         # _last_ dimension will have the multiplier 1.
