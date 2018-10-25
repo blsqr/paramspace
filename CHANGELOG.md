@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.1.0
+- #26: To provide a more consistent and convenient interface for `ParamSpace.iterator`, it is now possible to use the function for a zero-volume parameter space, i.e., one where no parameter dimensions where defined. Consequently, this will only return the current state of the dictionary, which is equivalent to the default state of a dictionary where parameter dimensions were defined.
+
 ## v2.0.0
 - #18: Calculate the `ParamSpace.state_no` instead of incrementing; this leads to higher reliability and allows more flexible iteration schemes.
 - #3: Include the ability to restrict `ParamSpace` to a subspace for iteration by introducing `ParamDim.mask`.
