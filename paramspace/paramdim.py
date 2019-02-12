@@ -57,9 +57,18 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     # Which additional attributes to use in __repr__
     _REPR_ATTRS = tuple()
 
+    # Keyword parameters used to set the values
+    _VKWARGS = ('values', 'range', 'linspace', 'logspace')
+
     # .........................................................................
 
-    def __init__(self, *, default, values: Iterable=None, order: float=None, name: str=None, as_type: str=None, assert_unique: bool=True, **kwargs) -> None:
+    def __init__(self, *, default,
+                 values: Iterable=None,
+                 order: float=None,
+                 name: str=None,
+                 as_type: str=None,
+                 assert_unique: bool=True,
+                 **kwargs) -> None:
         """Initialise a parameter dimension object.
         
         Args:
@@ -87,32 +96,59 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             TypeError: For invalid arguments
         """
         # Initialize attributes that are managed by properties or methods
-        self._vals = None
         self._state = 0  # corresponding to the default state
 
         # Set attributes that need no further checks
         self._name = name
         self._order = order if order is not None else np.inf
-        self._default = self._parse_value(default, as_type=as_type)
 
-        # Parse the keyword arguments, filtering out unallowed ones and
-        # packaging values into the kwargs for easier handling ...
-        vkwargs = ('values', 'range', 'linspace', 'logspace')
+        # Package values into kwargs, for easier handling
         if values is not None:
             kwargs['values'] = values
 
+        # Gather the initialization kwargs for use with yaml representer
+        init_kwargs = dict(default=default, order=order, name=name,
+                           as_type=as_type, assert_unique=assert_unique,
+                           **kwargs)
+
+        # TODO Make this more elegant!
+        # As the base class __init__ is used by derived classes that might
+        # already have set private members, check if the `default` argument
+        # should even be used...
+        if not hasattr(self, '_default'):
+            self._default = self._parse_value(default, as_type=as_type)
+
+        else:
+            # Was already set; don't store the passed value
+            del init_kwargs['default']
+
+        # Same for value-setting arguments
+        if not hasattr(self, '_vals'):
+            # Now let the helper function take care of the rest
+            self._init_vals(as_type=as_type,
+                            assert_unique=assert_unique,
+                            **kwargs)
+
+        # Store the initialization kwargs
+        self._init_kwargs = init_kwargs
+        # Derived classes should add the necessary kwargs in their __init__s
+
+        # Done.
+
+    def _init_vals(self, *, as_type: str, assert_unique: bool, **kwargs):
+
         # Now check for unexpected ones and set the valid ones
-        if any([k not in vkwargs for k in kwargs.keys()]):
+        if any([k not in self._VKWARGS for k in kwargs.keys()]):
             raise TypeError("Received invalid keyword argument(s) for {}: {}. "
                             "Allowed arguments: {}"
                             "".format(self.__class__.__name__,
                                       ", ".join([k for k in kwargs
-                                                 if k not in vkwargs]),
-                                      ", ".join(vkwargs)))
+                                                 if k not in self._VKWARGS]),
+                                      ", ".join(self._VKWARGS)))
 
         elif len(kwargs) > 1:
             raise TypeError("Received too many keyword arguments. Need _one_ "
-                            "of:  {}".format(", ".join(vkwargs)))
+                            "of:  {}".format(", ".join(self._VKWARGS)))
 
         elif 'values' in kwargs:
             self._set_values(kwargs['values'],
@@ -138,18 +174,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             raise TypeError("Missing one of the following required keyword "
                             "arguments to set the values of {}: {}."
                             "".format(self.__class__.__name__,
-                                      ", ".join(vkwargs)))
-
-        # Store the initialization kwargs for use with the yaml representer
-        self._init_kwargs = dict(default=default,
-                                 order=order,
-                                 name=name,
-                                 as_type=as_type,
-                                 assert_unique=assert_unique,
-                                 **kwargs)
-        # Derived classes should add the necessary kwargs in their __init__s
-
-        # Done.
+                                      ", ".join(self._VKWARGS)))
             
     # Properties ..............................................................
 
@@ -387,7 +412,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
                 of type float; this is needed for the numpy initializers
         """
         # Check the values
-        if self._vals is not None:
+        if hasattr(self, '_vals'):
             # Was already set
             raise AttributeError("Values already set; cannot be set again!")
 
@@ -740,11 +765,11 @@ class CoupledParamDim(ParamDimBase):
     """
 
     # Which __dict__ content to omit when checking for equivalence
-    _OMIT_ATTR_IN_EQ = ('_init_finished',)
+    _OMIT_ATTR_IN_EQ = ()
     
     # Define the additional attribute names that are to be added to __repr__
     _REPR_ATTRS = ('target_pdim', 'target_name',
-                   'use_coupled_default', 'use_coupled_values')
+                   '_use_coupled_default', '_use_coupled_values')
 
     # Define the yaml tag to use
     yaml_tag = u'!coupled-pdim'
@@ -761,64 +786,73 @@ class CoupledParamDim(ParamDimBase):
 
     # .........................................................................
 
-    def __init__(self, *, target_pdim: ParamDim=None, target_name: Union[str, Sequence[str]]=None, use_coupled_default: bool=None, use_coupled_values: bool=None, **kwargs):
-        """
+    def __init__(self, *,
+                 default=None,
+                 target_pdim: ParamDim=None,
+                 target_name: Union[str, Sequence[str]]=None,
+                 use_coupled_default: bool=None,
+                 use_coupled_values: bool=None,
+                 **kwargs):
+        """Initialize a coupled parameter dimension.
+        
+        If the `default` or any values-setting argument is set, those will be
+        used. If that is not the case, the respective parts from the coupled
+        dimension will be used.
+        
         Args:
+            default (None, optional): The default value. If not given, will
+                use the one from the coupled object. 
             target_pdim (ParamDim, optional): The ParamDim object to couple to
             target_name (Union[str, Sequence[str]], optional): The *name* of
                 the ParamDim object to couple to; needs to be within the same
                 ParamSpace and the ParamSpace needs to be able to resolve it
                 using this name.
-            use_coupled_default (bool, optional): Whether to use the default
-                value of the coupled ParamDim; need not be given: if it is not
-                set it is determined by looking at whether argument `default`
-                was passed in the kwargs.
-            use_coupled_values (bool, optional): Whether to use the values
-                of the coupled ParamDim; need not be given: if it is not
-                set it is determined by looking at whether argument `values`
-                was passed in the kwargs.
+            use_coupled_default (bool, optional): DEPRECATED
+            use_coupled_values (bool, optional): DEPRECATED
             **kwargs: Passed to ParamDimBase.__init__
         
         Raises:
-            ValueError: If neither target_pdim nor target_name were given
+            TypeError: If neither target_pdim nor target_name were given or
+                or both were given
         """
+        # TODO Make this __init__ more elegant!
 
-        # Determine whether the coupled values will be used or not
-        if use_coupled_default is None:
-            use_coupled_default = 'default' not in kwargs
+        # Deprecation warnings for old parameters
+        if use_coupled_default is not None or use_coupled_values is not None:
+            warnings.warn("The CoupledParamDim.__init__ parameters "
+                          "`use_coupled_default` and `use_coupled_values` are "
+                          "deprecated and will soon be removed. Whether the "
+                          "counterpart from the coupled parameter dimension "
+                          "is to be used is determined by whether the "
+                          "`default` or any value-setting argument was given.",
+                          DeprecationWarning)
 
-        if use_coupled_values is None:
-            use_coupled_values = 'values' not in kwargs
+        # Disallow mask argument
+        if 'mask' in kwargs:
+            raise TypeError("Received invalid keyword-argument `mask` for "
+                            "CoupledParamDim!")
 
         # Set attributes
-        # property managed
         self._target_pdim = None  # the object that is coupled to
         self._target_name = None  # the name of it in a ParamSpace
 
-        # others
-        self._init_finished = False
-        self.use_coupled_default = use_coupled_default
-        self.use_coupled_values = use_coupled_values
+        # Determine whether coupled values or given values are to be used
+        self._use_coupled_default = default is None
+        self._use_coupled_values = not any([k in self._VKWARGS
+                                            for k in kwargs])
 
-        # Warn if there is ambiguity regarding which values will be used
-        if self.use_coupled_default is True:
-            if 'default' in kwargs:
-                warnings.warn("Argument `default` was given despite "
-                              "`use_coupled_default` being set to True. "
-                              "Will ignore `default`!", UserWarning)
-            kwargs['default'] = None
+        # In order to not invoke the default- and value-setters in the parent
+        # classes' initializer, set them here already. Setting the attributes
+        # (regardless of value) already makes the base class __init__ jump that
+        # part of the initialization        
+        if self._use_coupled_default:
+            self._default = None  # Value does not matter, is never used
 
-        if self.use_coupled_values is True:
-            if 'values' in kwargs:
-                warnings.warn("Argument `values` was given despite "
-                              "`use_coupled_values` being set to True. "
-                              "Will ignore `values`!", UserWarning)
-            kwargs['values'] = [None]
-        # NOTE the values passed here will never actually be used and are just
-        # placeholders to comply with the parent signature
+        if self._use_coupled_values:
+            self._vals = [None]  # Value does not matter, is never used
 
-        # Initialise via parent 
-        super().__init__(assert_unique=False, **kwargs)
+        # Initialise via parent
+        super().__init__(default=default, assert_unique=False, **kwargs)
 
         # Check and set the target-related attributes
         if target_pdim is not None and target_name is not None:
@@ -841,12 +875,10 @@ class CoupledParamDim(ParamDimBase):
         # Add further initialization kwargs, needed for yaml representation
         self._init_kwargs['target_name'] = target_name
         self._init_kwargs['target_pdim'] = target_pdim
-        self._init_kwargs['use_coupled_default'] = use_coupled_default
-        self._init_kwargs['use_coupled_values'] = use_coupled_values
+        # NOTE The other kwargs are already stored in the base class __init__
 
         # Done now.
         log.debug("CoupledParamDim initialised.")
-        self._init_finished = True
 
 
     # Magic methods ...........................................................
@@ -941,7 +973,7 @@ class CoupledParamDim(ParamDimBase):
             raise TypeError("Target of CoupledParamDim needs to be of type "
                             "ParamDim, was "+str(type(pdim)))
 
-        elif (not self.use_coupled_values
+        elif (not self._use_coupled_values
               and self.num_values != pdim.num_values):
             raise ValueError("The lengths of the value sequences of target "
                              "ParamDim and this CoupledParamDim need to "
@@ -963,7 +995,7 @@ class CoupledParamDim(ParamDimBase):
         Raises:
             RuntimeError: If no ParamDim was associated yet
         """
-        if self.use_coupled_default:
+        if self._use_coupled_default:
             return self.target_pdim.default
 
         return self._default
@@ -972,17 +1004,12 @@ class CoupledParamDim(ParamDimBase):
     def values(self) -> tuple:
         """The values that are iterated over.
         
-        If self.use_coupled_values is set, will be those of the coupled pdim.
+        If self._use_coupled_values is set, will be those of the coupled pdim.
         
         Returns:
             tuple: The values of this CoupledParamDim or the target ParamDim
         """
-        # Before initialisation finished, this cannot access target_pdim yet
-        if not self._init_finished:
-            return self._vals
-
-        # The regular case, after initialisation finished
-        if self.use_coupled_values:
+        if self._use_coupled_values:
             return self.target_pdim.values
 
         return self._vals

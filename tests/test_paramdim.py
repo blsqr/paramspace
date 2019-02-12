@@ -28,17 +28,24 @@ def various_pdims():
     pds['named']     = ParamDim(default=0, values=[1,2,3], name="named_span")
     pds['with_order']= ParamDim(default=0, values=[1,2,3], order=42)
 
-    # coupled
-    pds['coupled1']  = CoupledParamDim(target_pdim=pds['one'])
-    pds['coupled2']  = CoupledParamDim(target_pdim=pds['two'],values=[1,2,3,4])
-    pds['coupled3']  = CoupledParamDim(target_pdim=pds['range'], default=0)
-
     return pds
 
 # Tests -----------------------------------------------------------------------
 
-def test_init(various_pdims):
-    """Test whether all initialisation methods work. Already got various_pdims from fixture, so these should work, so only explicitly tests the cases where initialisation should fail."""
+def test_init():
+    """Test whether all initialisation methods work."""
+    # These should all work
+    ParamDim(default=0, values=[1,2,3])
+    ParamDim(default=0, values=[1., 2, 'three', np.inf])
+    ParamDim(default=0, range=[1, 4, 1])
+    ParamDim(default=0, linspace=[1, 3, 3, True])
+    ParamDim(default=0, logspace=[-1, 1, 11])
+    ParamDim(default=0, range=[3], as_type='float')
+    ParamDim(default=0, values=[[1,2], [3,4]])
+    ParamDim(default=0, values=[1, [2], [3,4,[5]]], as_type='tuple')
+    ParamDim(default=0, values=[1,2,3], name="named_span")
+    ParamDim(default=0, values=[1,2,3], order=42)
+
     # No default given
     with pytest.raises(TypeError):
         ParamDim()
@@ -60,8 +67,11 @@ def test_init(various_pdims):
     with pytest.raises(TypeError, match="Received too many keyword arguments"):
         ParamDim(default=0, range=[1,2], linspace=[10,20,30])
 
-    # Assert correct range, linspace, logspace creation
+
+def test_values(various_pdims):
+    """Assert the correct values are chosen"""
     vpd = various_pdims
+
     assert vpd['range'].values == tuple(range(1, 4, 1))
     assert all(vpd['linspace'].values == np.linspace(1, 3, 3, True))
     assert all(vpd['logspace'].values == np.logspace(-1, 1, 11))
@@ -247,20 +257,15 @@ def test_cpd_init():
     CoupledParamDim(target_name=("foo",))
     CoupledParamDim(target_name=("foo",), default=0)
     CoupledParamDim(target_name=("foo",), values=[1,2,3])
+    CoupledParamDim(target_name=("foo",), range=[3])
+    CoupledParamDim(target_name=("foo",), linspace=[0,1,3])
+    CoupledParamDim(target_name=("foo",), logspace=[0,2,3])
     CoupledParamDim(target_name="foo")
 
     # These should fail due to wrong arguments given
     with pytest.raises(TypeError, match="Expected either argument"):
         # Neither target_pdim nor target_name given
         CoupledParamDim()
-
-    with pytest.raises(TypeError, match="missing 1 required"):
-        # No default given
-        CoupledParamDim(target_name=("foo",), use_coupled_default=False)
-
-    with pytest.raises(TypeError, match="Missing one of the following"):
-        # No values given
-        CoupledParamDim(target_name=("foo",), use_coupled_values=False)
 
     with pytest.raises(ValueError, match="The coupling target has not been"):
         # Not coupled yet
@@ -346,7 +351,7 @@ def test_coupled_mask():
     pd = ParamDim(default=0, values=[1, 2, 3, 4], mask=(0, 1, 0, 1))
     
     # It should not be possible to mask a CPD
-    with pytest.raises(TypeError, match="Received invalid keyword argument"):
+    with pytest.raises(TypeError, match="Received invalid keyword-argument"):
         CoupledParamDim(target_pdim=pd, mask=True)
 
     # Test that coupled iteration is masked accordingly
