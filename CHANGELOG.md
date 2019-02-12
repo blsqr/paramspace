@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.1.1
+- #28: Fix a bug where `CoupledParamDim` only allowed the `values` argument and no others.
+
 ## v2.1.0
 - #26: To provide a more consistent and convenient interface for `ParamSpace.iterator`, it is now possible to use the function for a zero-volume parameter space, i.e., one where no parameter dimensions where defined. Consequently, this will only return the current state of the dictionary, which is equivalent to the default state of a dictionary where parameter dimensions were defined.
 
