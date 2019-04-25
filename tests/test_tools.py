@@ -1,7 +1,9 @@
 """Tests for the tool functions of the paramspace package"""
 
 import copy
+
 import pytest
+
 import paramspace.tools as t
 
 # Dummy objects to find using the tools
@@ -9,9 +11,25 @@ class Dummy:
     def __init__(self, i: int):
         self.i = i
 
+# -----------------------------------------------------------------------------
+
+def test_create_indices():
+    """Test the create_indices function"""
+    ci = t.create_indices
+    assert ci() == []
+    assert ci(from_range=[0, 10, 2]) == list(range(0, 10, 2))
+    assert ci(append=[1,1,1], unique=True) == [1]
+    assert ci(append=[1,1,1,2], remove=[1]) == [2]
+    assert ci(append=[3,2,1], remove=[2], sort=True) == [1, 3]
+    assert ci(append=[3,2,1], remove=[2], sort=False) == [3, 1]
+
+
 def test_contains():
     """Tests the recursive_contains function"""
-    d = dict(a=dict(b=dict(c=dict(d=['e'], _="foo"), _="foo"), _="foo"), _="foo")
+    d = dict(a=dict(b=dict(c=dict(d=['e'], _="foo"),
+                           _="foo"),
+                    _="foo"),
+             _="foo")
 
     # Test both possible cases
     assert t.recursive_contains(d, keys=('a', 'b', 'c', 'd', 'e')) == True
@@ -20,6 +38,7 @@ def test_contains():
     # There should be a TypeError if the last element was a list
     with pytest.raises(TypeError):
         assert t.recursive_contains(d, keys=('a', 'b', 'c', 'd', 'e', 'f'))
+
 
 def test_getitem():
     """Tests the recursive_getitem function"""
@@ -38,6 +57,7 @@ def test_getitem():
         t.recursive_getitem(d, keys=('a', 'b', 'c', 'd', 1))
     with pytest.raises(IndexError):
         t.recursive_getitem(d, keys=('a', 'l', 1, 'l0l'))
+
 
 def test_collect():
     """Tests the recursive_collect function"""
@@ -136,7 +156,6 @@ def test_setitem():
     
     setitem(d, keys=('d', 'dd', 'ddd'), val=3.45, create_key=True)
     assert d['d']['dd']['ddd'] == 3.45
-
 
 
 def test_update():

@@ -41,6 +41,20 @@ class Masked:
     def __eq__(self, other) -> bool:
         return self.value == other
 
+    # YAML representation .....................................................
+
+    @classmethod
+    def to_yaml(cls, representer, node):
+        """
+        Args:
+            representer (ruamel.yaml.representer): The representer module
+            node (type(self)): The node, i.e. an instance of this class
+        
+        Returns:
+            the scalar value that this object masks
+        """
+        return representer.represent_data(node._val)
+        
 
 class MaskedValueError(ValueError):
     """Raised when trying to set the state of a ParamDim to a masked value"""

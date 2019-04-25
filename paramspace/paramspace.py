@@ -7,7 +7,7 @@ import collections
 from collections import OrderedDict
 from itertools import chain
 from functools import reduce
-from typing import Union, Sequence, Tuple, Generator, MutableMapping, MutableSequence, Dict, List
+from typing import Union, Sequence, Tuple, Generator, Dict, List
 
 import numpy as np
 import numpy.ma
@@ -18,9 +18,6 @@ from .tools import recursive_collect, recursive_update, recursive_replace
 
 # Get logger
 log = logging.getLogger(__name__)
-
-# Define an input type for the dictionary
-PStype = Union[MutableMapping, MutableSequence]
 
 # -----------------------------------------------------------------------------
 
@@ -39,7 +36,7 @@ class ParamSpace:
 
     # .........................................................................
 
-    def __init__(self, d: PStype):
+    def __init__(self, d: dict):
         """Initialize a ParamSpace object from a given mapping or sequence.
         
         Args:
@@ -49,8 +46,7 @@ class ParamSpace:
         """
 
         # Warn if type is unusual
-        if not isinstance(d, (collections.abc.MutableMapping,
-                              collections.abc.MutableSequence)):
+        if not isinstance(d, collections.abc.MutableMapping):
             warnings.warn("Got unusual type {} for ParamSpace initialisation."
                           "If the given object is not mutable, this might fail"
                           " somewhere unexpected.".format(type(d)),
@@ -165,7 +161,8 @@ class ParamSpace:
         log.debug("Finished gathering.")
 
     @staticmethod
-    def _unique_dim_names(kv_pairs: Sequence[Tuple]) -> List[Tuple[str, ParamDim]]:
+    def _unique_dim_names(kv_pairs: Sequence[Tuple]
+                          ) -> List[Tuple[str, ParamDim]]:
         """Given a sequence of key-value pairs, tries to create a unique string
         representation of the entries, such that it can be used as a unique
         mapping from names to parameter dimension objects.
@@ -656,7 +653,8 @@ class ParamSpace:
 
         return "\n".join(l)
 
-    def _parse_dims(self, *, mode: str='names', join_str: str=" -> ", prefix: str="  * ") -> str:
+    def _parse_dims(self, *, mode: str='names', join_str: str=" -> ",
+                    prefix: str="  * ") -> str:
         """Returns a multi-line string of dimension names or locations.
 
         This function is intended mostly for internal representation, thus
@@ -738,7 +736,7 @@ class ParamSpace:
 
     # Iterator functionality ..................................................
 
-    def __iter__(self) -> PStype:
+    def __iter__(self) -> dict:
         """Move to the next valid point in parameter space and return the
         corresponding dictionary.
         
@@ -756,7 +754,8 @@ class ParamSpace:
         return self._iter()
         # NOTE the generator will also raise StopIteration once it ended
         
-    def iterator(self, *, with_info: Union[str, Tuple[str]]=None, omit_pt: bool=False) -> Generator[PStype, None, None]:
+    def iterator(self, *, with_info: Union[str, Tuple[str]]=None,
+                 omit_pt: bool=False) -> Generator[dict, None, None]:
         """Returns an iterator (more precisely: a generator) yielding all
         unmasked points of the parameter space.
 
@@ -777,7 +776,7 @@ class ParamSpace:
                 only the information is returned.
         
         Returns:
-            Generator[PStype, None, None]: yields point after point of the
+            Generator[dict, None, None]: yields point after point of the
                 ParamSpace and the corresponding information
         """
 
@@ -1010,7 +1009,8 @@ class ParamSpace:
                                        reduce(lambda x, y: x*y,
                                               self.states_shape) - 1))
 
-    def get_dim_values(self, *, state_no: int=None, state_vector: Tuple[int]=None) -> OrderedDict:
+    def get_dim_values(self, *, state_no: int=None,
+                       state_vector: Tuple[int]=None) -> OrderedDict:
         """Returns the current parameter dimension values or those of a
         certain state number or state vector.
         """
