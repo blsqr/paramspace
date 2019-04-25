@@ -1,5 +1,7 @@
 """Tests the yaml constructors"""
 
+import io
+
 import pytest
 import numpy as np
 
@@ -15,21 +17,10 @@ def yamlstrs() -> dict:
     strs = {}
 
     strs['pspace_only'] = """
-sequence: !pspace
-  - 1
-  - 2
-  - 3
 mapping: !pspace 
   a: 1
   b: 2
   c: 3
-sequence_sorted: !pspace
-  - 1
-  - 2
-  - 3
-  - foo:
-    bar: 1
-    baz: 2
 mapping_sorted: !pspace
   a: 1
   c: 3
@@ -98,16 +89,31 @@ ranges:
  - !range [5, 10]
  - !range [5, 10, 2]
     """
+    
+    strs['listgen'] = """
+lists:
+ - !listgen [10]
+ - !listgen [0, 10, 2]
+ - !listgen
+   from_range: [0, 10, 3]
+   unique: true
+   append: [100]
+   remove: [0]
+   sort: true
+ - !listgen [5, 10, 2]
+    """
 
-    strs[('pspace', TypeError)] = """not_a_mapping_or_sequence: !pspace 1 """
+    # Failing or warning cases
+    strs[('_pspace_scalar', TypeError)] = "scalar_node: !pspace 1"
 
-    strs[('_pdim1', TypeError)]  = """not_a_mapping: !pdim 1 """
-    strs[('_pdim2', TypeError)]  = """not_a_mapping: !pdim [1,2,3] """
-    strs[('_pdim3', TypeError)]  = """wrong_args: !pdim {foo: bar} """
+    strs[('_pdim1', TypeError)] = "not_a_mapping: !pdim 1"
+    strs[('_pdim2', TypeError)] = "not_a_mapping: !pdim [1,2,3]"
+    strs[('_pdim3', TypeError)] = "wrong_args: !pdim {foo: bar}"
 
-    strs[('cpdim1', TypeError)] = """not_a_mapping: !coupled-pdim 1 """
-    strs[('cpdim2', TypeError)] = """not_a_mapping: !coupled-pdim [1,2,3] """
-    strs[('cpdim3', TypeError)] = """wrong_args: !coupled-pdim {foo: bar} """
+    strs[('cpdim1', TypeError)] = "not_a_mapping: !coupled-pdim 1"
+    strs[('cpdim2', TypeError)] = "not_a_mapping: !coupled-pdim [1,2,3]"
+    strs[('cpdim3', TypeError)] = "wrong_args: !coupled-pdim {foo: bar}"
+
     strs[('cpdim4', None, DeprecationWarning)] = """
 too_many_args: !coupled-pdim
   target_name: [foo, bar]
@@ -120,18 +126,22 @@ too_many_args: !coupled-pdim
   values: [1,2,3]
   use_coupled_values: True 
     """
+
+    strs[("_listgen_scalar", TypeError)] = "scalar_node: !listgen foo"
    
     return strs
 
 # -----------------------------------------------------------------------------
 # Tests
 
-def test_loading(yamlstrs):
-    """Tests whether the constructors loading works."""
+def test_load_and_safe(yamlstrs):
+    """Tests whether the constructor and representers work"""
     # Test plain loading
     for name, ystr in yamlstrs.items():
-        print("Name of yamlstr that will be loaded: ", name)
+        print("\n\nName of yamlstr that will be loaded: ", name)
+
         if isinstance(name, tuple):
+            # Expected to warn or raise
             if len(name) == 2:
                 name, exc = name
                 warn = None
@@ -151,8 +161,18 @@ def test_loading(yamlstrs):
             elif exc and not warn:
                 with pytest.raises(exc):
                     yaml.load(ystr)
-        else:
-            yaml.load(ystr)
+
+            continue
+
+        # else: Expected to load correctly
+        obj = yaml.load(ystr)
+
+        # Test the representer runs through
+        stream = io.StringIO("")
+        yaml.dump(obj, stream=stream)
+        output = "\n".join(stream.readlines())
+
+        # TODO Test output
 
 def test_correctness(yamlstrs):
     """Tests the correctness of the constructors"""

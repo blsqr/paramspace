@@ -2,13 +2,16 @@
 
 from ruamel.yaml import YAML
 
-from .paramdim import ParamDim, CoupledParamDim
+from .paramdim import ParamDim, CoupledParamDim, Masked
 from .paramspace import ParamSpace
 
 from .yaml_constructors import pspace, pspace_unsorted
 from .yaml_constructors import pdim, pdim_default
 from .yaml_constructors import coupled_pdim, coupled_pdim_default
 from .yaml_constructors import _slice_constructor, _range_constructor
+from .yaml_constructors import _list_constructor
+
+from .yaml_representers import _slice_representer, _range_representer
 
 # -----------------------------------------------------------------------------
 # Define a safe and an unsafe ruamel.yaml YAML object
@@ -20,12 +23,17 @@ yaml = yaml_safe
 
 
 # Attach representers .........................................................
-# ... to all YAML objects by registering the classes.
+# ... to all YAML objects by registering the classes or by adding the custom
+# representer functions
 
 for _yaml in (yaml_safe, yaml_unsafe):
+    _yaml.register_class(Masked)
     _yaml.register_class(ParamDim)
     _yaml.register_class(CoupledParamDim)
     _yaml.register_class(ParamSpace)
+
+    _yaml.representer.add_representer(slice, _slice_representer)
+    _yaml.representer.add_representer(range, _range_representer)
 
 # NOTE It is important that this happens _before_ the custom constructors are
 #      added below, because otherwise it is tried to construct the classes
@@ -44,7 +52,8 @@ _constructors = [
     #
     # additional constructors for Python objects
     (u'!slice',                 _slice_constructor),
-    (u'!range',                 _range_constructor)
+    (u'!range',                 _range_constructor),
+    (u'!listgen',               _list_constructor)
 
 ]
 # NOTE entries marked with '***' overwrite a default constructor. Thus, they

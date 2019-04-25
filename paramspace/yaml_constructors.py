@@ -11,7 +11,8 @@ from typing import Iterable, Union
 
 import ruamel.yaml
 
-from paramspace import ParamSpace, ParamDim, CoupledParamDim
+from . import ParamSpace, ParamDim, CoupledParamDim
+from .tools import create_indices
 
 # Get logger
 log = logging.getLogger(__name__)
@@ -44,7 +45,8 @@ def pdim(loader, node) -> ParamDim:
     return _pdim_constructor(loader, node)
 
 def pdim_default(loader, node) -> ParamDim:
-    """constructor for creating a ParamDim object from a mapping, but only return the default value.
+    """constructor for creating a ParamDim object from a mapping, but only
+    return the default value.
 
     Suggested tag: !pdim-default
     """
@@ -60,7 +62,8 @@ def coupled_pdim(loader, node) -> CoupledParamDim:
     return _coupled_pdim_constructor(loader, node)
 
 def coupled_pdim_default(loader, node) -> CoupledParamDim:
-    """constructor for creating a CoupledParamDim object from a mapping, but only return the default value.
+    """constructor for creating a CoupledParamDim object from a mapping, but
+    only return the default value.
 
     Suggested tag: !coupled-pdim-default
     """
@@ -71,7 +74,8 @@ def coupled_pdim_default(loader, node) -> CoupledParamDim:
 
 # The actual constructor functions --------------------------------------------
 
-def _pspace_constructor(loader, node, sort_if_mapping: bool=True) -> ParamSpace:
+def _pspace_constructor(loader, node,
+                        sort_if_mapping: bool=True) -> ParamSpace:
     """constructor for instantiating ParamSpace from a mapping or a sequence"""
     log.debug("Encountered tag associated with ParamSpace.")
 
@@ -84,10 +88,6 @@ def _pspace_constructor(loader, node, sort_if_mapping: bool=True) -> ParamSpace:
         if sort_if_mapping:
             log.debug("Recursively sorting the mapping ...")
             d = recursively_sort_dict(OrderedDict(d))
-
-    elif isinstance(node, ruamel.yaml.nodes.SequenceNode):
-        log.debug("Constructing sequence from node ...")
-        d = loader.construct_sequence(node, deep=True)
     
     else:
         raise TypeError("ParamSpace node can only be constructed from a "
@@ -100,7 +100,8 @@ def _pspace_constructor(loader, node, sort_if_mapping: bool=True) -> ParamSpace:
 def _pdim_constructor(loader, node) -> ParamDim:
     """constructor for creating a ParamDim object from a mapping
 
-    For it to be incorported into a ParamSpace, one parent (or higher) of this node needs to be tagged such that the pspace_constructor is invoked.
+    For it to be incorported into a ParamSpace, one parent (or higher) of this
+    node needs to be tagged such that the pspace_constructor is invoked.
     """
     log.debug("Encountered tag associated with ParamDim.")
 
@@ -119,7 +120,8 @@ def _pdim_constructor(loader, node) -> ParamDim:
 def _coupled_pdim_constructor(loader, node) -> ParamDim:
     """constructor for creating a ParamDim object from a mapping
 
-    For it to be incorported into a ParamSpace, one parent (or higher) of this node needs to be tagged such that the pspace_constructor is invoked.
+    For it to be incorported into a ParamSpace, one parent (or higher) of this
+    node needs to be tagged such that the pspace_constructor is invoked.
     """
     log.debug("Encountered tag associated with ParamDim.")
 
@@ -171,6 +173,22 @@ def _range_constructor(loader, node):
 
     return rg
 
+def _list_constructor(loader, node):
+    """pyyaml constructor for lists, where node can be a mapping or sequence"""
+    log.debug("Encountered !listgen tag.")
+
+    if isinstance(node, ruamel.yaml.nodes.MappingNode):
+        kwargs = loader.construct_mapping(node, deep=True)
+    
+    elif isinstance(node, ruamel.yaml.nodes.SequenceNode):
+        kwargs = dict(from_range=loader.construct_sequence(node))
+    
+    else:
+        raise TypeError("Expected mapping or sequence node for !listgen, but "
+                        "got {}!".format(type(node)))
+
+    log.debug("  kwargs:  %s", kwargs)
+    return create_indices(**kwargs)
 
 
 # Helpers ---------------------------------------------------------------------

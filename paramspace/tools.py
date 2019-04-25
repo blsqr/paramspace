@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 
 
 # -----------------------------------------------------------------------------
-# Small helper classes
+# Small helper classes and functions
 
 class Skip:
     """A skip object can be used to indiciate that no action should be taken
@@ -21,6 +21,44 @@ class Skip:
 
 # Initialize such an object, simplifying the calls
 SKIP = Skip()
+
+# .............................................................................
+
+def create_indices(*, from_range: list=None,
+                   unique: bool=False, sort: bool=True,
+                   append: list=None, remove: list=None) -> List[int]:
+    """Generates a list of integer elements.
+    
+    Args:
+        from_range (list, optional): range arguments to use as the basis of the
+            list
+        unique (bool, optional): Whether to ascertain uniqueness of elements
+        sort (bool, optional): Whether to sort the list before returning
+        append (list, optional): Additional elements to append to the list
+        remove (list, optional): Elements to remove all occurrences of
+    
+    Returns:
+        List[int]: The generated list
+    """
+    l = []
+    if from_range:
+        l += list(range(*from_range))
+
+    if append:
+        l += append
+
+    if remove:
+        for element_to_remove in list(set(remove)):
+            while element_to_remove in l:
+                l.remove(element_to_remove)
+
+    if unique:
+        l = list(set(l))
+
+    if sort:
+        l.sort()
+
+    return l
 
 
 # -----------------------------------------------------------------------------

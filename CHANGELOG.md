@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.2.0
+- !24: Add YAML representers for `slice` and `range` and add a `!listgen` YAML tag which generates a list.
+
 ## v2.1.1
 - #28: Fix a bug where `CoupledParamDim` only allowed the `values` argument and no others.
 

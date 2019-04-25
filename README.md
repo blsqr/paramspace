@@ -134,7 +134,10 @@ for params in pspace:
 
 
 ## Known issues
-* `CoupledParamDim` objects might be implemented a bit inconsistently:
+* `CoupledParamDim` objects are implemented a bit inconsistently:
    * They behave in some cases not equivalent to regular `ParamDim` objects, e.g., they cannot be iterated over on their own (in fact, this will lead to an infinite loop).
    * Their `mask` behaviour might be unexpected.
    * Within a `ParamSpace`, they are mostly hidden from the user. The iteration over parameter space works reliably, but they are, e.g., not accessible within the state maps.
+* YAML representation is quite fragile, especially for `CoupledParamDim`. This
+  will require some rewriting sooner or later, quite possibly accompied by an
+  interface change ...
