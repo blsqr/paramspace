@@ -21,6 +21,13 @@ def small_psp():
                            p2=ParamDim(default=0, values=[1, 2, 3, 4, 5])))
 
 @pytest.fixture()
+def float_valued_psp():
+    """A small parameter space that has float values for parameter values"""
+    return ParamSpace(dict(lin1=ParamDim(default=0., linspace=[-1., 1., 11]),
+                           lin2=ParamDim(default=0., linspace=[-2., 2., 11]),
+                           log1=ParamDim(default=0., logspace=[-10., 10., 6])))
+
+@pytest.fixture()
 def basic_psp():
     """Used to setup a basic pspace object to be tested on."""
     d = dict(a=1, b=2, foo="bar", spam="eggs", mutable=[0, 0, 0],
@@ -742,10 +749,10 @@ def test_subspace(small_psp, basic_psp):
     assert list(psp.active_state_map.coords['p2']) == [1, 3, 5]
 
     # Empty arguments
-    psp.activate_subspace(**{})
+    psp.activate_subspace()
     assert psp.volume == 2 * 3 * 5
 
-    basic_psp.activate_subspace(**{})
+    basic_psp.activate_subspace()
     assert basic_psp.volume == 3**6
 
     # Test the error messages
@@ -780,6 +787,43 @@ def test_subspace(small_psp, basic_psp):
     # allow_default
     with pytest.raises(ValueError, match="'p0' would be totally masked, thus"):
         psp.activate_subspace(p0=[])
+
+def test_subspace_float_locs(float_valued_psp):
+    """Test that parameter spaces with float-valued parameter values can also
+    be reliably selected.
+    """
+    psp = float_valued_psp
+    assert psp.volume == 11 * 11 * 6
+
+    # Select subspace via location
+    psp.activate_subspace(lin1=0.2,
+                          lin2=[-2.0, -1.6, 0.4],
+                          log1=[1.e-10, 1e+10])
+    assert psp.volume == 1 * 3 * 2
+    assert np.isclose(psp.active_state_map.coords['lin1'],
+                      [0.2]).all()
+    assert np.isclose(psp.active_state_map.coords['lin2'],
+                      [-2., -1.6, +0.4]).all()
+    assert np.isclose(psp.active_state_map.coords['log1'],
+                      [1.e-10, 1.e+10]).all()
+
+    # Can also pass a custom tolerance
+    psp.activate_subspace()
+    assert psp.volume == 11 * 11 * 6
+
+    psp.activate_subspace(lin1=dict(loc=0.2+1e-6, atol=1e-5),
+                          lin2=dict(loc=[-2.0+1e-16, 0.4+1e-16], atol=1e-10),
+                          log1=dict(loc=[1.e-10 + 1e-16, 1e+10 - 1e-16],
+                                    rtol=1e-10, atol=1e-100))
+    assert psp.volume == 1 * 2 * 2
+    assert np.isclose(psp.active_state_map.coords['lin1'],
+                      [0.2]).all()
+    assert np.isclose(psp.active_state_map.coords['lin2'],
+                      [-2., +0.4]).all()
+    assert np.isclose(psp.active_state_map.coords['log1'],
+                      [1.e-10, 1.e+10]).all()
+
+
 
 # Complicated content ---------------------------------------------------------
 

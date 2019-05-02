@@ -1136,6 +1136,8 @@ class ParamSpace:
                 value should be a dict with one of the following keys.
                     idx: to select by index
                     loc: to select by coordinate values
+                    **tol_kwargs: passed on to ``np.isclose`` when comparing
+                        coordinate values.
                 Non-sequence values will be put into lists. Alternatively,
                 slices can be specified, which are applied on the list of all
                 available indices or coordinates, respectively.
@@ -1145,10 +1147,19 @@ class ParamSpace:
         Raises:
             ValueError: Description
         """
-        def calc_mask(name, *, idx=None, loc=None) -> List[bool]:
+        def calc_mask(name, *, idx=None, loc=None, **tol_kwargs) -> List[bool]:
             """Calculates the mask to use such that the given indices or
             locations are _un_masked.
+
+            The ``tol_kwargs`` are passed on to ``np.isclose`` for cases where
+            a coordinate is selected by ``loc``.
             """
+            def contains_close(a, seq, **tol_kwargs) -> bool:
+                """Whether ``a`` is contained in ``seq`` when comparing via
+                ``np.isclose`` rather than ``==``.
+                """
+                return any([np.isclose(a, v, **tol_kwargs) for v in seq])
+
             if idx is not None and loc is not None:
                 raise ValueError("Only accepting _either_ of the arguments "
                                  "idx and loc, but got both!.")
@@ -1215,7 +1226,7 @@ class ParamSpace:
                     if not isinstance(loc, (list, tuple)):
                         loc = [loc]
 
-                    if any([val not in coords for val in loc]):
+                    if any([not contains_close(val, coords) for val in loc]):
                         raise KeyError("At least one of the labels in {} is "
                                        "not available as coordinate of this "
                                        "parameter dimension, {}!"
@@ -1225,9 +1236,12 @@ class ParamSpace:
                         raise ValueError("Given labels {} contained at least "
                                          "one duplicate item!".format(loc))
 
-                    # Everything ok.
+                    # Everything ok. Get the indices. Iterate over coordinates
+                    # rather than loc in order to ascertain the correct order
+                    # and have the indices available. The checks above make
+                    # sure that this is no issue.
                     idcs = [(idx + 1) for idx, val in enumerate(coords)
-                            if val in loc]
+                            if contains_close(val, loc)]
 
             else:
                 raise ValueError("Missing one of the required keyword "
