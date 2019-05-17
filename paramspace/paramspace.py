@@ -1155,10 +1155,26 @@ class ParamSpace:
             a coordinate is selected by ``loc``.
             """
             def contains_close(a, seq, **tol_kwargs) -> bool:
-                """Whether ``a`` is contained in ``seq`` when comparing via
-                ``np.isclose`` rather than ``==``.
+                """Whether ``a`` is contained in ``seq`` when comparing a
+                numeric-typed ``a`` via ``np.isclose`` rather than ``==``.
+                
+                For non-numeric types, the regular ``__contains__`` is used.
+
+                NOTE: The decision is made via the type of ``a``
                 """
-                return any([np.isclose(a, v, **tol_kwargs) for v in seq])
+                if isinstance(a, (float, int)):
+                    try:
+                        return any([np.isclose(a, v, **tol_kwargs)
+                                    for v in seq])
+                    except TypeError as err:
+                        raise TypeError("Could not ascertain whether {} is "
+                                        "contained in {}! This is probably "
+                                        "due to values of numeric type being "
+                                        "mixed with non-numeric ones. Check "
+                                        "the definition of your parameter "
+                                        "dimensions.".format(a, seq)
+                                        ) from err
+                return a in seq
 
             if idx is not None and loc is not None:
                 raise ValueError("Only accepting _either_ of the arguments "

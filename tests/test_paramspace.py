@@ -28,6 +28,15 @@ def float_valued_psp():
                            log1=ParamDim(default=0., logspace=[-10., 10., 6])))
 
 @pytest.fixture()
+def str_valued_psp():
+    """A small parameter space that has string values for parameter values"""
+    return ParamSpace(dict(p0=ParamDim(default='foo',
+                                       values=['foo', 'bar', 'baz']),
+                           p1=ParamDim(default='0',
+                                       values=['0', '1', '2', '3', '4']),
+                           lin=ParamDim(default=0., linspace=[0., 1., 6])))
+
+@pytest.fixture()
 def basic_psp():
     """Used to setup a basic pspace object to be tested on."""
     d = dict(a=1, b=2, foo="bar", spam="eggs", mutable=[0, 0, 0],
@@ -823,6 +832,44 @@ def test_subspace_float_locs(float_valued_psp):
     assert np.isclose(psp.active_state_map.coords['log1'],
                       [1.e-10, 1.e+10]).all()
 
+def test_subspace_str_locs(str_valued_psp):
+    """Test that parameter spaces with str-valued parameter values can also
+    be reliably selected.
+    """
+    psp = str_valued_psp
+    assert psp.volume == 3 * 5 * 6
+
+    # Select subspace via location
+    psp.activate_subspace(p0='foo',
+                          p1=['1', '3', '4'])
+    assert psp.volume == 1 * 3 * 6
+    assert (psp.active_state_map.coords['p0'] == ['foo']).all()
+    assert (psp.active_state_map.coords['p1'] == ['1', '3', '4']).all()
+
+
+def test_subspace_mixed_values():
+    """Test that parameter spaces with parameter dimensions that have mixed
+    values raise the expected error message.
+    """
+    psp = ParamSpace(dict(all_str=ParamDim(default='foo',
+                                           values=['foo', 'bar', 'baz']),
+                          mixed=ParamDim(default='0',
+                                         values=[0., '1', '2', 3, '4'])))
+    assert psp.volume == 3 * 5
+
+    # These should fail due to a mixed-type dimension is tried to be masked
+    with pytest.raises(TypeError, match="Could not ascertain whether"):
+        psp.activate_subspace(mixed=0.)
+
+    with pytest.raises(TypeError, match="Could not ascertain whether"):
+        psp.activate_subspace(all_str='foo', mixed=[0., '1'])
+        
+    with pytest.raises(TypeError, match="Could not ascertain whether"):
+        psp.activate_subspace(all_str='foo', mixed=['1', '2'])
+    
+    # ... but this should work, as the mixed-type dimension is not touched
+    psp.activate_subspace(all_str='foo')
+    assert psp.volume == 1 * 5
 
 
 # Complicated content ---------------------------------------------------------
