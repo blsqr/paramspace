@@ -847,6 +847,31 @@ def test_subspace_str_locs(str_valued_psp):
     assert (psp.active_state_map.coords['p1'] == ['1', '3', '4']).all()
 
 
+def test_subspace_mixed_values():
+    """Test that parameter spaces with parameter dimensions that have mixed
+    values raise the expected error message.
+    """
+    psp = ParamSpace(dict(all_str=ParamDim(default='foo',
+                                           values=['foo', 'bar', 'baz']),
+                          mixed=ParamDim(default='0',
+                                         values=[0., '1', '2', 3, '4'])))
+    assert psp.volume == 3 * 5
+
+    # These should fail due to a mixed-type dimension is tried to be masked
+    with pytest.raises(TypeError, match="Could not ascertain whether"):
+        psp.activate_subspace(mixed=0.)
+
+    with pytest.raises(TypeError, match="Could not ascertain whether"):
+        psp.activate_subspace(all_str='foo', mixed=[0., '1'])
+        
+    with pytest.raises(TypeError, match="Could not ascertain whether"):
+        psp.activate_subspace(all_str='foo', mixed=['1', '2'])
+    
+    # ... but this should work, as the mixed-type dimension is not touched
+    psp.activate_subspace(all_str='foo')
+    assert psp.volume == 1 * 5
+
+
 # Complicated content ---------------------------------------------------------
 
 def test_coupled(psp_with_coupled):
