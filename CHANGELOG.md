@@ -2,6 +2,8 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.2.3
+- !27: Allows `CoupledParamDim.target_pdim` to change
 
 ## v2.2.2
 - #30: Fixes a bug where `ParamSpace.activate_subspace` failed when specifying string `loc` values.
