@@ -306,8 +306,9 @@ def test_cpd_init():
         cpd.target_pdim = "foo"
 
     cpd.target_pdim = pd
-    with pytest.raises(ValueError, match="Cannot change target of"):
-        cpd.target_pdim = pd
+
+    # Setting it again also works
+    cpd.target_pdim = pd
     
     # Test lengths are matching
     with pytest.raises(ValueError, match="The lengths of the value sequences"):

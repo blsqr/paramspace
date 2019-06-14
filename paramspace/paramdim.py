@@ -979,11 +979,8 @@ class CoupledParamDim(ParamDimBase):
 
     @target_pdim.setter
     def target_pdim(self, pdim: ParamDim):
-        """Set the target ParamDim, if it is not already set"""
-        if self._target_pdim is not None:
-            raise ValueError("Cannot change target of CoupledParamDim!")
-
-        elif not isinstance(pdim, ParamDim):
+        """Set the target ParamDim"""
+        if not isinstance(pdim, ParamDim):
             raise TypeError("Target of CoupledParamDim needs to be of type "
                             "ParamDim, was "+str(type(pdim)))
 
