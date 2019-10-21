@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.3.0 _(WIP)_
+- #31 Adds CI testing for Python 3.8
+
 ## v2.2.3
 - !27: Allows `CoupledParamDim.target_pdim` to change
 

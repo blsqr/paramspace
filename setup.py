@@ -8,7 +8,7 @@ test_deps    = ['tox>=3.1', 'pytest>=3.4', 'pytest-cov>=2.6']
 
 
 setup(name='paramspace',
-      version='2.2.3',  # NOTE: also change this in __init__.py
+      version='2.3.0rc0',  # NOTE: also change this in __init__.py
       description='Multidimensional parameter space with dictionaries at each point.',
       long_description='Classes that allow easy iteration over a multidimensional parameter space, generating dictionaries at each point in this parameter space.',
       author='Yunus Sevinchan',
@@ -21,6 +21,7 @@ setup(name='paramspace',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Utilities'
       ],
       packages=['paramspace'],
