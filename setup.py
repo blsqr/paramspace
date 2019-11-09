@@ -2,12 +2,17 @@
 
 from setuptools import setup
 
-# Dependency lists
+# Dependencies for paramspace itself
 install_deps = [
     'numpy>=1.15',
     'xarray>=0.10.9',
     'ruamel.yaml>=0.16.5'
 ]
+
+# Derive an extra that uses strict versions; allows testing for these via tox
+minimal_install_deps = [dep.replace(">=", "==") for dep in install_deps]
+
+# Dependencies for the tests
 test_deps = [
     'tox>=3.1',
     'pytest>=3.4',
@@ -73,5 +78,6 @@ setup(
     install_requires=install_deps,
     tests_require=test_deps,
     test_suite='tox',
-    extras_require=dict(test_deps=test_deps)
+    extras_require=dict(test_deps=test_deps,
+                        minimal_deps=minimal_install_deps)
 )
