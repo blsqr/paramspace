@@ -4,7 +4,7 @@ from setuptools import setup
 
 # Dependencies for paramspace itself
 install_deps = [
-    'numpy>=1.15',
+    'numpy>=1.17.3',
     'xarray>=0.10.9',
     'ruamel.yaml>=0.16.5'
 ]
