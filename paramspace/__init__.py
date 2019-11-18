@@ -6,7 +6,7 @@ create parameter dimensions. When passing this dict-like object to
 `ParamSpace`, it is possible to iterate over the points in parameter space ...
 """
 
-__version__ = '2.2.3'
+__version__ = '2.3.0'
 
 from paramspace.paramspace import ParamSpace
 from paramspace.paramdim import ParamDim, CoupledParamDim

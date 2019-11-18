@@ -4,6 +4,7 @@ image: python
 stages:
   - test
   - test_minimal_deps
+  - deploy
 
 before_script:
   - pip install tox
@@ -55,3 +56,26 @@ test_minimal_deps:py38:
     - test:py38
   script:
     - tox -e py38-minimal_deps
+
+
+# -----------------------------------------------------------------------------
+# Deployment to PyPI
+
+deploy:pypi:
+  image: python:3.6
+  stage: deploy
+  only:
+    - tags    # Triggered when a new tag is added
+    - web     # Use this for pre-release deployment
+
+  before_script:
+    - pip install -U twine setuptools
+  script:
+    # Create distribution files
+    - python setup.py sdist bdist_wheel
+
+    # Upload to the TEST PyPI index (using separate credentials)
+    - twine upload --repository-url https://test.pypi.org/legacy/ -u ${PYPI_TEST_USER} -p ${PYPI_TEST_PASSWORD} dist/*
+
+    # If this worked, continue and upload to actual package index
+    - twine upload -u ${PYPI_USER} -p ${PYPI_PASSWORD} dist/*
