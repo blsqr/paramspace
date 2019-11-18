@@ -35,17 +35,26 @@ In other words: each point in this parameter space refers to a specific state of
 
 
 ## Install
-The `paramspace` package is tested for Python 3.6 and 3.7.
-
-For installation, it is best to use `pip` and pass the URL to this repository to it. This will automatically install `paramspace` and its requirements and makes it very easy to uninstall or upgrade later.
+The `paramspace` package is tested for Python 3.6 - 3.8 and is available [on the Python Package Index](https://pypi.org/project/paramspace/).
+You can install it using:
 
 ```bash
-$ pip3 install git+ssh://git@ts-gitlab.iup.uni-heidelberg.de:10022/yunus/paramspace.git
+pip install paramspace
 ```
 
-You can also clone this repository and install it (in editable mode) from the local directory:
+### For Developers
+For installation of versions that are not on the PyPI, `pip` allows specifying a git repository:
+
 ```bash
-$ git clone ssh://git@ts-gitlab.iup.uni-heidelberg.de:10022/yunus/paramspace.git
+$ pip3 install git+<clone-URL>@<some-branch-name>
+```
+
+Here, replace `<clone-URL>` with the repositories clone URL and specify the branch you want to install the package from.
+Alternatively, omit the `@` and everything after it.
+
+For local development and testing, it's best to clone this repository and install it (in editable mode) from the local directory:
+```bash
+$ git clone <clone-URL>
 $ pip3 install -e paramspace/
 ```
 

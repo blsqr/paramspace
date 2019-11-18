@@ -2,6 +2,16 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.3.0
+With this release, the paramspace project page becomes publicly available and the package becomes installable via the Python Package Index. :tada:  
+This is an infrastructure release; there are no changes to package functionality.
+
+- !32 adds a GitLab CI job to deploy `paramspace` to PyPI
+- !31 changes the package license to be the BSD-2-clause license
+- !29 single-sources the package version specification
+- !28 and !30 extend testing to Python 3.8 and separate jobs to test dependencies with the lowest specified versions.   
+
+
 ## v2.2.3
 - !27: Allows `CoupledParamDim.target_pdim` to change
 
