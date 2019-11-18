@@ -63,11 +63,11 @@ setup(
     author='Yunus Sevinchan',
     author_email='Yunus.Sevinchan@iup.uni-heidelberg.de',
     url='https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace',
-    license='MIT',
+    license='BSD-2',
     classifiers=[
       'Development Status :: 5 - Production/Stable',
       'Intended Audience :: Science/Research',
-      'License :: OSI Approved :: MIT License',
+      'License :: OSI Approved :: BSD License',
       'Programming Language :: Python :: 3.6',
       'Programming Language :: Python :: 3.7',
       'Programming Language :: Python :: 3.8',
