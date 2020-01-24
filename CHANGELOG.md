@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.3.1
+- !33 adds a `.coveragerc` file for pytest
+
 ## v2.3.0
 With this release, the paramspace project page becomes publicly available and the package becomes installable via the Python Package Index. :tada:  
 This is an infrastructure release; there are no changes to package functionality.

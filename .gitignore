@@ -1,9 +1,12 @@
+# Ignore build info
 build
 dist
-files.txt
-MANIFEST
-ParamSpace.egg-info
-.coverage
-.pytest_cache
-.tox
+*.egg-info
 
+# Ignore test-generated files
+.tox
+.pytest_cache
+.coverage
+
+# Don't ignore some specific files
+!.coveragerc
