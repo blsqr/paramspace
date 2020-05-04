@@ -20,12 +20,14 @@ log = logging.getLogger(__name__)
 
 # Top-level functions for the yaml-module to import ---------------------------
 
+
 def pspace(loader, node) -> ParamSpace:
     """yaml constructor for creating a ParamSpace object from a mapping.
 
     Suggested tag: !pspace
     """
     return _pspace_constructor(loader, node)
+
 
 def pspace_unsorted(loader, node) -> ParamSpace:
     """yaml constructor for creating a ParamSpace object from a mapping.
@@ -37,12 +39,14 @@ def pspace_unsorted(loader, node) -> ParamSpace:
     """
     return _pspace_constructor(loader, node, sort_if_mapping=False)
 
+
 def pdim(loader, node) -> ParamDim:
     """constructor for creating a ParamDim object from a mapping
 
     Suggested tag: !pdim
     """
     return _pdim_constructor(loader, node)
+
 
 def pdim_default(loader, node) -> ParamDim:
     """constructor for creating a ParamDim object from a mapping, but only
@@ -54,12 +58,14 @@ def pdim_default(loader, node) -> ParamDim:
     log.debug("Returning default value of constructed ParamDim.")
     return pdim.default
 
+
 def coupled_pdim(loader, node) -> CoupledParamDim:
     """constructor for creating a CoupledParamDim object from a mapping
 
     Suggested tag: !coupled-pdim
     """
     return _coupled_pdim_constructor(loader, node)
+
 
 def coupled_pdim_default(loader, node) -> CoupledParamDim:
     """constructor for creating a CoupledParamDim object from a mapping, but
@@ -74,8 +80,10 @@ def coupled_pdim_default(loader, node) -> CoupledParamDim:
 
 # The actual constructor functions --------------------------------------------
 
-def _pspace_constructor(loader, node,
-                        sort_if_mapping: bool=True) -> ParamSpace:
+
+def _pspace_constructor(
+    loader, node, sort_if_mapping: bool = True
+) -> ParamSpace:
     """constructor for instantiating ParamSpace from a mapping or a sequence"""
     log.debug("Encountered tag associated with ParamSpace.")
 
@@ -88,14 +96,17 @@ def _pspace_constructor(loader, node,
         if sort_if_mapping:
             log.debug("Recursively sorting the mapping ...")
             d = recursively_sort_dict(OrderedDict(d))
-    
+
     else:
-        raise TypeError("ParamSpace node can only be constructed from a "
-                        "Mapping or a Sequence, got node of type {} with "
-                        "value:\n{}.".format(type(node), node))
+        raise TypeError(
+            "ParamSpace node can only be constructed from a "
+            "Mapping or a Sequence, got node of type {} with "
+            "value:\n{}.".format(type(node), node)
+        )
 
     log.debug("Instantiating ParamSpace ...")
     return ParamSpace(d)
+
 
 def _pdim_constructor(loader, node) -> ParamDim:
     """constructor for creating a ParamDim object from a mapping
@@ -111,11 +122,14 @@ def _pdim_constructor(loader, node) -> ParamDim:
         pdim = ParamDim(**mapping)
 
     else:
-        raise TypeError("ParamDim can only be constructed from a mapping node,"
-                        " got node of type {} "
-                        "with value:\n{}".format(type(node), node))
+        raise TypeError(
+            "ParamDim can only be constructed from a mapping node,"
+            " got node of type {} "
+            "with value:\n{}".format(type(node), node)
+        )
 
     return pdim
+
 
 def _coupled_pdim_constructor(loader, node) -> ParamDim:
     """constructor for creating a ParamDim object from a mapping
@@ -131,9 +145,11 @@ def _coupled_pdim_constructor(loader, node) -> ParamDim:
         cpdim = CoupledParamDim(**mapping)
 
     else:
-        raise TypeError("CoupledParamDim can only be constructed from a "
-                        "mapping node, got node of type {} "
-                        "with value:\n{}".format(type(node), node))
+        raise TypeError(
+            "CoupledParamDim can only be constructed from a "
+            "mapping node, got node of type {} "
+            "with value:\n{}".format(type(node), node)
+        )
 
     return cpdim
 
@@ -157,6 +173,7 @@ def _slice_constructor(loader, node):
 
     return slc
 
+
 def _range_constructor(loader, node):
     """pyyaml constructor for range"""
     log.debug("Encountered !range tag.")
@@ -173,25 +190,29 @@ def _range_constructor(loader, node):
 
     return rg
 
+
 def _list_constructor(loader, node):
     """pyyaml constructor for lists, where node can be a mapping or sequence"""
     log.debug("Encountered !listgen tag.")
 
     if isinstance(node, ruamel.yaml.nodes.MappingNode):
         kwargs = loader.construct_mapping(node, deep=True)
-    
+
     elif isinstance(node, ruamel.yaml.nodes.SequenceNode):
         kwargs = dict(from_range=loader.construct_sequence(node))
-    
+
     else:
-        raise TypeError("Expected mapping or sequence node for !listgen, but "
-                        "got {}!".format(type(node)))
+        raise TypeError(
+            "Expected mapping or sequence node for !listgen, but "
+            "got {}!".format(type(node))
+        )
 
     log.debug("  kwargs:  %s", kwargs)
     return create_indices(**kwargs)
 
 
 # Helpers ---------------------------------------------------------------------
+
 
 def recursively_sort_dict(d: dict) -> OrderedDict:
     """Recursively sorts a dictionary by its keys, transforming it to an

@@ -12,21 +12,30 @@ log = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 # Small helper classes and functions
 
+
 class Skip:
     """A skip object can be used to indiciate that no action should be taken
 
     It is used in recursive_update to indicate that a value is to be skipped
     """
+
     pass
+
 
 # Initialize such an object, simplifying the calls
 SKIP = Skip()
 
 # .............................................................................
 
-def create_indices(*, from_range: list=None,
-                   unique: bool=False, sort: bool=True,
-                   append: list=None, remove: list=None) -> List[int]:
+
+def create_indices(
+    *,
+    from_range: list = None,
+    unique: bool = False,
+    sort: bool = True,
+    append: list = None,
+    remove: list = None,
+) -> List[int]:
     """Generates a list of integer elements.
     
     Args:
@@ -63,7 +72,10 @@ def create_indices(*, from_range: list=None,
 
 # -----------------------------------------------------------------------------
 
-def recursive_contains(obj: Union[Mapping, Sequence], *, keys: Sequence) -> bool:
+
+def recursive_contains(
+    obj: Union[Mapping, Sequence], *, keys: Sequence
+) -> bool:
     """Checks whether the given keysequence is reachable in the `obj`.
     
     Args:
@@ -81,6 +93,7 @@ def recursive_contains(obj: Union[Mapping, Sequence], *, keys: Sequence) -> bool
         return False
     # else: reached the end of the recursion
     return keys[0] in obj
+
 
 def recursive_getitem(obj: Union[Mapping, Sequence], *, keys: Sequence):
     """Go along the sequence of `keys` through `obj` and return the target item.
@@ -117,7 +130,14 @@ def recursive_getitem(obj: Union[Mapping, Sequence], *, keys: Sequence):
         except IndexError as err:
             raise IndexError(idxerr_fstr.format(keys[0], keys, obj)) from err
 
-def recursive_update(obj: Union[Mapping, List], upd: Union[Mapping, List], *, try_list_conversion: bool=False, no_convert: tuple=(str,)) -> Union[Mapping, List]:
+
+def recursive_update(
+    obj: Union[Mapping, List],
+    upd: Union[Mapping, List],
+    *,
+    try_list_conversion: bool = False,
+    no_convert: tuple = (str,),
+) -> Union[Mapping, List]:
     """Recursively update items in `obj` with the values from `upd`.
     
     Be aware that objects are not copied from `upd` to `obj`, but only
@@ -157,9 +177,12 @@ def recursive_update(obj: Union[Mapping, List], upd: Union[Mapping, List], *, tr
             # The target object is already a mapping.
             # Can now either recurse or set the value, depending on val
             if isinstance(val, (collections.abc.Mapping, list)):
-                obj[key] = recursive_update(obj.get(key, {}), val,
-                                            try_list_conversion=try_list_conversion,
-                                            no_convert=no_convert)
+                obj[key] = recursive_update(
+                    obj.get(key, {}),
+                    val,
+                    try_list_conversion=try_list_conversion,
+                    no_convert=no_convert,
+                )
                 # NOTE the .get also creates an empty mapping, if needed
             else:
                 obj[key] = val
@@ -177,12 +200,14 @@ def recursive_update(obj: Union[Mapping, List], upd: Union[Mapping, List], *, tr
                 try:
                     obj = list(obj)
                 except Exception as err:
-                    warnings.warn("Could not convert object of type {} "
-                                  "to a list, got {}:{}.\nUsing empty list "
-                                  "instead.".format(type(obj),
-                                                    err.__class__.__name__,
-                                                    str(err)),
-                                  UserWarning)
+                    warnings.warn(
+                        "Could not convert object of type {} "
+                        "to a list, got {}:{}.\nUsing empty list "
+                        "instead.".format(
+                            type(obj), err.__class__.__name__, str(err)
+                        ),
+                        UserWarning,
+                    )
                     # Ditch the list
                     obj = list()
 
@@ -200,35 +225,54 @@ def recursive_update(obj: Union[Mapping, List], upd: Union[Mapping, List], *, tr
             # Determine whether recursion needs to start/continue
             if isinstance(val, (collections.abc.Mapping, list)):
                 # Continue recursion
-                obj[idx] = recursive_update(obj[idx], val,
-                                            try_list_conversion=try_list_conversion,
-                                            no_convert=no_convert)
+                obj[idx] = recursive_update(
+                    obj[idx],
+                    val,
+                    try_list_conversion=try_list_conversion,
+                    no_convert=no_convert,
+                )
                 # NOTE it was ensured above that this element is available
             else:
                 obj[idx] = val
-        
+
         return obj
     # else: this case is logically impossible
 
-def recursive_setitem(d: dict, *, keys: tuple, val, create_key: bool=False):
+
+def recursive_setitem(d: dict, *, keys: tuple, val, create_key: bool = False):
     """Recursively goes through dict-like d along the keys in tuple keys and sets the value to the child entry."""
     if len(keys) > 1:
         # Check and continue recursion
         if keys[0] in d:
-            recursive_setitem(d=d[keys[0]], keys=keys[1:],
-                               val=val, create_key=create_key)
+            recursive_setitem(
+                d=d[keys[0]], keys=keys[1:], val=val, create_key=create_key
+            )
         else:
             if create_key:
                 d[keys[0]] = {}
-                recursive_setitem(d=d[keys[0]], keys=keys[1:],
-                                   val=val, create_key=create_key)
+                recursive_setitem(
+                    d=d[keys[0]], keys=keys[1:], val=val, create_key=create_key
+                )
             else:
-                raise KeyError("No key '{}' found in dict {}; if it should be created, set create_key argument to True.".format(keys[0], d))
+                raise KeyError(
+                    "No key '{}' found in dict {}; if it should be created, set create_key argument to True.".format(
+                        keys[0], d
+                    )
+                )
     else:
         # reached the end of the recursion
         d[keys[0]] = val
 
-def recursive_collect(obj: Union[Mapping, Sequence], *, select_func: Callable, prepend_info: Sequence=None, info_func: Callable=None, stop_recursion_types: tuple=None, _parent_keys: tuple=None) -> list:
+
+def recursive_collect(
+    obj: Union[Mapping, Sequence],
+    *,
+    select_func: Callable,
+    prepend_info: Sequence = None,
+    info_func: Callable = None,
+    stop_recursion_types: tuple = None,
+    _parent_keys: tuple = None,
+) -> list:
     """Go recursively through a mapping or sequence and collect selected elements.
     
     The `select_func` is called on each values. If the return value is True, that value will be collected to a list, which is returned at the end.
@@ -295,30 +339,42 @@ def recursive_collect(obj: Union[Mapping, Sequence], *, select_func: Callable, p
                 entry = (val,)
                 # Loop over the keys to prepend in reversed order (such that the order of the given tuple is not inverted)
                 for info in reversed(prepend_info):
-                    if info in ['key', 'keys', 'keyseq', 'keysequence']:
+                    if info in ["key", "keys", "keyseq", "keysequence"]:
                         entry = (these_keys,) + entry
-                    elif info in ['info_func']:
+                    elif info in ["info_func"]:
                         entry = (info_func(val),) + entry
                     else:
-                        raise ValueError("No such `prepend_info` entry implemented: "+str(info))
+                        raise ValueError(
+                            "No such `prepend_info` entry implemented: "
+                            + str(info)
+                        )
 
             # Add it to the return list
             coll.append(entry)
 
         elif is_iterable(val) and not isinstance(val, stop_recursion_types):
             # Not the desired element, but recursion possible ...
-            coll += recursive_collect(val,
-                                      select_func=select_func,
-                                      prepend_info=prepend_info,
-                                      info_func=info_func,
-                                      stop_recursion_types=stop_recursion_types,
-                                      _parent_keys=these_keys)
+            coll += recursive_collect(
+                val,
+                select_func=select_func,
+                prepend_info=prepend_info,
+                info_func=info_func,
+                stop_recursion_types=stop_recursion_types,
+                _parent_keys=these_keys,
+            )
 
         # else: is something that cannot be selected and cannot be further recursed ...
 
     return coll
 
-def recursive_replace(obj: Union[Mapping, Sequence], *, select_func: Callable, replace_func: Callable, stop_recursion_types: tuple=None) -> Union[Mapping, Sequence]:
+
+def recursive_replace(
+    obj: Union[Mapping, Sequence],
+    *,
+    select_func: Callable,
+    replace_func: Callable,
+    stop_recursion_types: tuple = None,
+) -> Union[Mapping, Sequence]:
     """Go recursively through a mapping or sequence and call a replace function on each element that the select function returned true on.
     
     For passing arguments to any of the two, use lambda functions.    
@@ -344,8 +400,11 @@ def recursive_replace(obj: Union[Mapping, Sequence], *, select_func: Callable, r
         try:
             ms[key] = replace_by
         except TypeError as err:
-            raise TypeError("Failed to replace element via item assignment; probably because given container type ({}) was not mutable for key '{}'.".format(type(ms), key)) from err
-
+            raise TypeError(
+                "Failed to replace element via item assignment; probably because given container type ({}) was not mutable for key '{}'.".format(
+                    type(ms), key
+                )
+            ) from err
 
     # Compile the list of types that should not be recursed further
     if not stop_recursion_types:
@@ -360,22 +419,28 @@ def recursive_replace(obj: Union[Mapping, Sequence], *, select_func: Callable, r
     for key, val in get_key_val_iter(obj):
         if select_func(val):
             # found the desired element -> replace by the value returned from the replace_func
-            replace(obj, key=key,
-                    replace_by=replace_func(val))
+            replace(obj, key=key, replace_by=replace_func(val))
 
         elif is_iterable(val) and not isinstance(val, stop_recursion_types):
             # Not the desired element, but recursion possible ...
-            replace(obj, key=key,
-                    replace_by=recursive_replace(val,
-                                                 select_func=select_func,
-                                                 replace_func=replace_func,
-                                                 stop_recursion_types=stop_recursion_types))
+            replace(
+                obj,
+                key=key,
+                replace_by=recursive_replace(
+                    val,
+                    select_func=select_func,
+                    replace_func=replace_func,
+                    stop_recursion_types=stop_recursion_types,
+                ),
+            )
 
         # else: was not selected and cannot be further recursed, thus: stays the same
 
     return obj
 
+
 # Helpers ---------------------------------------------------------------------
+
 
 def is_iterable(obj) -> bool:
     """Tests if the given object is iterable or not
@@ -392,6 +457,7 @@ def is_iterable(obj) -> bool:
         return False
     return True
 
+
 def get_key_val_iter(obj: Union[Mapping, Sequence]) -> Iterator:
     """Given an object -- assumed dict- or sequence-like -- returns a (key, value) iterator.
     
@@ -402,7 +468,7 @@ def get_key_val_iter(obj: Union[Mapping, Sequence]) -> Iterator:
         Iterator: An iterator that emits (key, value) tuples
     """
     # Distinguish different ways of iterating over it
-    if hasattr(obj, 'items') and callable(obj.items):
+    if hasattr(obj, "items") and callable(obj.items):
         # assume it is dict-like
         return obj.items()
     # assume sequence-like

@@ -10,6 +10,7 @@ log = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
 
+
 def _slice_representer(representer, node: slice):
     """
     Args:
@@ -20,7 +21,7 @@ def _slice_representer(representer, node: slice):
         a yaml sequence that is able to recreate a slice
     """
     slice_args = [node.start, node.stop, node.step]
-    return representer.represent_sequence(u'!slice', slice_args)
+    return representer.represent_sequence("!slice", slice_args)
 
 
 def _range_representer(representer, node: range):
@@ -33,4 +34,4 @@ def _range_representer(representer, node: range):
         a yaml sequence that is able to recreate a range
     """
     range_args = [node.start, node.stop, node.step]
-    return representer.represent_sequence(u'!range', range_args)
+    return representer.represent_sequence("!range", range_args)

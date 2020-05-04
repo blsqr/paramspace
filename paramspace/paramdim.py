@@ -12,15 +12,16 @@ from typing import Iterable, Union, Tuple, Hashable, Sequence, List
 import numpy as np
 
 
-
 # Get logger
 log = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
 # Small helper classes
 
+
 class Masked:
     """To indicate a masked value in a ParamDim"""
+
     def __init__(self, value):
         """Initialize a Masked object that is a placeholder for the given value
         Args:
@@ -54,13 +55,16 @@ class Masked:
             the scalar value that this object masks
         """
         return representer.represent_data(node._val)
-        
+
 
 class MaskedValueError(ValueError):
     """Raised when trying to set the state of a ParamDim to a masked value"""
+
     pass
 
+
 # -----------------------------------------------------------------------------
+
 
 class ParamDimBase(metaclass=abc.ABCMeta):
     """The ParamDim base class."""
@@ -72,17 +76,21 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     _REPR_ATTRS = tuple()
 
     # Keyword parameters used to set the values
-    _VKWARGS = ('values', 'range', 'linspace', 'logspace')
+    _VKWARGS = ("values", "range", "linspace", "logspace")
 
     # .........................................................................
 
-    def __init__(self, *, default,
-                 values: Iterable=None,
-                 order: float=None,
-                 name: str=None,
-                 as_type: str=None,
-                 assert_unique: bool=True,
-                 **kwargs) -> None:
+    def __init__(
+        self,
+        *,
+        default,
+        values: Iterable = None,
+        order: float = None,
+        name: str = None,
+        as_type: str = None,
+        assert_unique: bool = True,
+        **kwargs,
+    ) -> None:
         """Initialise a parameter dimension object.
         
         Args:
@@ -118,30 +126,35 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
         # Package values into kwargs, for easier handling
         if values is not None:
-            kwargs['values'] = values
+            kwargs["values"] = values
 
         # Gather the initialization kwargs for use with yaml representer
-        init_kwargs = dict(default=default, order=order, name=name,
-                           as_type=as_type, assert_unique=assert_unique,
-                           **kwargs)
+        init_kwargs = dict(
+            default=default,
+            order=order,
+            name=name,
+            as_type=as_type,
+            assert_unique=assert_unique,
+            **kwargs,
+        )
 
         # TODO Make this more elegant!
         # As the base class __init__ is used by derived classes that might
         # already have set private members, check if the `default` argument
         # should even be used...
-        if not hasattr(self, '_default'):
+        if not hasattr(self, "_default"):
             self._default = self._parse_value(default, as_type=as_type)
 
         else:
             # Was already set; don't store the passed value
-            del init_kwargs['default']
+            del init_kwargs["default"]
 
         # Same for value-setting arguments
-        if not hasattr(self, '_vals'):
+        if not hasattr(self, "_vals"):
             # Now let the helper function take care of the rest
-            self._init_vals(as_type=as_type,
-                            assert_unique=assert_unique,
-                            **kwargs)
+            self._init_vals(
+                as_type=as_type, assert_unique=assert_unique, **kwargs
+            )
 
         # Store the initialization kwargs
         self._init_kwargs = init_kwargs
@@ -153,43 +166,55 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
         # Now check for unexpected ones and set the valid ones
         if any([k not in self._VKWARGS for k in kwargs.keys()]):
-            raise TypeError("Received invalid keyword argument(s) for {}: {}. "
-                            "Allowed arguments: {}"
-                            "".format(self.__class__.__name__,
-                                      ", ".join([k for k in kwargs
-                                                 if k not in self._VKWARGS]),
-                                      ", ".join(self._VKWARGS)))
+            raise TypeError(
+                "Received invalid keyword argument(s) for {}: {}. "
+                "Allowed arguments: {}"
+                "".format(
+                    self.__class__.__name__,
+                    ", ".join([k for k in kwargs if k not in self._VKWARGS]),
+                    ", ".join(self._VKWARGS),
+                )
+            )
 
         elif len(kwargs) > 1:
-            raise TypeError("Received too many keyword arguments. Need _one_ "
-                            "of:  {}".format(", ".join(self._VKWARGS)))
+            raise TypeError(
+                "Received too many keyword arguments. Need _one_ "
+                "of:  {}".format(", ".join(self._VKWARGS))
+            )
 
-        elif 'values' in kwargs:
-            self._set_values(kwargs['values'],
-                             assert_unique=assert_unique,
-                             as_type=as_type)
+        elif "values" in kwargs:
+            self._set_values(
+                kwargs["values"], assert_unique=assert_unique, as_type=as_type
+            )
 
-        elif 'range' in kwargs:
-            self._set_values(range(*kwargs['range']),
-                             assert_unique=assert_unique,
-                             as_type=as_type)
+        elif "range" in kwargs:
+            self._set_values(
+                range(*kwargs["range"]),
+                assert_unique=assert_unique,
+                as_type=as_type,
+            )
 
-        elif 'linspace' in kwargs:
-            self._set_values(np.linspace(*kwargs['linspace']),
-                             assert_unique=assert_unique,
-                             as_type='float' if as_type is None else as_type)
+        elif "linspace" in kwargs:
+            self._set_values(
+                np.linspace(*kwargs["linspace"]),
+                assert_unique=assert_unique,
+                as_type="float" if as_type is None else as_type,
+            )
 
-        elif 'logspace' in kwargs:
-            self._set_values(np.logspace(*kwargs['logspace']),
-                             assert_unique=assert_unique,
-                             as_type='float' if as_type is None else as_type)
+        elif "logspace" in kwargs:
+            self._set_values(
+                np.logspace(*kwargs["logspace"]),
+                assert_unique=assert_unique,
+                as_type="float" if as_type is None else as_type,
+            )
 
         else:
-            raise TypeError("Missing one of the following required keyword "
-                            "arguments to set the values of {}: {}."
-                            "".format(self.__class__.__name__,
-                                      ", ".join(self._VKWARGS)))
-            
+            raise TypeError(
+                "Missing one of the following required keyword "
+                "arguments to set the values of {}: {}."
+                "".format(self.__class__.__name__, ", ".join(self._VKWARGS))
+            )
+
     # Properties ..............................................................
 
     @property
@@ -216,7 +241,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
                 values are not yet set.
         """
         return self._vals
-    
+
     @property
     def coords(self) -> tuple:
         """Returns the coordinates of this parameter dimension, i.e.: the
@@ -236,8 +261,9 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         Returns:
             tuple: coordinates associated with the indices of this dimension
         """
-        return tuple([c if not isinstance(c, Masked) else c.value
-                      for c in self.coords])
+        return tuple(
+            [c if not isinstance(c, Masked) else c.value for c in self.coords]
+        )
 
     @property
     def num_values(self) -> int:
@@ -247,7 +273,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             int: The number of available values
         """
         return len(self.values)
-    
+
     @property
     def num_states(self) -> int:
         """The number of possible states, i.e.: including the default state
@@ -276,7 +302,6 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             return self.default
         return self.values[self.state - 1]
 
-
     # Magic methods ...........................................................
 
     def __eq__(self, other) -> bool:
@@ -292,9 +317,13 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             return False
 
         # Check equality of the objects' __dict__s, leaving out _mask_cache
-        return all([self.__dict__[k] == other.__dict__[k]
-                    for k in self.__dict__.keys()
-                    if k not in ('_init_kwargs',) + self._OMIT_ATTR_IN_EQ])
+        return all(
+            [
+                self.__dict__[k] == other.__dict__[k]
+                for k in self.__dict__.keys()
+                if k not in ("_init_kwargs",) + self._OMIT_ATTR_IN_EQ
+            ]
+        )
 
     @abc.abstractmethod
     def __len__(self) -> int:
@@ -319,22 +348,23 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             str: Returns the string representation of the ParamDimBase-derived
                 object
         """
-        return ("<paramspace.paramdim.{} object at {} with {}>"
-                "".format(self.__class__.__name__, id(self),
-                          repr(self._parse_repr_attrs())))
+        return "<paramspace.paramdim.{} object at {} with {}>" "".format(
+            self.__class__.__name__, id(self), repr(self._parse_repr_attrs())
+        )
 
     def _parse_repr_attrs(self) -> dict:
         """For the __repr__ method, collects some attributes into a dict"""
-        d = dict(default=self.default,
-                 order=self.order,
-                 values=self.values,
-                 name=self.name)
+        d = dict(
+            default=self.default,
+            order=self.order,
+            values=self.values,
+            name=self.name,
+        )
 
         for attr_name in self._REPR_ATTRS:
             d[attr_name] = getattr(self, attr_name)
 
         return d
-
 
     # Iterator functionality ..................................................
 
@@ -351,7 +381,6 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         """
         self.iterate_state()
         return self.current_value
-
 
     # Public API ..............................................................
     # These are needed by the ParamSpace class to have more control over the
@@ -389,15 +418,19 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             None
         """
 
-
     # Non-public API ..........................................................
 
-    def _parse_value(self, val, *, as_type: str=None):
+    def _parse_value(self, val, *, as_type: str = None):
         """Parses a single value and ensures it is of correct type."""
 
         # Map of available type conversions
-        type_convs = dict(str=str, int=int, float=float, bool=bool,
-                          tuple=self._rec_tuple_conv)
+        type_convs = dict(
+            str=str,
+            int=int,
+            float=float,
+            bool=bool,
+            tuple=self._rec_tuple_conv,
+        )
 
         # Apply type conversion
         if as_type is not None:
@@ -405,7 +438,9 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
         return val
 
-    def _set_values(self, values: Iterable, *, assert_unique: bool, as_type: str=None):
+    def _set_values(
+        self, values: Iterable, *, assert_unique: bool, as_type: str = None
+    ):
         """This function sets the values attribute; it is needed for the
         values setter function that is overwritten when changing the property
         in a derived class.
@@ -426,14 +461,16 @@ class ParamDimBase(metaclass=abc.ABCMeta):
                 of type float; this is needed for the numpy initializers
         """
         # Check the values
-        if hasattr(self, '_vals'):
+        if hasattr(self, "_vals"):
             # Was already set
             raise AttributeError("Values already set; cannot be set again!")
 
         elif len(values) < 1:
-            raise ValueError("{} values need be a container of length >= 1, "
-                             "was {}".format(self.__class__.__name__, values))
-        
+            raise ValueError(
+                "{} values need be a container of length >= 1, "
+                "was {}".format(self.__class__.__name__, values)
+            )
+
         # Parse each individual value, changing type if configured to do so
         values = [self._parse_value(v, as_type=as_type) for v in values]
 
@@ -442,8 +479,10 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
         # Assert that values are unique
         if assert_unique and any([values.count(v) > 1 for v in values]):
-            raise ValueError("Values need to be unique, but there were "
-                             "duplicates: {}".format(values))
+            raise ValueError(
+                "Values need to be unique, but there were "
+                "duplicates: {}".format(values)
+            )
 
         # Now store it as attribute
         self._vals = values
@@ -454,13 +493,15 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         """
         # Recursive branch
         if isinstance(obj, list):
-            return tuple([o if not isinstance(o, list)
-                          else self._rec_tuple_conv(o)
-                          for o in obj])
-        
+            return tuple(
+                [
+                    o if not isinstance(o, list) else self._rec_tuple_conv(o)
+                    for o in obj
+                ]
+            )
+
         # End of recursion
         return obj
-
 
     # YAML representation .....................................................
     # NOTE The `yaml_tag` class variable needs be set in the derived classes
@@ -483,7 +524,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             a yaml mapping that is able to recreate this object
         """
         # Get the init_kwargs and use them as basis for the mapping
-        d = copy.deepcopy(node._init_kwargs) 
+        d = copy.deepcopy(node._init_kwargs)
 
         # Depending on the class variables, update some entries
         for k, attr_name in cls._YAML_UPDATE.items():
@@ -494,9 +535,11 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             d[k] = new_val
 
         # ... and remove some if they match the given value
-        d = {k: v for k, v in d.items()
-             if k not in cls._YAML_REMOVE_IF
-                or v not in cls._YAML_REMOVE_IF[k]}
+        d = {
+            k: v
+            for k, v in d.items()
+            if k not in cls._YAML_REMOVE_IF or v not in cls._YAML_REMOVE_IF[k]
+        }
 
         # Can now call the representer
         return representer.represent_mapping(cls.yaml_tag, d)
@@ -506,27 +549,29 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         """The default constructor for ParamDim-derived objects"""
         return cls(**constructor.construct_mapping(node, deep=True))
 
+
 # -----------------------------------------------------------------------------
+
 
 class ParamDim(ParamDimBase):
     """The ParamDim class."""
 
     # Which __dict__ content to omit when checking for equivalence
-    _OMIT_ATTR_IN_EQ = ('_mask_cache', '_inside_iter', '_target_of')
+    _OMIT_ATTR_IN_EQ = ("_mask_cache", "_inside_iter", "_target_of")
 
     # Define the additional attribute names that are to be added to __repr__
-    _REPR_ATTRS = ('mask',)
+    _REPR_ATTRS = ("mask",)
 
     # Define the yaml tag to use
-    yaml_tag = u'!pdim'
+    yaml_tag = "!pdim"
 
     # And the other yaml representer settings
-    _YAML_UPDATE = dict(mask='mask')
+    _YAML_UPDATE = dict(mask="mask")
     _YAML_REMOVE_IF = dict(name=(None,), order=(None,), mask=(None, False))
 
     # .........................................................................
 
-    def __init__(self, *, mask: Union[bool, Tuple[bool]]=False, **kwargs):
+    def __init__(self, *, mask: Union[bool, Tuple[bool]] = False, **kwargs):
         """Initialize a regular parameter dimension.
         
         Args:
@@ -562,7 +607,7 @@ class ParamDim(ParamDimBase):
         self.mask = mask
 
         # Add further initialization kwargs, needed for yaml
-        self._init_kwargs['mask'] = mask
+        self._init_kwargs["mask"] = mask
 
         log.debug("ParamDim initialised.")
 
@@ -590,22 +635,28 @@ class ParamDim(ParamDimBase):
         """Sets the current iterator state."""
         # Perform type and value checks
         if not isinstance(new_state, int):
-            raise TypeError("New state can only be of type int, was {}!"
-                            "".format(type(new_state)))
+            raise TypeError(
+                "New state can only be of type int, was {}!"
+                "".format(type(new_state))
+            )
 
         elif new_state < 0:
-            raise ValueError("New state needs to be >= 0, was {}."
-                             "".format(new_state))
-        
+            raise ValueError(
+                "New state needs to be >= 0, was {}." "".format(new_state)
+            )
+
         elif new_state > self.num_values:
-            raise ValueError("New state needs to be <= {}, was {}."
-                             "".format(self.num_values, new_state))
+            raise ValueError(
+                "New state needs to be <= {}, was {}."
+                "".format(self.num_values, new_state)
+            )
 
         elif new_state > 0 and self.mask_tuple[new_state - 1] is True:
-            raise MaskedValueError("Value at index {} is masked: {}. "
-                                   "Cannot set the state to this index."
-                                   "".format(new_state,
-                                             self.values[new_state - 1]))
+            raise MaskedValueError(
+                "Value at index {} is masked: {}. "
+                "Cannot set the state to this index."
+                "".format(new_state, self.values[new_state - 1])
+            )
 
         # Everything ok. Can set the state
         self._state = new_state
@@ -614,17 +665,18 @@ class ParamDim(ParamDimBase):
     def mask_tuple(self) -> Tuple[bool]:
         """Returns a tuple representation of the current mask"""
         if self._mask_cache is None:
-            self._mask_cache = tuple([isinstance(v, Masked)
-                                      for v in self.values])
+            self._mask_cache = tuple(
+                [isinstance(v, Masked) for v in self.values]
+            )
         return self._mask_cache
 
     @property
     def mask(self) -> Union[bool, Tuple[bool]]:
         """Returns False if no value is masked or a tuple of booleans that
         represents the mask
-        """        
+        """
         m = self.mask_tuple  # uses a cached value, if available
-        
+
         if not any(m):  # no entry masked
             return False
 
@@ -670,10 +722,12 @@ class ParamDim(ParamDimBase):
 
         # Should be a container now. Assert correct length.
         if len(mask) != self.num_values:
-            raise ValueError("Given mask needs to be a boolean, a slice, or a "
-                             "container of same length as the values "
-                             "container ({}), was:  {}"
-                             "".format(self.num_values, mask))
+            raise ValueError(
+                "Given mask needs to be a boolean, a slice, or a "
+                "container of same length as the values "
+                "container ({}), was:  {}"
+                "".format(self.num_values, mask)
+            )
 
         # Mark the mask cache as invalid, such that it is re-calculated when
         # the mask getter is accessed the next time
@@ -689,7 +743,6 @@ class ParamDim(ParamDimBase):
     def num_masked(self) -> int:
         """Returns the number of unmasked values"""
         return sum(self.mask_tuple)
-
 
     # Magic Methods ...........................................................
 
@@ -743,14 +796,14 @@ class ParamDim(ParamDimBase):
         if not self._inside_iter:
             self.enter_iteration()
             return
-            
+
         # Else: within iteration
         # Look for further possible states in the remainder of the mask tuple
-        sub_mask = self.mask_tuple[self.state:]
+        sub_mask = self.mask_tuple[self.state :]
 
         if False in sub_mask:
             # There is another possible state, find it via index
-            self.state += (sub_mask.index(False) + 1)
+            self.state += sub_mask.index(False) + 1
 
         else:
             # No more possible state values
@@ -770,8 +823,8 @@ class ParamDim(ParamDimBase):
         self._inside_iter = False
 
 
-
 # -----------------------------------------------------------------------------
+
 
 class CoupledParamDim(ParamDimBase):
     """A CoupledParamDim object is recognized by the ParamSpace and its state
@@ -780,33 +833,44 @@ class CoupledParamDim(ParamDimBase):
 
     # Which __dict__ content to omit when checking for equivalence
     _OMIT_ATTR_IN_EQ = ()
-    
+
     # Define the additional attribute names that are to be added to __repr__
-    _REPR_ATTRS = ('target_pdim', 'target_name',
-                   '_use_coupled_default', '_use_coupled_values')
+    _REPR_ATTRS = (
+        "target_pdim",
+        "target_name",
+        "_use_coupled_default",
+        "_use_coupled_values",
+    )
 
     # Define the yaml tag to use
-    yaml_tag = u'!coupled-pdim'
+    yaml_tag = "!coupled-pdim"
 
     # And the other yaml representer settings
-    _YAML_UPDATE = dict(target_name='_target_name_as_list')
-    _YAML_REMOVE_IF = dict(name=(None,), order=(None,),
-                           assert_unique=(True, False),
-                           default=(None,), values=(None, [None]),
-                           use_coupled_default=(None,),
-                           use_coupled_values=(None,),
-                           target_name=(None,), target_pdim=(None,),
-                           )
+    _YAML_UPDATE = dict(target_name="_target_name_as_list")
+    _YAML_REMOVE_IF = dict(
+        name=(None,),
+        order=(None,),
+        assert_unique=(True, False),
+        default=(None,),
+        values=(None, [None]),
+        use_coupled_default=(None,),
+        use_coupled_values=(None,),
+        target_name=(None,),
+        target_pdim=(None,),
+    )
 
     # .........................................................................
 
-    def __init__(self, *,
-                 default=None,
-                 target_pdim: ParamDim=None,
-                 target_name: Union[str, Sequence[str]]=None,
-                 use_coupled_default: bool=None,
-                 use_coupled_values: bool=None,
-                 **kwargs):
+    def __init__(
+        self,
+        *,
+        default=None,
+        target_pdim: ParamDim = None,
+        target_name: Union[str, Sequence[str]] = None,
+        use_coupled_default: bool = None,
+        use_coupled_values: bool = None,
+        **kwargs,
+    ):
         """Initialize a coupled parameter dimension.
         
         If the `default` or any values-setting argument is set, those will be
@@ -833,18 +897,22 @@ class CoupledParamDim(ParamDimBase):
 
         # Deprecation warnings for old parameters
         if use_coupled_default is not None or use_coupled_values is not None:
-            warnings.warn("The CoupledParamDim.__init__ parameters "
-                          "`use_coupled_default` and `use_coupled_values` are "
-                          "deprecated and will soon be removed. Whether the "
-                          "counterpart from the coupled parameter dimension "
-                          "is to be used is determined by whether the "
-                          "`default` or any value-setting argument was given.",
-                          DeprecationWarning)
+            warnings.warn(
+                "The CoupledParamDim.__init__ parameters "
+                "`use_coupled_default` and `use_coupled_values` are "
+                "deprecated and will soon be removed. Whether the "
+                "counterpart from the coupled parameter dimension "
+                "is to be used is determined by whether the "
+                "`default` or any value-setting argument was given.",
+                DeprecationWarning,
+            )
 
         # Disallow mask argument
-        if 'mask' in kwargs:
-            raise TypeError("Received invalid keyword-argument `mask` for "
-                            "CoupledParamDim!")
+        if "mask" in kwargs:
+            raise TypeError(
+                "Received invalid keyword-argument `mask` for "
+                "CoupledParamDim!"
+            )
 
         # Set attributes
         self._target_pdim = None  # the object that is coupled to
@@ -852,13 +920,14 @@ class CoupledParamDim(ParamDimBase):
 
         # Determine whether coupled values or given values are to be used
         self._use_coupled_default = default is None
-        self._use_coupled_values = not any([k in self._VKWARGS
-                                            for k in kwargs])
+        self._use_coupled_values = not any(
+            [k in self._VKWARGS for k in kwargs]
+        )
 
         # In order to not invoke the default- and value-setters in the parent
         # classes' initializer, set them here already. Setting the attributes
         # (regardless of value) already makes the base class __init__ jump that
-        # part of the initialization        
+        # part of the initialization
         if self._use_coupled_default:
             self._default = None  # Value does not matter, is never used
 
@@ -870,30 +939,33 @@ class CoupledParamDim(ParamDimBase):
 
         # Check and set the target-related attributes
         if target_pdim is not None and target_name is not None:
-            raise TypeError("Got both `target_pdim` and `target_name` "
-                            "arguments, but only accepting one of them at the "
-                            "same time!")
+            raise TypeError(
+                "Got both `target_pdim` and `target_name` "
+                "arguments, but only accepting one of them at the "
+                "same time!"
+            )
 
         elif target_name:
             # Save only the name of object to couple to. Resolved by ParamSpace
             self.target_name = target_name
-        
+
         elif target_pdim:
             # Directly save the object to couple to
             self.target_pdim = target_pdim
 
         else:
-            raise TypeError("Expected either argument `target_pdim` or "
-                            "`target_name`, got neither.")
+            raise TypeError(
+                "Expected either argument `target_pdim` or "
+                "`target_name`, got neither."
+            )
 
         # Add further initialization kwargs, needed for yaml representation
-        self._init_kwargs['target_name'] = target_name
-        self._init_kwargs['target_pdim'] = target_pdim
+        self._init_kwargs["target_name"] = target_name
+        self._init_kwargs["target_pdim"] = target_pdim
         # NOTE The other kwargs are already stored in the base class __init__
 
         # Done now.
         log.debug("CoupledParamDim initialised.")
-
 
     # Magic methods ...........................................................
 
@@ -923,7 +995,6 @@ class CoupledParamDim(ParamDimBase):
     def reset(self) -> None:
         """Does nothing, as state has no effect for CoupledParamDim"""
 
-
     # Properties that only the CoupledParamDim has ............................
 
     @property
@@ -941,14 +1012,18 @@ class CoupledParamDim(ParamDimBase):
             raise ValueError("Target name cannot be changed!")
 
         elif self._target_pdim is not None:
-            raise ValueError("Target name cannot be changed after the target "
-                             "object is already set!")
+            raise ValueError(
+                "Target name cannot be changed after the target "
+                "object is already set!"
+            )
 
         # Make sure it is of valid type
         elif not isinstance(target_name, (tuple, list, str)):
-            raise TypeError("Argument `target_name` should be a tuple or list "
-                            "(i.e.: a key sequence) or a string! Was {}: {}"
-                            "".format(type(target_name), target_name))
+            raise TypeError(
+                "Argument `target_name` should be a tuple or list "
+                "(i.e.: a key sequence) or a string! Was {}: {}"
+                "".format(type(target_name), target_name)
+            )
 
         elif isinstance(target_name, list):
             target_name = tuple(target_name)
@@ -969,11 +1044,13 @@ class CoupledParamDim(ParamDimBase):
     def target_pdim(self) -> ParamDim:
         """The ParamDim object this CoupledParamDim couples to."""
         if self._target_pdim is None:
-            raise ValueError("The coupling target has not been set! Either "
-                             "set the `target_pdim` to a ParamDim object or "
-                             "incorporate this CoupledParamDim into a "
-                             "ParamSpace to resolve its coupling target using "
-                             "the given `target_name` attribute.")
+            raise ValueError(
+                "The coupling target has not been set! Either "
+                "set the `target_pdim` to a ParamDim object or "
+                "incorporate this CoupledParamDim into a "
+                "ParamSpace to resolve its coupling target using "
+                "the given `target_name` attribute."
+            )
 
         return self._target_pdim
 
@@ -981,21 +1058,26 @@ class CoupledParamDim(ParamDimBase):
     def target_pdim(self, pdim: ParamDim):
         """Set the target ParamDim"""
         if not isinstance(pdim, ParamDim):
-            raise TypeError("Target of CoupledParamDim needs to be of type "
-                            "ParamDim, was "+str(type(pdim)))
+            raise TypeError(
+                "Target of CoupledParamDim needs to be of type "
+                "ParamDim, was " + str(type(pdim))
+            )
 
-        elif (not self._use_coupled_values
-              and self.num_values != pdim.num_values):
-            raise ValueError("The lengths of the value sequences of target "
-                             "ParamDim and this CoupledParamDim need to "
-                             "match, were: {} and {}, respectively."
-                             "".format(pdim.num_values, self.num_values))
+        elif (
+            not self._use_coupled_values and self.num_values != pdim.num_values
+        ):
+            raise ValueError(
+                "The lengths of the value sequences of target "
+                "ParamDim and this CoupledParamDim need to "
+                "match, were: {} and {}, respectively."
+                "".format(pdim.num_values, self.num_values)
+            )
 
         self._target_pdim = pdim
         log.debug("Set CoupledParamDim target.")
 
     # Properties that need to relay to the coupled ParamDim ...................
-    
+
     @property
     def default(self):
         """The default value.

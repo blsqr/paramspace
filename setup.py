@@ -4,9 +4,9 @@ from setuptools import setup
 
 # Dependencies for paramspace itself
 install_deps = [
-    'numpy>=1.17.3',
-    'xarray>=0.10.9',
-    'ruamel.yaml>=0.16.5'
+    "numpy>=1.17.3",
+    "xarray>=0.10.9",
+    "ruamel.yaml>=0.16.5",
 ]
 
 # Derive an extra that uses strict versions; allows testing for these via tox
@@ -14,14 +14,14 @@ minimal_install_deps = [dep.replace(">=", "==") for dep in install_deps]
 
 # Dependencies for the tests
 test_deps = [
-    'tox>=3.1',
-    'pytest>=3.4',
-    'pytest-cov>=2.6'
+    "tox>=3.1",
+    "pytest>=3.4",
+    "pytest-cov>=2.6",
 ]
 
 # .............................................................................
 
-DESCRIPTION = 'Dictionary-based, multi-dimensional parameter space iteration'
+DESCRIPTION = "Dictionary-based, multi-dimensional parameter space iteration"
 LONG_DESCRIPTION = """
 The **paramspace** package is an open-source project and Python package that
 makes it possible to conveniently define dictionary-based, multi-dimensional
@@ -55,7 +55,7 @@ accepts a dictionary-like object. To define parameter dimensions, individual
 entries within that dictionary can be replaced by a ``ParamDim`` object,
 regardless of the position and nestedness within the dictionary.
 The parameter space is then the cartesian product of all parameter dimensions,
-each parameter opening a new dimension of the parameter space. 
+each parameter opening a new dimension of the parameter space.
 
 When iterating over the space, each returned value is a dictionary with one
 combination of parameters, ready to be passed on to run the desired program.
@@ -76,7 +76,6 @@ https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace
 """
 
 
-
 # .............................................................................
 
 # A function to extract version number from __init__.py
@@ -87,7 +86,7 @@ def find_version(*file_paths) -> str:
     def read(*parts):
         """Reads a file from the given path sequence, relative to this file"""
         here = os.path.abspath(os.path.dirname(__file__))
-        with codecs.open(os.path.join(here, *parts), 'r') as fp:
+        with codecs.open(os.path.join(here, *parts), "r") as fp:
             return fp.read()
 
     # Read the file and match the __version__ string
@@ -101,33 +100,34 @@ def find_version(*file_paths) -> str:
 # .............................................................................
 
 setup(
-    name='paramspace',
-    version=find_version('paramspace', '__init__.py'),
+    name="paramspace",
+    version=find_version("paramspace", "__init__.py"),
     #
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     #
-    author='Yunus Sevinchan',
-    author_email='Yunus.Sevinchan@iup.uni-heidelberg.de',
-    url='https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace',
-    license='BSD-2',
+    author="Yunus Sevinchan",
+    author_email="Yunus.Sevinchan@iup.uni-heidelberg.de",
+    url="https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace",
+    license="BSD-2",
     classifiers=[
-      'Development Status :: 5 - Production/Stable',
-      'Intended Audience :: Science/Research',
-      'License :: OSI Approved :: BSD License',
-      'Programming Language :: Python :: 3',
-      'Programming Language :: Python :: 3 :: Only',
-      'Programming Language :: Python :: 3.6',
-      'Programming Language :: Python :: 3.7',
-      'Programming Language :: Python :: 3.8',
-      'Topic :: Utilities',
-      'Typing :: Typed'
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: BSD License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Topic :: Utilities",
+        "Typing :: Typed",
     ],
-    packages=['paramspace'],
+    packages=["paramspace"],
     include_package_data=True,
     install_requires=install_deps,
     tests_require=test_deps,
-    test_suite='tox',
-    extras_require=dict(test_deps=test_deps,
-                        minimal_deps=minimal_install_deps)
+    test_suite="tox",
+    extras_require=dict(
+        test_deps=test_deps, minimal_deps=minimal_install_deps
+    ),
 )
