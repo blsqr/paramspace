@@ -12,11 +12,16 @@ install_deps = [
 # Derive an extra that uses strict versions; allows testing for these via tox
 minimal_install_deps = [dep.replace(">=", "==") for dep in install_deps]
 
-# Dependencies for the tests
+# Dependencies for executing tests
 test_deps = [
     "tox>=3.1",
     "pytest>=3.4",
     "pytest-cov>=2.6",
+]
+
+# Dependencies for local development
+dev_deps = [
+    "black",
 ]
 
 # .............................................................................
@@ -102,10 +107,8 @@ def find_version(*file_paths) -> str:
 setup(
     name="paramspace",
     version=find_version("paramspace", "__init__.py"),
-    #
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
-    #
     author="Yunus Sevinchan",
     author_email="Yunus.Sevinchan@iup.uni-heidelberg.de",
     url="https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace",
@@ -128,6 +131,6 @@ setup(
     tests_require=test_deps,
     test_suite="tox",
     extras_require=dict(
-        test_deps=test_deps, minimal_deps=minimal_install_deps
+        test=test_deps, minimal=minimal_install_deps, dev=dev_deps,
     ),
 )

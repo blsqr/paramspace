@@ -1,20 +1,22 @@
 # The `paramspace` package
 
-The `paramspace` package supplies classes that make it easy to iterate over a multi-dimensional parameter space while maintaining a data structure that is convenient for passing arguments around: `dict`s.
+The `paramspace` package supplies classes that make it easy to iterate over a multi-dimensional parameter space while maintaining a data structure that is convenient for passing hierarchically structured arguments around: `dict`s.
 
-A parameter space is an $`n`$-dimensional space, where each dimension corresponds to one of $`n`$ parameters and each point in this space represents a certain combination of parameter values.  
+A parameter space is an `n`-dimensional space, where each dimension corresponds to one of `n` parameters and each point in this space represents a certain combination of parameter values.  
 In modelling and simulations, it is often useful to be able to iterate over certain values of multiple parameters, creating a multi-dimensional, discrete parameter space.
 For example, having a model with six parameters that are worth varying, an iteration would go over the cartesian product of all possible parameter values.
-(This is hinted at in the avatar of this repository, a 2d representation of a 6-dimensional [hybercube](https://en.wikipedia.org/wiki/Hypercube)).
+(This is hinted at in the icon of this repository, a 2D representation of a 6-dimensional [hybercube](https://en.wikipedia.org/wiki/Hypercube)).
 
 To that end, this package supplies the `ParamSpace` class, which is initialised with a Python `dict`; it holds the whole set of parameters that are required by a simulation (i.e., _not_ only those that correspond to a parameter dimension).
 To add a parameter dimension that can be iterated over, an entry in the dictionary can be replaced by a `ParamDim` object, for which the discrete values to iterate over are defined.
 
 After initialsation of such a `ParamSpace` object, this package allows operations like the following:
+
 ```python
 for params in pspace:
     run_my_simulation(**params)
 ```
+
 The `params` object is then a dictionary that holds the configuration of the simulation at one specific point in parameter space.  
 In other words: each point in this parameter space refers to a specific state of the given dictionary of simulation parameters.
 
@@ -32,6 +34,7 @@ In other words: each point in this parameter space refers to a specific state of
 * A few __usage examples__ are given [below](#usage). Note that a full documentation does not yet exist... but the docstrings are quite informative :)
 * For an overview over the __changes,__ see the [changelog](CHANGELOG.md).
 * A list of [__known issues__](#known-issues) with some classes
+* [Information for Developers](#information-for-developers)
 
 
 ## Install
@@ -148,5 +151,35 @@ for params in pspace:
    * Their `mask` behaviour might be unexpected.
    * Within a `ParamSpace`, they are mostly hidden from the user. The iteration over parameter space works reliably, but they are, e.g., not accessible within the state maps.
 * YAML representation is quite fragile, especially for `CoupledParamDim`. This
-  will require some rewriting sooner or later, quite possibly accompied by an
+  will require some rewriting sooner or later, quite possibly accompanied by an
   interface change ...
+
+
+## Information for Developers
+### Dependencies
+When developing for `paramspace`, additionally install the test and development dependencies:
+
+```bash
+pip install -e .[test,dev]
+```
+
+
+### Tests
+Tests are implemented using [pytest](https://github.com/pytest-dev/pytest).
+
+Invoke the following command to run tests and see the coverage report:
+
+```bash
+python -m pytest -xv tests/ --cov=paramspace --cov-report=term-missing
+```
+
+Additionally, [tox](https://github.com/tox-dev/tox) is used in the GitLab CI pipeline to test against various Python versions.
+
+
+### Code Formatting
+This package uses [black](https://github.com/psf/black) for formatting.
+Prior to committing, make sure to run it:
+
+```bash
+black .
+```
