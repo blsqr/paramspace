@@ -36,7 +36,7 @@ class Masked:
         return f"<{self.value}>"
 
     def __repr__(self) -> str:
-        return "<Masked object, value: {}>".format(repr(self.value))
+        return f"<Masked object, value: {repr(self.value)}>"
 
     def __eq__(self, other) -> bool:
         return self.value == other
@@ -75,7 +75,12 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     _REPR_ATTRS = tuple()
 
     # Keyword parameters used to set the values
-    _VKWARGS = ("values", "range", "linspace", "logspace")
+    _VKWARGS = (
+        "values",
+        "range",
+        "linspace",
+        "logspace",
+    )
 
     # .........................................................................
 
@@ -177,9 +182,9 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             )
 
         elif len(kwargs) > 1:
+            _vkws = ", ".join(self._VKWARGS)
             raise TypeError(
-                "Received too many keyword arguments. Need _one_ "
-                "of:  {}".format(", ".join(self._VKWARGS))
+                f"Received too many keyword arguments. Need _one_ of:  {_vkws}"
             )
 
         elif "values" in kwargs:
@@ -209,10 +214,10 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             )
 
         else:
+            _vkws = ", ".join(self._VKWARGS)
             raise TypeError(
-                "Missing one of the following required keyword "
-                "arguments to set the values of {}: {}."
-                "".format(self.__class__.__name__, ", ".join(self._VKWARGS))
+                f"Missing one of the following required keyword arguments to "
+                f"set the values of {self.__class__.__name__}: {_vkws}."
             )
 
     # Properties ..............................................................
@@ -348,8 +353,9 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             str: Returns the string representation of the ParamDimBase-derived
                 object
         """
-        return "<paramspace.paramdim.{} object at {} with {}>" "".format(
-            self.__class__.__name__, id(self), repr(self._parse_repr_attrs())
+        return (
+            f"<paramspace.paramdim.{self.__class__.__name__} object at "
+            f"{id(self)} with {repr(self._parse_repr_attrs())}>"
         )
 
     def _parse_repr_attrs(self) -> dict:
@@ -467,8 +473,8 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
         elif len(values) < 1:
             raise ValueError(
-                "{} values need be a container of length >= 1, "
-                "was {}".format(self.__class__.__name__, values)
+                f"{self.__class__.__name__} values need be a container of "
+                f"length >= 1, was {values}"
             )
 
         # Parse each individual value, changing type if configured to do so
@@ -480,8 +486,8 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         # Assert that values are unique
         if assert_unique and any([values.count(v) > 1 for v in values]):
             raise ValueError(
-                "Values need to be unique, but there were "
-                "duplicates: {}".format(values)
+                f"Values need to be unique, but there were "
+                f"duplicates: {values}"
             )
 
         # Now store it as attribute
@@ -557,7 +563,11 @@ class ParamDim(ParamDimBase):
     """The ParamDim class."""
 
     # Which __dict__ content to omit when checking for equivalence
-    _OMIT_ATTR_IN_EQ = ("_mask_cache", "_inside_iter", "_target_of")
+    _OMIT_ATTR_IN_EQ = (
+        "_mask_cache",
+        "_inside_iter",
+        "_target_of",
+    )
 
     # Define the additional attribute names that are to be added to __repr__
     _REPR_ATTRS = ("mask",)
@@ -566,8 +576,8 @@ class ParamDim(ParamDimBase):
     yaml_tag = "!pdim"
 
     # And the other yaml representer settings
-    _YAML_UPDATE = dict(mask="mask")
-    _YAML_REMOVE_IF = dict(name=(None,), order=(None,), mask=(None, False))
+    _YAML_UPDATE = dict(mask="mask",)
+    _YAML_REMOVE_IF = dict(name=(None,), order=(None,), mask=(None, False),)
 
     # .........................................................................
 
@@ -638,26 +648,22 @@ class ParamDim(ParamDimBase):
         # Perform type and value checks
         if not isinstance(new_state, int):
             raise TypeError(
-                "New state can only be of type int, was {}!"
-                "".format(type(new_state))
+                f"New state can only be of type int, was {type(new_state)}!"
             )
 
         elif new_state < 0:
-            raise ValueError(
-                "New state needs to be >= 0, was {}." "".format(new_state)
-            )
+            raise ValueError(f"New state needs to be >= 0, was {new_state}.")
 
         elif new_state > self.num_values:
             raise ValueError(
-                "New state needs to be <= {}, was {}."
-                "".format(self.num_values, new_state)
+                f"New state needs to be <= {self.num_values}, was {new_state}."
             )
 
         elif new_state > 0 and self.mask_tuple[new_state - 1] is True:
             raise MaskedValueError(
-                "Value at index {} is masked: {}. "
-                "Cannot set the state to this index."
-                "".format(new_state, self.values[new_state - 1])
+                f"Value at index {new_state} is masked: "
+                f"{self.values[new_state - 1]}. Cannot set the state to this "
+                "index!"
             )
 
         # Everything ok. Can set the state
@@ -725,10 +731,9 @@ class ParamDim(ParamDimBase):
         # Should be a container now. Assert correct length.
         if len(mask) != self.num_values:
             raise ValueError(
-                "Given mask needs to be a boolean, a slice, or a "
-                "container of same length as the values "
-                "container ({}), was:  {}"
-                "".format(self.num_values, mask)
+                f"Given mask needs to be a boolean, a slice, or a container "
+                f"of same length as the values container ({self.num_values}), "
+                f"was:  {mask}"
             )
 
         # Mark the mask cache as invalid, such that it is re-calculated when
@@ -848,7 +853,7 @@ class CoupledParamDim(ParamDimBase):
     yaml_tag = "!coupled-pdim"
 
     # And the other yaml representer settings
-    _YAML_UPDATE = dict(target_name="_target_name_as_list")
+    _YAML_UPDATE = dict(target_name="_target_name_as_list",)
     _YAML_REMOVE_IF = dict(
         name=(None,),
         order=(None,),
@@ -1022,9 +1027,9 @@ class CoupledParamDim(ParamDimBase):
         # Make sure it is of valid type
         elif not isinstance(target_name, (tuple, list, str)):
             raise TypeError(
-                "Argument `target_name` should be a tuple or list "
-                "(i.e., a key sequence) or a string! Was {}: {}"
-                "".format(type(target_name), target_name)
+                f"Argument `target_name` should be a tuple or list (i.e., a "
+                f"key sequence) or a string! "
+                f"Was {type(target_name)}: {target_name}"
             )
 
         elif isinstance(target_name, list):
@@ -1061,18 +1066,17 @@ class CoupledParamDim(ParamDimBase):
         """Set the target ParamDim"""
         if not isinstance(pdim, ParamDim):
             raise TypeError(
-                "Target of CoupledParamDim needs to be of type "
-                "ParamDim, was " + str(type(pdim))
+                f"Target of CoupledParamDim needs to be of type "
+                f"ParamDim, was {type(pdim)}!"
             )
 
         elif (
             not self._use_coupled_values and self.num_values != pdim.num_values
         ):
             raise ValueError(
-                "The lengths of the value sequences of target "
-                "ParamDim and this CoupledParamDim need to "
-                "match, were: {} and {}, respectively."
-                "".format(pdim.num_values, self.num_values)
+                f"The lengths of the value sequences of target ParamDim and "
+                f"this CoupledParamDim need to match, were: "
+                f"{pdim.num_values} and {self.num_values}, respectively."
             )
 
         self._target_pdim = pdim

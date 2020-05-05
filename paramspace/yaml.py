@@ -1,4 +1,11 @@
-"""This module adds yaml constructors for ParamSpace and ParamDim generation"""
+"""This module registers various YAML constructors and representers, notably
+those for :py:class:`~paramspace.paramspace.ParamSpace` and
+:py:class:`~paramspace.paramdim.ParamDim`.
+
+Furthermore, it defines a shared ``ruamel.yaml.YAML`` object that can be
+imported and used for loading and storing YAML files using the representers and
+constructors.
+"""
 from ruamel.yaml import YAML
 
 from .paramdim import CoupledParamDim, Masked, ParamDim

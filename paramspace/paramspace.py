@@ -48,9 +48,9 @@ class ParamSpace:
         # Warn if type is unusual
         if not isinstance(d, collections.abc.MutableMapping):
             warnings.warn(
-                "Got unusual type {} for ParamSpace initialisation."
-                "If the given object is not mutable, this might fail"
-                " somewhere unexpected.".format(type(d)),
+                f"Got unusual type {type(d)} for ParamSpace initialisation! "
+                f"If the given object is not mutable, this might fail at some "
+                f"unexpected later point.",
                 UserWarning,
             )
 
@@ -141,13 +141,13 @@ class ParamSpace:
 
             except (KeyError, ValueError) as err:
                 # Could not find that name
+                _dim_info = self._parse_dims(mode="both")
                 raise ValueError(
-                    "Could not resolve the coupling target for "
-                    "CoupledParamDim at {}. Check the "
-                    "`target_name` specification of that entry "
-                    "and the full traceback of this error.\n"
-                    "Available parameter dimensions:\n{}"
-                    "".format(cpdim_key, self._parse_dims(mode="both"))
+                    f"Could not resolve the coupling target for "
+                    f"CoupledParamDim at {cpdim_key}. Check the "
+                    f"`target_name` specification of that entry "
+                    f"and the full traceback of this error.\n"
+                    f"Available parameter dimensions:\n{_dim_info}"
                 ) from err
 
             # Set attribute of the coupled ParamDim
@@ -218,17 +218,15 @@ class ParamSpace:
 
         if any(["." in name for name in pdim_names]):
             raise ValueError(
-                "Custom parameter dimension names cannot contain "
-                "the hierarchy-separating character '.'! Please "
-                "remove it from the names it appears in: {}"
-                "".format(pdim_names)
+                f"Custom parameter dimension names cannot contain the "
+                f"hierarchy-separating character '.'! Please remove it from "
+                f"the names it appears in: {pdim_names}"
             )
 
         elif len(set(pdim_names)) != len(pdim_names):
             raise ValueError(
-                "There were duplicates among the manually set "
-                "names of parameter dimensions!\n"
-                "List of names: {}".format(pdim_names)
+                f"There were duplicates among the manually set names of "
+                f"parameter dimensions!\nList of names: {pdim_names}"
             )
 
         # Set the custom names; with the others, start with the end of the path
@@ -263,23 +261,20 @@ class ParamSpace:
                     # Make sure the while loop has a break condition
                     if i > max(plens):
                         raise ValueError(
-                            "Could not automatically find a "
-                            "unique string representation for "
-                            "path {}! You should set a custom "
-                            "name for the parameter dimension."
-                            "".format(paths[cidx])
+                            f"Could not automatically find a unique string "
+                            f"representation for path {paths[cidx]}! You "
+                            f"should set a custom name for the parameter "
+                            "dimension."
                         )
 
                     # Check there is no '.' in the (relevant!) path segement
                     elif any(["." in seg for seg in path_seg]):
                         raise ValueError(
-                            "A path segement of {} contains a "
-                            "'.' character which interferes with "
-                            "automatically creating unambiguous "
-                            "parameter dimension names. Please "
-                            "select a custom name for the object "
-                            "at path {}."
-                            "".format(path_seg, paths[cidx])
+                            f"A path segement of {path_seg} contains the '.' "
+                            f"character which interferes with automatically "
+                            f"creating unambiguous parameter dimension names. "
+                            f"Please select a custom name for the object at "
+                            f"path {paths[cidx]}."
                         )
 
                     # All checks passed. Join the path segement together and
@@ -316,11 +311,11 @@ class ParamSpace:
                 return self._dims[name]
 
             except KeyError as err:
+                _dim_info = self._parse_dims(mode="both")
                 raise KeyError(
-                    "A parameter dimension with name '{}' was not "
-                    "found in this ParamSpace. Available parameter "
-                    "dimensions:\n{}"
-                    "".format(name, self._parse_dims(mode="both"))
+                    f"A parameter dimension with name '{name}' was not found "
+                    f"in this ParamSpace. Available parameter dimensions:\n"
+                    f"{_dim_info}"
                 )
 
         # else: is assumed to be a path segement, i.e. a sequence of strings
@@ -341,26 +336,24 @@ class ParamSpace:
                     continue
 
                 # else: already set -> there was already one matching this name
+                _dim_info = self._parse_dims(mode="both")
                 raise ValueError(
-                    "Could not unambiguously find a parameter "
-                    "dimension matching the path segment {}! "
-                    "Pass a longer path segement to select the "
-                    "right dimension. To symbolize that the key "
-                    "sequence is absolute, start with an empty "
-                    "string entry in the key sequence.\n"
-                    "Available parameter dimensions:\n"
-                    "{}"
-                    "".format(name, self._parse_dims(mode="both"))
+                    f"Could not unambiguously find a parameter dimension "
+                    f"matching the path segment {name}! "
+                    f"Pass a longer path segement to select the right "
+                    f"parameter dimension. To symbolize that the key sequence "
+                    f"should be regarded as absolute, start with an empty "
+                    f"string entry in the key sequence.\nAvailable parameter "
+                    f"dimensions:\n{_dim_info}"
                 )
 
         # If still None after all this, no such name was found
         if pdim is None:
+            _dim_info = self._parse_dims(mode="both")
             raise KeyError(
-                "A parameter dimension matching location {} was "
-                "not found in this ParamSpace. "
-                "Available parameter dimensions:\n"
-                "{}"
-                "".format(name, self._parse_dims(mode="both"))
+                f"A parameter dimension matching location {name} was not "
+                f"found in this ParamSpace. Available parameter dimensions:\n"
+                f"{_dim_info}"
             )
 
         return pdim
@@ -569,9 +562,8 @@ class ParamSpace:
         """Sets the state of all parameter dimensions"""
         if len(vec) != self.num_dims:
             raise ValueError(
-                "Given vector needs to be of same length as "
-                "there are number of dimensions ({}), was: {}"
-                "".format(self.num_dims, vec)
+                f"Given vector needs to be of same length as there are number "
+                f"of dimensions ({self.num_dims}), was: {vec}"
             )
 
         for (name, pdim), new_state in zip(self.dims.items(), vec):
@@ -580,9 +572,8 @@ class ParamSpace:
 
             except ValueError as err:
                 raise ValueError(
-                    "Could not set the state of parameter "
-                    "dimension {} to {}!"
-                    "".format(name, new_state)
+                    f"Could not set the state of parameter dimension {name} "
+                    f"to {new_state}!"
                 ) from err
 
         log.debug("Successfully set state vector to %s.", vec)
@@ -624,8 +615,9 @@ class ParamSpace:
 
     def __str__(self) -> str:
         """Returns a parsed, human-readable information string"""
-        return "<{} object at {} with volume {}, shape {}>" "".format(
-            self.__class__.__name__, id(self), self.volume, self.shape
+        return (
+            f"<{self.__class__.__name__} object at {id(self)} with "
+            f"volume {self.volume}, shape {self.shape}>"
         )
 
     def __repr__(self) -> str:
@@ -668,10 +660,7 @@ class ParamSpace:
             l += [f"      {pdim.values}"]
             # TODO add information on length?!
             if pdim.mask is True:
-                l += [
-                    "      fully masked -> using default:  {}"
-                    "".format(pdim.default)
-                ]
+                l += [f"      fully masked -> using default:  {pdim.default}"]
 
             if pdim.order < np.inf:
                 l += [f"      Order: {pdim.order}"]
@@ -729,7 +718,7 @@ class ParamSpace:
             ]
 
         else:
-            raise ValueError("Invalid mode: " + str(mode))
+            raise ValueError(f"Invalid mode: {mode}")
 
         # Create the multi-line string
         return "\n" + prefix + ("\n" + prefix).join(lines)
@@ -784,8 +773,8 @@ class ParamSpace:
         item = self._dict.get(key, None)
         if item in self.dims.values() or item in self.coupled_dims.values():
             raise KeyError(
-                "Cannot remove item with key '{}' as it is part of "
-                "a parameter dimension.".format(key)
+                f"Cannot remove item with key '{key}' as it is part of a "
+                f"parameter dimension."
             )
 
         return self._dict.pop(key, default)
@@ -961,9 +950,8 @@ class ParamSpace:
 
             else:
                 raise ValueError(
-                    "No such information '{}' available. "
-                    "Check the `with_info` argument!"
-                    "".format(info)
+                    f"No such information '{info}' available. Check the "
+                    f"`with_info` argument!"
                 )
 
         # Return depending on whether a point was given or not
@@ -1082,12 +1070,9 @@ class ParamSpace:
 
         except IndexError as err:
             raise ValueError(
-                "Did not find state number {} in inverse "
-                "mapping! Make sure it is an integer in the "
-                "closed interval [0, {}]."
-                "".format(
-                    state_no, reduce(lambda x, y: x * y, self.states_shape) - 1
-                )
+                f"Did not find state number {state_no} in inverse mapping! "
+                f"Make sure it is an integer in the closed interval "
+                f"[0, {reduce(lambda x, y: x * y, self.states_shape) - 1}]."
             )
 
     def get_dim_values(
@@ -1278,19 +1263,18 @@ class ParamSpace:
                         )
                     except TypeError as err:
                         raise TypeError(
-                            "Could not ascertain whether {} is "
-                            "contained in {}! This is probably "
-                            "due to values of numeric type being "
-                            "mixed with non-numeric ones. Check "
-                            "the definition of your parameter "
-                            "dimensions.".format(a, seq)
+                            f"Could not ascertain whether {a} is contained in "
+                            f"{seq}! This is probably due to values of "
+                            f"numeric type being mixed with non-numeric ones. "
+                            f"Check the definition of your parameter "
+                            f"dimensions."
                         ) from err
                 return a in seq
 
             if idx is not None and loc is not None:
                 raise ValueError(
                     "Only accepting _either_ of the arguments "
-                    "idx and loc, but got both!."
+                    "`idx` and `loc`, but got both!"
                 )
 
             pdim = self.dims[name]
@@ -1322,15 +1306,14 @@ class ParamSpace:
 
                     elif max(idx) > pdim.num_values:
                         raise IndexError(
-                            "Given indices {} contained a value "
-                            "that exceeds the highest index, {}!"
-                            "".format(idx, pdim.num_values)
+                            f"Given indices {idx} contained a value that "
+                            f"exceeds the highest index, {pdim.num_values}!"
                         )
 
                     elif len(set(idx)) != len(idx):
                         raise ValueError(
-                            "Given indices {} contained at least "
-                            "one duplicate element!".format(idx)
+                            f"Given indices {idx} contained at least "
+                            f"one duplicate element!"
                         )
 
                     # Everything ok.
@@ -1366,16 +1349,15 @@ class ParamSpace:
 
                     if any([not contains_close(val, coords) for val in loc]):
                         raise KeyError(
-                            "At least one of the labels in {} is "
-                            "not available as coordinate of this "
-                            "parameter dimension, {}!"
-                            "".format(loc, coords)
+                            f"At least one of the labels in {loc} is not "
+                            f"available as coordinate of this parameter "
+                            f"dimension, {coords}!"
                         )
 
                     elif len(set(loc)) != len(loc):
                         raise ValueError(
-                            "Given labels {} contained at least "
-                            "one duplicate item!".format(loc)
+                            f"Given labels {loc} contained at least "
+                            f"one duplicate item!"
                         )
 
                     # Everything ok. Get the indices. Iterate over coordinates
@@ -1415,12 +1397,12 @@ class ParamSpace:
         for dim_name, mask in masks.items():
             if not allow_default and all(mask):
                 raise ValueError(
-                    "With the given selector, parameter "
-                    "dimension '{}' would be totally masked, "
-                    "thus resulting in shifting to its default "
-                    "state in iteration. If you want to permit "
-                    "this, set the allow_default argument.\n"
-                    "Selector:\n{}".format(dim_name, selector)
+                    f"With the given selector, parameter "
+                    f"dimension '{dim_name}' would be totally masked, "
+                    f"thus resulting in shifting to its default "
+                    f"state in iteration. If you want to permit "
+                    f"this, set the allow_default argument.\n"
+                    f"Selector:\n{selector}"
                 )
 
             # Everything ok, set the mask now.

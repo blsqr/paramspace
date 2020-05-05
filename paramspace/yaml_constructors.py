@@ -1,7 +1,9 @@
-"""This module defines the yaml constructors for ParamSpace and ParamDim
-generation during loading.
+"""Defines the yaml constructors for the generation of
+:py:class:`~paramspace.paramspace.ParamSpace` and
+:py:class:`~paramspace.paramdim.ParamDim` during loading of YAML files.
 
-Note that they are not added in this module but in the .yaml module.
+Note that they are not registered in this module but in the
+:py:mod:`paramspace.yaml` module.
 """
 import logging
 import warnings
@@ -10,7 +12,8 @@ from typing import Iterable, Union
 
 import ruamel.yaml
 
-from . import CoupledParamDim, ParamDim, ParamSpace
+from .paramdim import CoupledParamDim, ParamDim
+from .paramspace import ParamSpace
 from .tools import create_indices
 
 # Get logger
@@ -23,7 +26,7 @@ log = logging.getLogger(__name__)
 def pspace(loader, node) -> ParamSpace:
     """yaml constructor for creating a ParamSpace object from a mapping.
 
-    Suggested tag: !pspace
+    Suggested tag: ``!pspace``
     """
     return _pspace_constructor(loader, node)
 
@@ -34,7 +37,7 @@ def pspace_unsorted(loader, node) -> ParamSpace:
     Unlike the regular constructor, this one does NOT sort the input before
     instantiating ParamSpace.
 
-    Suggested tag: !pspace-unsorted
+    Suggested tag: ``!pspace-unsorted``
     """
     return _pspace_constructor(loader, node, sort_if_mapping=False)
 
@@ -42,7 +45,7 @@ def pspace_unsorted(loader, node) -> ParamSpace:
 def pdim(loader, node) -> ParamDim:
     """constructor for creating a ParamDim object from a mapping
 
-    Suggested tag: !pdim
+    Suggested tag: ``!pdim``
     """
     return _pdim_constructor(loader, node)
 
@@ -51,7 +54,7 @@ def pdim_default(loader, node) -> ParamDim:
     """constructor for creating a ParamDim object from a mapping, but only
     return the default value.
 
-    Suggested tag: !pdim-default
+    Suggested tag: ``!pdim-default``
     """
     pdim = _pdim_constructor(loader, node)
     log.debug("Returning default value of constructed ParamDim.")
@@ -61,7 +64,7 @@ def pdim_default(loader, node) -> ParamDim:
 def coupled_pdim(loader, node) -> CoupledParamDim:
     """constructor for creating a CoupledParamDim object from a mapping
 
-    Suggested tag: !coupled-pdim
+    Suggested tag: ``!coupled-pdim``
     """
     return _coupled_pdim_constructor(loader, node)
 
@@ -70,7 +73,7 @@ def coupled_pdim_default(loader, node) -> CoupledParamDim:
     """constructor for creating a CoupledParamDim object from a mapping, but
     only return the default value.
 
-    Suggested tag: !coupled-pdim-default
+    Suggested tag: ``!coupled-pdim-default``
     """
     cpdim = _coupled_pdim_constructor(loader, node)
     log.debug("Returning default value of constructed CoupledParamDim.")
@@ -83,7 +86,7 @@ def coupled_pdim_default(loader, node) -> CoupledParamDim:
 def _pspace_constructor(
     loader, node, sort_if_mapping: bool = True
 ) -> ParamSpace:
-    """constructor for instantiating ParamSpace from a mapping or a sequence"""
+    """Constructor for instantiating ParamSpace from a mapping or a sequence"""
     log.debug("Encountered tag associated with ParamSpace.")
 
     # get fields as mapping or sequence
@@ -98,9 +101,8 @@ def _pspace_constructor(
 
     else:
         raise TypeError(
-            "ParamSpace node can only be constructed from a "
-            "Mapping or a Sequence, got node of type {} with "
-            "value:\n{}.".format(type(node), node)
+            f"ParamSpace node can only be constructed from a mapping or a "
+            f"sequence, got node of type {type(node)} with value:\n{node}."
         )
 
     log.debug("Instantiating ParamSpace ...")
@@ -108,7 +110,7 @@ def _pspace_constructor(
 
 
 def _pdim_constructor(loader, node) -> ParamDim:
-    """constructor for creating a ParamDim object from a mapping
+    """Constructor for creating a ParamDim object from a mapping
 
     For it to be incorported into a ParamSpace, one parent (or higher) of this
     node needs to be tagged such that the pspace_constructor is invoked.
@@ -122,16 +124,15 @@ def _pdim_constructor(loader, node) -> ParamDim:
 
     else:
         raise TypeError(
-            "ParamDim can only be constructed from a mapping node,"
-            " got node of type {} "
-            "with value:\n{}".format(type(node), node)
+            f"ParamDim can only be constructed from a mapping node,got node "
+            f"of type {type(node)} with value:\n{node}"
         )
 
     return pdim
 
 
 def _coupled_pdim_constructor(loader, node) -> ParamDim:
-    """constructor for creating a ParamDim object from a mapping
+    """Constructor for creating a ParamDim object from a mapping
 
     For it to be incorported into a ParamSpace, one parent (or higher) of this
     node needs to be tagged such that the pspace_constructor is invoked.
@@ -145,9 +146,8 @@ def _coupled_pdim_constructor(loader, node) -> ParamDim:
 
     else:
         raise TypeError(
-            "CoupledParamDim can only be constructed from a "
-            "mapping node, got node of type {} "
-            "with value:\n{}".format(type(node), node)
+            f"CoupledParamDim can only be constructed from a mapping node, "
+            f"got node of type {type(node)} with value:\n{node}"
         )
 
     return cpdim
@@ -157,7 +157,7 @@ def _coupled_pdim_constructor(loader, node) -> ParamDim:
 
 # ...for constructing slice objects
 def _slice_constructor(loader, node):
-    """pyyaml constructor for slices"""
+    """Constructor for slices"""
     log.debug("Encountered !slice tag.")
 
     # get slice arguments either from a scalar or from a sequence
@@ -174,7 +174,7 @@ def _slice_constructor(loader, node):
 
 
 def _range_constructor(loader, node):
-    """pyyaml constructor for range"""
+    """Constructor for range"""
     log.debug("Encountered !range tag.")
 
     # get range arguments either from a scalar or from a sequence
@@ -191,7 +191,7 @@ def _range_constructor(loader, node):
 
 
 def _list_constructor(loader, node):
-    """pyyaml constructor for lists, where node can be a mapping or sequence"""
+    """Constructor for lists, where node can be a mapping or sequence"""
     log.debug("Encountered !listgen tag.")
 
     if isinstance(node, ruamel.yaml.nodes.MappingNode):
@@ -202,8 +202,8 @@ def _list_constructor(loader, node):
 
     else:
         raise TypeError(
-            "Expected mapping or sequence node for !listgen, but "
-            "got {}!".format(type(node))
+            f"Expected mapping or sequence node for !listgen, but "
+            f"got {type(node)}!"
         )
 
     log.debug("  kwargs:  %s", kwargs)
