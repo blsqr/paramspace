@@ -3,9 +3,9 @@ from setuptools import setup
 
 # Dependencies for paramspace itself
 install_deps = [
-    "numpy>=1.17.3",
-    "xarray>=0.10.9",
-    "ruamel.yaml>=0.16.5",
+    "numpy >= 1.17.3",
+    "xarray >= 0.10.9",
+    "ruamel.yaml >= 0.16.5",
 ]
 
 # Derive an extra that uses strict versions; allows testing for these via tox
@@ -13,13 +13,18 @@ minimal_install_deps = [dep.replace(">=", "==") for dep in install_deps]
 
 # Dependencies for executing tests
 test_deps = [
-    "tox>=3.1",
-    "pytest>=3.4",
-    "pytest-cov>=2.6",
+    "tox >= 3.1",
+    "pytest >= 3.4",
+    "pytest-cov >= 2.6",
 ]
 
 # Dependencies for local development
 dev_deps = [
+    # Documentation
+    "sphinx >= 3.0",
+    "sphinx_rtd_theme",
+    #
+    # Code Maintenance
     "pre-commit",
     "seed-isort-config",
     "isort[pyproject]",

@@ -10,3 +10,8 @@ dist
 
 # Don't ignore some specific files
 !.coveragerc
+
+# Ignore documentation build files
+doc/_build
+doc/api
+doc/build_errors.log
