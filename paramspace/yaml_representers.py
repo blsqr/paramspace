@@ -1,4 +1,4 @@
-"""This module implements custom representer functions"""
+"""This module implements custom YAML representer functions"""
 import logging
 from typing import Iterable, Union
 
@@ -11,7 +11,8 @@ log = logging.getLogger(__name__)
 
 
 def _slice_representer(representer, node: slice):
-    """
+    """Represents a Python slice object using the ``!slice`` YAML tag.
+
     Args:
         representer (ruamel.yaml.representer): The representer module
         node (slice): The node, i.e. a slice instance
@@ -24,7 +25,8 @@ def _slice_representer(representer, node: slice):
 
 
 def _range_representer(representer, node: range):
-    """
+    """Represents a Python range object using the ``!range`` YAML tag.
+
     Args:
         representer (ruamel.yaml.representer): The representer module
         node (range): The node, i.e. a range instance
