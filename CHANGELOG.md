@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.4.0 _(WIP)_
+- !34 reformats the whole code base using `black` (see #40) and implements `pre-commit` hooks to maintain formatting.
+
 ## v2.3.1
 - !33 adds a `.coveragerc` file for pytest
 
