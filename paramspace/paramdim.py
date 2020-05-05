@@ -2,15 +2,13 @@
 can be assumed. While they provide iteration abilities on their own, they make
 sense mostly to use as objects in a dict that is converted to a ParamSpace.
 """
-
 import abc
 import copy
 import logging
 import warnings
-from typing import Iterable, Union, Tuple, Hashable, Sequence, List
+from typing import Hashable, Iterable, List, Sequence, Tuple, Union
 
 import numpy as np
-
 
 # Get logger
 log = logging.getLogger(__name__)
@@ -50,7 +48,7 @@ class Masked:
         Args:
             representer (ruamel.yaml.representer): The representer module
             node (type(self)): The node, i.e. an instance of this class
-        
+
         Returns:
             the scalar value that this object masks
         """
@@ -92,7 +90,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         **kwargs,
     ) -> None:
         """Initialise a parameter dimension object.
-        
+
         Args:
             default: default value of this parameter dimension
             values (Iterable, optional): Which discrete values this parameter
@@ -113,7 +111,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
                 `range`, `linspace`, and `logspace`; corresponding values are
                 expected to be iterables and are passed to `range(*args)`,
                 `np.linspace(*args)`, or `np.logspace(*args)`, respectively.
-        
+
         Raises:
             TypeError: For invalid arguments
         """
@@ -235,7 +233,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     @property
     def values(self) -> tuple:
         """The values that are iterated over.
-        
+
         Returns:
             tuple: the values this parameter dimension can take. If None, the
                 values are not yet set.
@@ -246,7 +244,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     def coords(self) -> tuple:
         """Returns the coordinates of this parameter dimension, i.e.: the
         combined default value and the sequence of iteration values.
-        
+
         Returns:
             tuple: coordinates associated with the indices of this dimension
         """
@@ -257,7 +255,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         """Returns the pure coordinates of this parameter dimension, i.e.: the
         combined default value and the sequence of iteration values, but with
         masked values resolved.
-        
+
         Returns:
             tuple: coordinates associated with the indices of this dimension
         """
@@ -268,7 +266,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     @property
     def num_values(self) -> int:
         """The number of values available.
-        
+
         Returns:
             int: The number of available values
         """
@@ -277,7 +275,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     @property
     def num_states(self) -> int:
         """The number of possible states, i.e.: including the default state
-        
+
         Returns:
             int: The number of possible states
         """
@@ -286,7 +284,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     @property
     def state(self) -> int:
         """The current iterator state
-        
+
         Returns:
             Union[int, None]: The state of the iterator; if it is None, the
                 ParamDim is not inside an iteration.
@@ -306,10 +304,10 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
     def __eq__(self, other) -> bool:
         """Check for equality between self and other
-        
+
         Args:
             other: the object to compare to
-        
+
         Returns:
             bool: Whether the two objects are equivalent
         """
@@ -329,7 +327,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     def __len__(self) -> int:
         """Returns the effective length of the parameter dimension, i.e. the
         number of values that will be iterated over
-        
+
         Returns:
             int: The number of values to be iterated over
         """
@@ -375,7 +373,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     def __next__(self):
         """Move to the next valid state and return the corresponding parameter
         value.
-        
+
         Returns:
             The current value (inside an iteration)
         """
@@ -390,7 +388,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     def enter_iteration(self) -> None:
         """Sets the state to the first possible one, symbolising that an
         iteration has started.
-        
+
         Returns:
             None
 
@@ -401,7 +399,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def iterate_state(self) -> None:
         """Iterates the state of the parameter dimension.
-        
+
         Returns:
             None
 
@@ -444,18 +442,18 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         """This function sets the values attribute; it is needed for the
         values setter function that is overwritten when changing the property
         in a derived class.
-        
+
         Args:
             values (Iterable): The iterable to set the values with
             assert_unique (bool): Whether to assert uniqueness of the values
             as_type (str, optional): The following values are possible:
                 str, int, bool, float. If not given, will leave the values
                 as they are.
-        
+
         Raises:
             AttributeError: If the attribute is already set
             ValueError: If the iterator is invalid
-        
+
         Deleted Parameters:
             as_float (bool, optional): If given, makes sure that values are
                 of type float; this is needed for the numpy initializers
@@ -519,7 +517,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         Args:
             representer (ruamel.yaml.representer): The representer module
             node (type(self)): The node, i.e. an instance of this class
-        
+
         Returns:
             a yaml mapping that is able to recreate this object
         """
@@ -573,7 +571,7 @@ class ParamDim(ParamDimBase):
 
     def __init__(self, *, mask: Union[bool, Tuple[bool]] = False, **kwargs):
         """Initialize a regular parameter dimension.
-        
+
         Args:
             mask (Union[bool, Tuple[bool]], optional): Which values of the
                 dimension to mask, i.e.: skip in iteration. Note that masked
@@ -623,7 +621,7 @@ class ParamDim(ParamDimBase):
     @property
     def state(self) -> int:
         """The current iterator state
-        
+
         Returns:
             Union[int, None]: The state of the iterator; if it is None, the
                 ParamDim is not inside an iteration.
@@ -689,10 +687,10 @@ class ParamDim(ParamDimBase):
     @mask.setter
     def mask(self, mask: Union[bool, Tuple[bool]]):
         """Sets the mask
-        
+
         Args:
             mask (Union[bool, Tuple[bool]]): A bool or an iterable of booleans
-        
+
         Raises:
             ValueError: If the length of the iterable does not match that of
                 this parameter dimension
@@ -749,7 +747,7 @@ class ParamDim(ParamDimBase):
     def __len__(self) -> int:
         """Returns the effective length of the parameter dimension, i.e. the
         number of values that will be iterated over.
-        
+
         Returns:
             int: The number of values to be iterated over
         """
@@ -763,7 +761,7 @@ class ParamDim(ParamDimBase):
     def enter_iteration(self) -> None:
         """Sets the state to the first possible one, symbolising that an
         iteration has started.
-        
+
         Raises:
             StopIteration: If no iteration is possible because all values are
                 masked.
@@ -787,7 +785,7 @@ class ParamDim(ParamDimBase):
 
     def iterate_state(self) -> None:
         """Iterates the state of the parameter dimension.
-        
+
         Raises:
             StopIteration: Upon end of iteration
         """
@@ -872,14 +870,14 @@ class CoupledParamDim(ParamDimBase):
         **kwargs,
     ):
         """Initialize a coupled parameter dimension.
-        
+
         If the `default` or any values-setting argument is set, those will be
         used. If that is not the case, the respective parts from the coupled
         dimension will be used.
-        
+
         Args:
             default (None, optional): The default value. If not given, will
-                use the one from the coupled object. 
+                use the one from the coupled object.
             target_pdim (ParamDim, optional): The ParamDim object to couple to
             target_name (Union[str, Sequence[str]], optional): The *name* of
                 the ParamDim object to couple to; needs to be within the same
@@ -888,7 +886,7 @@ class CoupledParamDim(ParamDimBase):
             use_coupled_default (bool, optional): DEPRECATED
             use_coupled_values (bool, optional): DEPRECATED
             **kwargs: Passed to ParamDimBase.__init__
-        
+
         Raises:
             TypeError: If neither target_pdim nor target_name were given or
                 or both were given
@@ -973,7 +971,7 @@ class CoupledParamDim(ParamDimBase):
         """Returns the effective length of the parameter dimension, i.e. the
         number of values that will be iterated over; corresponds to that of
         the target ParamDim
-        
+
         Returns:
             int: The number of values to be iterated over
         """
@@ -1033,7 +1031,7 @@ class CoupledParamDim(ParamDimBase):
     @property
     def _target_name_as_list(self) -> Union[str, List[str]]:
         """For the safe yaml representer, the target_name cannot be a tuple.
-        
+
         This property returns it as str or list of strings.
         """
         if self.target_name is None or isinstance(self.target_name, str):
@@ -1081,10 +1079,10 @@ class CoupledParamDim(ParamDimBase):
     @property
     def default(self):
         """The default value.
-        
+
         Returns:
             the default value this parameter dimension can take.
-        
+
         Raises:
             RuntimeError: If no ParamDim was associated yet
         """
@@ -1096,9 +1094,9 @@ class CoupledParamDim(ParamDimBase):
     @property
     def values(self) -> tuple:
         """The values that are iterated over.
-        
+
         If self._use_coupled_values is set, will be those of the coupled pdim.
-        
+
         Returns:
             tuple: The values of this CoupledParamDim or the target ParamDim
         """
@@ -1110,7 +1108,7 @@ class CoupledParamDim(ParamDimBase):
     @property
     def state(self) -> int:
         """The current iterator state of the target ParamDim
-        
+
         Returns:
             Union[int, None]: The state of the iterator; if it is None, the
                 ParamDim is not inside an iteration.

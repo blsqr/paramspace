@@ -1,17 +1,20 @@
 """This module adds yaml constructors for ParamSpace and ParamDim generation"""
-
 from ruamel.yaml import YAML
 
-from .paramdim import ParamDim, CoupledParamDim, Masked
+from .paramdim import CoupledParamDim, Masked, ParamDim
 from .paramspace import ParamSpace
-
-from .yaml_constructors import pspace, pspace_unsorted
-from .yaml_constructors import pdim, pdim_default
-from .yaml_constructors import coupled_pdim, coupled_pdim_default
-from .yaml_constructors import _slice_constructor, _range_constructor
-from .yaml_constructors import _list_constructor
-
-from .yaml_representers import _slice_representer, _range_representer
+from .yaml_constructors import (
+    _list_constructor,
+    _range_constructor,
+    _slice_constructor,
+    coupled_pdim,
+    coupled_pdim_default,
+    pdim,
+    pdim_default,
+    pspace,
+    pspace_unsorted,
+)
+from .yaml_representers import _range_representer, _slice_representer
 
 # -----------------------------------------------------------------------------
 # Define a safe and an unsafe ruamel.yaml YAML object

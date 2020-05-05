@@ -1,11 +1,10 @@
 """Tests for the ParamDim classes"""
-
 import warnings
 
-import pytest
 import numpy as np
+import pytest
 
-from paramspace import ParamDim, CoupledParamDim
+from paramspace import CoupledParamDim, ParamDim
 from paramspace.paramdim import Masked, MaskedValueError
 from paramspace.yaml import *
 

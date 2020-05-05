@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 from setuptools import setup
 
 # Dependencies for paramspace itself
@@ -22,8 +21,10 @@ test_deps = [
 # Dependencies for local development
 dev_deps = [
     "pre-commit",
-    "black",
+    "seed-isort-config",
     "isort[pyproject]",
+    "black",
+    "pyupgrade",
 ]
 
 # .............................................................................

@@ -1,10 +1,10 @@
 """Tests for the tool functions of the paramspace package"""
-
 import copy
 
 import pytest
 
 import paramspace.tools as t
+
 
 # Dummy objects to find using the tools
 class Dummy:

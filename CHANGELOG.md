@@ -12,7 +12,7 @@ This is an infrastructure release; there are no changes to package functionality
 - !32 adds a GitLab CI job to deploy `paramspace` to PyPI
 - !31 changes the package license to be the BSD-2-clause license
 - !29 single-sources the package version specification
-- !28 and !30 extend testing to Python 3.8 and separate jobs to test dependencies with the lowest specified versions.   
+- !28 and !30 extend testing to Python 3.8 and separate jobs to test dependencies with the lowest specified versions.  
 
 
 ## v2.2.3
@@ -36,7 +36,7 @@ This is an infrastructure release; there are no changes to package functionality
 ## v2.0.0
 - #18: Calculate the `ParamSpace.state_no` instead of incrementing; this leads to higher reliability and allows more flexible iteration schemes.
 - #3: Include the ability to restrict `ParamSpace` to a subspace for iteration by introducing `ParamDim.mask`.
-   - This required changing the `state` property of the dimension and parameter space classes to include the default value as state 0. It is one of many changes to the public interface of this package that is introduced in version 2.0 and makes the whole state numbering more 
+   - This required changing the `state` property of the dimension and parameter space classes to include the default value as state 0. It is one of many changes to the public interface of this package that is introduced in version 2.0 and makes the whole state numbering more
    - Improvements going along this:
       - Accessing a parameter dimension by name
       - Calculating the state mapping; indices now relate directly and unambiguously to the state vector of the parameter space.
@@ -49,7 +49,7 @@ This is an infrastructure release; there are no changes to package functionality
    - This leads to a much nicer and future-proof way of storing the objects while remaining human-readable.
    - All this is managed in the new `paramspace.yaml` module, which also supplies the `ruamel.yaml.YAML` object along which the new API revolves.
    - _For packages updating to this version,_ it is recommended to _not_ add custom constructors that trigger on a different tag; this might lead to confusion because the representer can only create mappings with the tag specified in the `paramspace` implementation.
-- #12: Test coverage is now up to 99% and the existing tests have been extended in order to more explicitly test the behaviour of the package. 
+- #12: Test coverage is now up to 99% and the existing tests have been extended in order to more explicitly test the behaviour of the package.
 - #19: Update the README
 - #20: Add a new argument, `as_type`, to `ParamDim.__init__` to allow a type cast after the values have been parsed.
 - #21: Refactor `ParamSpace.all_points` to `ParamSpace.iterator`

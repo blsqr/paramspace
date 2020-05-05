@@ -1,12 +1,10 @@
 """Tests the yaml constructors"""
-
 import io
 
-import pytest
 import numpy as np
+import pytest
 
-# Add the constructors using the paramspace package methods
-from paramspace import ParamSpace, ParamDim
+from paramspace import ParamDim, ParamSpace
 from paramspace.yaml import *
 
 # Fixtures --------------------------------------------------------------------
@@ -20,7 +18,7 @@ def yamlstrs() -> dict:
     strs[
         "pspace_only"
     ] = """
-mapping: !pspace 
+mapping: !pspace
   a: 1
   b: 2
   c: 3
@@ -133,7 +131,7 @@ lists:
 too_many_args: !coupled-pdim
   target_name: [foo, bar]
   default: 0
-  use_coupled_default: True 
+  use_coupled_default: True
     """
     strs[
         ("cpdim5", None, DeprecationWarning)
@@ -141,7 +139,7 @@ too_many_args: !coupled-pdim
 too_many_args: !coupled-pdim
   target_name: [foo, bar]
   values: [1,2,3]
-  use_coupled_values: True 
+  use_coupled_values: True
     """
 
     strs[("_listgen_scalar", TypeError)] = "scalar_node: !listgen foo"

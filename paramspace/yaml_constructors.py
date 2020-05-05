@@ -3,7 +3,6 @@ generation during loading.
 
 Note that they are not added in this module but in the .yaml module.
 """
-
 import logging
 import warnings
 from collections import OrderedDict
@@ -11,7 +10,7 @@ from typing import Iterable, Union
 
 import ruamel.yaml
 
-from . import ParamSpace, ParamDim, CoupledParamDim
+from . import CoupledParamDim, ParamDim, ParamSpace
 from .tools import create_indices
 
 # Get logger
@@ -217,12 +216,12 @@ def _list_constructor(loader, node):
 def recursively_sort_dict(d: dict) -> OrderedDict:
     """Recursively sorts a dictionary by its keys, transforming it to an
     OrderedDict in the process.
-    
+
     From: http://stackoverflow.com/a/22721724/1827608
-    
+
     Args:
         d (dict): The dictionary to be sorted
-    
+
     Returns:
         OrderedDict: the recursively sorted dict
     """

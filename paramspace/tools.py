@@ -1,9 +1,8 @@
 """This module provides general methods needed by the ParamSpan and ParamSpace classes."""
-
-import warnings
-import logging
 import collections
-from typing import Union, Callable, Iterator, Sequence, Mapping, List
+import logging
+import warnings
+from typing import Callable, Iterator, List, Mapping, Sequence, Union
 
 # Get logger
 log = logging.getLogger(__name__)
@@ -37,7 +36,7 @@ def create_indices(
     remove: list = None,
 ) -> List[int]:
     """Generates a list of integer elements.
-    
+
     Args:
         from_range (list, optional): range arguments to use as the basis of the
             list
@@ -45,7 +44,7 @@ def create_indices(
         sort (bool, optional): Whether to sort the list before returning
         append (list, optional): Additional elements to append to the list
         remove (list, optional): Elements to remove all occurrences of
-    
+
     Returns:
         List[int]: The generated list
     """
@@ -77,11 +76,11 @@ def recursive_contains(
     obj: Union[Mapping, Sequence], *, keys: Sequence
 ) -> bool:
     """Checks whether the given keysequence is reachable in the `obj`.
-    
+
     Args:
         obj (Union[Mapping, Sequence]): The object to check recursively
         keys (Sequence): The sequence of keys to check for
-    
+
     Returns:
         bool: Whether the key sequence is reachable
     """
@@ -97,14 +96,14 @@ def recursive_contains(
 
 def recursive_getitem(obj: Union[Mapping, Sequence], *, keys: Sequence):
     """Go along the sequence of `keys` through `obj` and return the target item.
-    
+
     Args:
         obj (Union[Mapping, Sequence]): The object to get the item from
         keys (Sequence): The sequence of keys to follow
-    
+
     Returns:
         The target item from `obj`, specified by `keys`
-    
+
     Raises:
         IndexError: If any index in the key sequence was not available
         KeyError: If any key in the key sequence was not available
@@ -139,29 +138,29 @@ def recursive_update(
     no_convert: tuple = (str,),
 ) -> Union[Mapping, List]:
     """Recursively update items in `obj` with the values from `upd`.
-    
+
     Be aware that objects are not copied from `upd` to `obj`, but only
     assigned. This means:
         * the given `obj` will be changed in place
         * changing mutable elements in `obj` will also change them in `upd`
-    
+
     After the update, `obj` holds all entries of `upd` plus those that it did
     not have in common with `upd`.
-    
+
     If recursion is possible is determined by type; it is only done for types
     mappings (dicts) or lists.
 
     To indicate that a value in a list should not be updated, an instance of
     the tools.Skip class, e.g. the tools.SKIP object, can be passed instead.
-    
+
     Args:
         obj (Union[Mapping, List]): The object to update.
         upd (Union[Mapping, List]): The object to use for updating.
         try_list_conversion (bool, optional): If true, it is tried to convert
             an entry in `obj` to a list if it is a list in `upd`
-        no_convert (tuple, optional): For these types conversion is skipped 
+        no_convert (tuple, optional): For these types conversion is skipped
             and an empty list is generated instead
-    
+
     Returns:
         Union[Mapping, List]: The updated `obj`
     """
@@ -274,16 +273,16 @@ def recursive_collect(
     _parent_keys: tuple = None,
 ) -> list:
     """Go recursively through a mapping or sequence and collect selected elements.
-    
+
     The `select_func` is called on each values. If the return value is True, that value will be collected to a list, which is returned at the end.
-    
+
     Additionally, some information can be gathered about these elements, controlled by `prepend_info`
-    
+
     With `prepend_info`, information can be prepended to the return value. Then, not only the values but also these additional items can be gathered:
         `keys`      : prepends the key
         `info_func` : prepends the return value of `info_func(val)`
     The resulting return value is then a list of tuples (in that order).
-    
+
     Args:
         obj (Union[Mapping, Sequence]): The object to recursively search
         select_func (Callable): Each element is passed to this function; if
@@ -298,12 +297,12 @@ def recursive_collect(
             will not be further searched through.
             NOTE: strings are never iterated through further
         _parent_keys (tuple, optional): Used to track the keys; not public!
-    
+
     Returns:
-        list: the collected elements, as selected by select_func(val) or -- if 
-            `prepend_info` was set -- tuples of (info, element), where the 
+        list: the collected elements, as selected by select_func(val) or -- if
+            `prepend_info` was set -- tuples of (info, element), where the
             requested information is in the first entries of the tuple
-    
+
     Raises:
         ValueError: Raised if invalid `prepend_info` entries were set
     """
@@ -376,9 +375,9 @@ def recursive_replace(
     stop_recursion_types: tuple = None,
 ) -> Union[Mapping, Sequence]:
     """Go recursively through a mapping or sequence and call a replace function on each element that the select function returned true on.
-    
-    For passing arguments to any of the two, use lambda functions.    
-    
+
+    For passing arguments to any of the two, use lambda functions.
+
     Args:
         cont (Union[Mapping, Sequence]): The mapping or sequence to go through
             recursively
@@ -388,7 +387,7 @@ def recursive_replace(
 		stop_recursion_types (tuple, optional): Can specify types here that
             will not be further searched through.
             NOTE: strings are never iterated through further
-    
+
     Returns:
         Union[Mapping, Sequence]: The updated mapping where each element that was selected was replaced by the return value of the replacement function.
     """
@@ -444,10 +443,10 @@ def recursive_replace(
 
 def is_iterable(obj) -> bool:
     """Tests if the given object is iterable or not
-    
+
     Args:
         obj: The object to test
-    
+
     Returns:
         bool: True if iterable, False else
     """
@@ -460,10 +459,10 @@ def is_iterable(obj) -> bool:
 
 def get_key_val_iter(obj: Union[Mapping, Sequence]) -> Iterator:
     """Given an object -- assumed dict- or sequence-like -- returns a (key, value) iterator.
-    
+
     Args:
         obj (Union[Mapping, Sequence]): The obj to generate the key-value iter from
-    
+
     Returns:
         Iterator: An iterator that emits (key, value) tuples
     """

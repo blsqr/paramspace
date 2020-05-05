@@ -1,15 +1,14 @@
 """Tests for the ParamSpace class"""
-
-from functools import reduce
 from collections import OrderedDict
+from functools import reduce
 
-import pytest
 import numpy as np
 import numpy.ma
+import pytest
 
-from paramspace import ParamSpace, ParamDim, CoupledParamDim
-from paramspace.yaml import *
+from paramspace import CoupledParamDim, ParamDim, ParamSpace
 from paramspace.paramdim import Masked
+from paramspace.yaml import *
 
 # Fixtures --------------------------------------------------------------------
 

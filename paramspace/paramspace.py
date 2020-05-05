@@ -1,20 +1,19 @@
 """Implementation of the ParamSpace class"""
-
+import collections
 import copy
 import logging
 import warnings
-import collections
 from collections import OrderedDict
-from itertools import chain
 from functools import reduce
-from typing import Union, Sequence, Tuple, Generator, Dict, List
+from itertools import chain
+from typing import Dict, Generator, List, Sequence, Tuple, Union
 
 import numpy as np
 import numpy.ma
 import xarray as xr
 
-from .paramdim import ParamDimBase, ParamDim, CoupledParamDim, Masked
-from .tools import recursive_collect, recursive_update, recursive_replace
+from .paramdim import CoupledParamDim, Masked, ParamDim, ParamDimBase
+from .tools import recursive_collect, recursive_replace, recursive_update
 
 # Get logger
 log = logging.getLogger(__name__)
@@ -39,7 +38,7 @@ class ParamSpace:
 
     def __init__(self, d: dict):
         """Initialize a ParamSpace object from a given mapping or sequence.
-        
+
         Args:
             d (Union[MutableMapping, MutableSequence]): The mapping or sequence
                 that will form the parameter space. It is crucial that this
@@ -174,14 +173,14 @@ class ParamSpace:
         """Given a sequence of key-value pairs, tries to create a unique string
         representation of the entries, such that it can be used as a unique
         mapping from names to parameter dimension objects.
-        
+
         Args:
             kv_pairs (Sequence[Tuple]): Pairs of (path, ParamDim), where the
                 path is a Tuple of strings.
-        
+
         Returns:
             List[Tuple[str, ParamDim]]: The now unique (name, ParamDim) pairs
-        
+
         Raises:
             ValueError: For invalid names, i.e.: failure to find a unique
                 representation.
@@ -295,22 +294,22 @@ class ParamSpace:
 
     def _get_dim(self, name: Union[str, Tuple[str]]) -> ParamDimBase:
         """Get the ParamDim object with the given name or location.
-        
+
         Note that coupled parameter dimensions cannot be accessed via this
         method.
-        
+
         Args:
             name (Union[str, Tuple[str]]): If a string, will look it up by
                 that name, which has to match completely. If it is a tuple of
                 strings, the location is looked up instead.
-        
+
         Returns:
             ParamDimBase: the parameter dimension object
-        
+
         Raises:
             KeyError: If the ParamDim could not be found
             ValueError: If the parameter dimension name was ambiguous
-        
+
         """
         if isinstance(name, str):
             try:
@@ -416,7 +415,7 @@ class ParamSpace:
 
     @property
     def dims_by_loc(self) -> Dict[Tuple[str], ParamDim]:
-        """Returns the ParamDim objects of this ParamSpace, keys being the 
+        """Returns the ParamDim objects of this ParamSpace, keys being the
         paths to the objects in the dictionary.
         """
         return self._dims_by_loc
@@ -523,7 +522,7 @@ class ParamSpace:
         values of parameter dimensions. If a dimension is fully masked, it is
         still represented as of length 1, representing the default value
         being used.
-        
+
         Returns:
             Tuple[int]: The iterator shape
         """
@@ -537,7 +536,7 @@ class ParamSpace:
     @property
     def full_shape(self) -> Tuple[int]:
         """Returns the shape of the parameter space, ignoring masked values
-        
+
         Returns:
             Tuple[int]: The shape of the fully unmasked iterator
         """
@@ -547,7 +546,7 @@ class ParamSpace:
     def states_shape(self) -> Tuple[int]:
         """Returns the shape of the parameter space, including default states
         for each parameter dimension and ignoring masked ones.
-        
+
         Returns:
             Tuple[int]: The shape tuple
         """
@@ -748,7 +747,7 @@ class ParamSpace:
         Args:
             representer (ruamel.yaml.representer): The representer module
             node (type(self)): The node, i.e. an instance of this class
-        
+
         Returns:
             a yaml mapping that is able to recreate this object
         """
@@ -796,10 +795,10 @@ class ParamSpace:
     def __iter__(self) -> dict:
         """Move to the next valid point in parameter space and return the
         corresponding dictionary.
-        
+
         Returns:
             The current value of the iteration
-        
+
         Raises:
             StopIteration: When the iteration has finished
         """
@@ -823,7 +822,7 @@ class ParamSpace:
         To control which information is returned at each point, the `with_info`
         and `omit_pt` arguments can be used. By default, the generator will
         return a single dictionary.
-        
+
         Note that an iteration is also possible for zero-volume parameter
         spaces, i.e. where no parameter dimensions were defined.
 
@@ -835,7 +834,7 @@ class ParamSpace:
                 To get multiple, add them to a tuple.
             omit_pt (bool, optional): If true, the current value is omitted and
                 only the information is returned.
-        
+
         Returns:
             Generator[dict, None, None]: yields point after point of the
                 ParamSpace and the corresponding information
@@ -892,7 +891,7 @@ class ParamSpace:
 
         Important: this assumes that the parameter dimensions already have
         been prepared for an iteration and that self.state_no == 0.
-        
+
         Returns:
             bool: Returns False when iteration finishes
         """
@@ -986,13 +985,13 @@ class ParamSpace:
         """Returns an inverse mapping, i.e. an n-dimensional array where the
         indices along the dimensions relate to the states of the parameter
         dimensions and the content of the array relates to the state numbers.
-        
+
         Returns:
             xr.DataArray: A mapping of indices and coordinates to the state
                 number. Note that it is not ensured that the coordinates are
                 unique, so it _might_ not be possible to use location-based
                 indexing.
-        
+
         Raises:
             RuntimeError: If -- for an unknown reason -- the iteration did not
                 cover all of the state mapping. Should not occur.
@@ -1037,14 +1036,14 @@ class ParamSpace:
     def active_state_map(self) -> xr.DataArray:
         """Returns a subset of the state map, where masked coordinates are
         removed and only the active coordinates are present.
-        
+
         Note that this array has to be re-calculated every time, as the mask
         status of the ParamDim objects is not controlled by the ParamSpace and
         can change without notice.
-        
+
         Also: the indices will no longer match the states of the dimensions!
         Values of the DataArray should only be accessed via the coordinates!
-        
+
         Returns:
             xr.DataArray: A reduced state map which only includes active, i.e.:
                 unmasked coordinates.
@@ -1067,7 +1066,7 @@ class ParamSpace:
 
     def get_state_vector(self, *, state_no: int) -> Tuple[int]:
         """Returns the state vector that corresponds to a state number
-        
+
         Args:
             state_no (int): The state number to look for in the inverse mapping
 
@@ -1164,7 +1163,7 @@ class ParamSpace:
         invert: bool = False,
     ) -> None:
         """Set the mask value of the parameter dimension with the given name.
-        
+
         Args:
             name (Union[str, Tuple[str]]): the name of the dim, which can be a
                 tuple of strings or a string.
@@ -1202,7 +1201,7 @@ class ParamSpace:
         """Sets multiple mask specifications after another. Note that the order
         is maintained and that sequential specifications can apply to the same
         parameter dimensions.
-        
+
         Args:
             *mask_specs: Can be tuples/lists or dicts which will be unpacked
                 (in the given order) and passed to .set_mask
@@ -1225,11 +1224,11 @@ class ParamSpace:
     ) -> None:
         """Selects a subspace of the parameter space and makes only that part
         active for iteration.
-        
+
         This is a wrapper around set_mask, implementing more arguments and also
         checking if any dimension is reduced to a default value, which might
         cause problems elsewhere.
-        
+
         Args:
             allow_default (bool, optional): If True, a ValueError is raised
                 when any of the dimensions is completely masked or when the
@@ -1249,7 +1248,7 @@ class ParamSpace:
                 available indices or coordinates, respectively.
                 As a shorthand, not specifying a dict but directly a list or a
                 slice defaults to "loc"-behaviour.
-        
+
         Raises:
             ValueError: Description
         """
@@ -1265,7 +1264,7 @@ class ParamSpace:
             def contains_close(a, seq, **tol_kwargs) -> bool:
                 """Whether ``a`` is contained in ``seq`` when comparing a
                 numeric-typed ``a`` via ``np.isclose`` rather than ``==``.
-                
+
                 For non-numeric types, the regular ``__contains__`` is used.
 
                 NOTE: The decision is made via the type of ``a``
