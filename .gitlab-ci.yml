@@ -6,14 +6,21 @@ stages:
   - check
   - test
   - test_minimal_deps
+  - build
   - deploy
 
 before_script:
   - pip install tox
 
+# Some shared default configuration that cannot be set on root level
+.defaults: &defaults
+  tags:
+    - default
+
 # Checks ----------------------------------------------------------------------
 
 check:hooks:
+  <<: *defaults
   stage: check
   allow_failure: true
   before_script:
@@ -24,27 +31,29 @@ check:hooks:
 
 # Tests -----------------------------------------------------------------------
 
-test:py36:
+test:py36: &test
+  <<: *defaults
   image: python:3.6
   stage: test
   script:
     - tox -e py36
 
 test:py37:
+  <<: *test
   image: python:3.7
-  stage: test
   script:
     - tox -e py37
 
 test:py38:
+  <<: *test
   image: python:3.8
-  stage: test
   script:
     - tox -e py38
 
 # Test again using the lower bound of the python dependencies .................
 
 test_minimal_deps:py36: &minimal
+  <<: *defaults
   image: python:3.6
   stage: test_minimal_deps
   allow_failure: true
@@ -70,9 +79,35 @@ test_minimal_deps:py38:
     - tox -e py38-minimal_deps
 
 
+# Build -----------------------------------------------------------------------
+
+build:docs:
+  <<: *defaults
+  stage: build
+  needs:
+    - check:hooks
+  allow_failure: true
+  before_script:
+    - pip install -e .[doc]
+  script:
+    - cd doc
+    - make doc
+  after_script:
+    - cat doc/build_errors.log
+  artifacts:
+    when: always
+    name: "doc-$CI_COMMIT_REF_NAME"
+    expire_in: 1w
+    expose_as: documentation build results and error log
+    paths:
+      - doc/_build/html
+      - doc/build_errors.log
+
+
 # Deployment ------------------------------------------------------------------
 
 deploy:pypi:
+  <<: *defaults
   image: python:3.6
   stage: deploy
   only:

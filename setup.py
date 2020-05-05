@@ -18,13 +18,14 @@ test_deps = [
     "pytest-cov >= 2.6",
 ]
 
-# Dependencies for local development
-dev_deps = [
-    # Documentation
+# Dependencies for documentation building
+doc_deps = [
     "sphinx >= 3.0",
     "sphinx_rtd_theme",
-    #
-    # Code Maintenance
+]
+
+# Dependencies for development, code maintenance, ...
+dev_deps = [
     "pre-commit",
     "seed-isort-config",
     "isort[pyproject]",
@@ -139,6 +140,9 @@ setup(
     tests_require=test_deps,
     test_suite="tox",
     extras_require=dict(
-        test=test_deps, minimal=minimal_install_deps, dev=dev_deps,
+        test=test_deps,
+        minimal=minimal_install_deps,
+        dev=dev_deps,
+        doc=doc_deps,
     ),
 )
