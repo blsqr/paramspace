@@ -3,22 +3,27 @@
 repos:
   # Manually run this every now and again .....................................
   # Command:  pre-commit run --all-files --hook-stage manual
+
+  # Run if desiring to make use of newer language features
   - repo: https://github.com/asottile/pyupgrade
     rev: v2.4.0
     hooks:
     - id: pyupgrade
       name: upgrade python syntax
       args:
+        - --py3-plus
         - --py36-plus
       stages: [manual]
 
-  # Default pre-commit hooks ..................................................
+  # Run when having added new package dependencies
   - repo: https://github.com/asottile/seed-isort-config
     rev: v2.1.1
     hooks:
       - id: seed-isort-config
         name: seed isort config
+        stages: [manual]
 
+  # Default pre-commit hooks ..................................................
   - repo: https://github.com/timothycrosley/isort
     rev: master
     hooks:
