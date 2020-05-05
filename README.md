@@ -186,13 +186,24 @@ black .
 
 (Yes, it's uncompromising.)
 
+_Note:_ Code formatting is part of the [commit hooks](#commit-hooks), so you won't have to invoke this separately.
+
 
 ### Commit Hooks
 A number of [`pre-commit`](https://pre-commit.com) hooks are configured to make development more convenient.
-Upon invoking `git commit` the first time, the
+With the development dependencies installed as described above, the git commit hook can be installed by invoking:
 
-The following hooks are currently configured:
+```bash
+pre-commit install
+```
 
-* `black`
+Upon invoking `git commit` the first time, the corresponding dependencies will be installed and the hooks will be executed.
+If they fail, make sure that no unexpected changes were performed.
 
-For details, see [`.pre-commit-config.yaml`](.pre-commit-config.yaml).
+You can also run the hooks on all files, prior to committing:
+
+```bash
+pre-commit run -a
+```
+
+For more details about currently configured hooks, see [`.pre-commit-config.yaml`](.pre-commit-config.yaml).
