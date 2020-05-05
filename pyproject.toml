@@ -1,7 +1,16 @@
-# paramspace project configuration
-# =============================================================================
+# paramspace Project Configuration
+# ================================
 
 # TODO Migrate other configurations here, once possible.
+
+# isort configuration .........................................................
+[tool.isort]
+# This is the black-compatible isort configuration
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 79
 
 
 # Black configuration .........................................................

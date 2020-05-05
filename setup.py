@@ -21,7 +21,9 @@ test_deps = [
 
 # Dependencies for local development
 dev_deps = [
+    "pre-commit",
     "black",
+    "isort[pyproject]",
 ]
 
 # .............................................................................

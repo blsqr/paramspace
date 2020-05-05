@@ -76,7 +76,7 @@ cylinders = dict(pi=3.14159,
 
 # Define the volume calculation function
 def calc_cylinder_vol(*, pi, r, h):
-    return pi * (r**2) * h 
+    return pi * (r**2) * h
 
 # Initialise the parameter space
 pspace = ParamSpace(cylinders)
@@ -165,7 +165,7 @@ pip install -e .[test,dev]
 
 
 ### Tests
-Tests are implemented using [pytest](https://github.com/pytest-dev/pytest).
+Tests are implemented using [`pytest`](https://github.com/pytest-dev/pytest).
 
 Invoke the following command to run tests and see the coverage report:
 
@@ -173,13 +173,26 @@ Invoke the following command to run tests and see the coverage report:
 python -m pytest -xv tests/ --cov=paramspace --cov-report=term-missing
 ```
 
-Additionally, [tox](https://github.com/tox-dev/tox) is used in the GitLab CI pipeline to test against various Python versions.
+Additionally, [`tox`](https://github.com/tox-dev/tox) is used in the GitLab CI pipeline to test against various Python versions.
 
 
 ### Code Formatting
-This package uses [black](https://github.com/psf/black) for formatting.
-Prior to committing, make sure to run it:
+This package uses [`black`](https://github.com/psf/black) for formatting.
+To run it, simply invoke:
 
 ```bash
 black .
 ```
+
+(Yes, it's uncompromising.)
+
+
+### Commit Hooks
+A number of [`pre-commit`](https://pre-commit.com) hooks are configured to make development more convenient.
+Upon invoking `git commit` the first time, the
+
+The following hooks are currently configured:
+
+* `black`
+
+For details, see [`.pre-commit-config.yaml`](.pre-commit-config.yaml).
