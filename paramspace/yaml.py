@@ -1,22 +1,25 @@
 """This module adds yaml constructors for ParamSpace and ParamDim generation"""
-
 from ruamel.yaml import YAML
 
-from .paramdim import ParamDim, CoupledParamDim, Masked
+from .paramdim import CoupledParamDim, Masked, ParamDim
 from .paramspace import ParamSpace
-
-from .yaml_constructors import pspace, pspace_unsorted
-from .yaml_constructors import pdim, pdim_default
-from .yaml_constructors import coupled_pdim, coupled_pdim_default
-from .yaml_constructors import _slice_constructor, _range_constructor
-from .yaml_constructors import _list_constructor
-
-from .yaml_representers import _slice_representer, _range_representer
+from .yaml_constructors import (
+    _list_constructor,
+    _range_constructor,
+    _slice_constructor,
+    coupled_pdim,
+    coupled_pdim_default,
+    pdim,
+    pdim_default,
+    pspace,
+    pspace_unsorted,
+)
+from .yaml_representers import _range_representer, _slice_representer
 
 # -----------------------------------------------------------------------------
 # Define a safe and an unsafe ruamel.yaml YAML object
-yaml_safe = YAML(typ='safe')
-yaml_unsafe = YAML(typ='unsafe')
+yaml_safe = YAML(typ="safe")
+yaml_unsafe = YAML(typ="unsafe")
 
 # Define the safe one as default
 yaml = yaml_safe
@@ -43,18 +46,17 @@ for _yaml in (yaml_safe, yaml_unsafe):
 # Attach constructors .........................................................
 # Define list of (tag, constructor function) pairs
 _constructors = [
-    (u'!pspace',                pspace),        # ***
-    (u'!pspace-unsorted',       pspace_unsorted),
-    (u'!pdim',                  pdim),          # ***
-    (u'!pdim-default',          pdim_default),
-    (u'!coupled-pdim',          coupled_pdim),  # ***
-    (u'!coupled-pdim-default',  coupled_pdim_default),
+    ("!pspace", pspace),  # ***
+    ("!pspace-unsorted", pspace_unsorted),
+    ("!pdim", pdim),  # ***
+    ("!pdim-default", pdim_default),
+    ("!coupled-pdim", coupled_pdim),  # ***
+    ("!coupled-pdim-default", coupled_pdim_default),
     #
     # additional constructors for Python objects
-    (u'!slice',                 _slice_constructor),
-    (u'!range',                 _range_constructor),
-    (u'!listgen',               _list_constructor)
-
+    ("!slice", _slice_constructor),
+    ("!range", _range_constructor),
+    ("!listgen", _list_constructor),
 ]
 # NOTE entries marked with '***' overwrite a default constructor. Thus, they
 #      need to be defined down here, after the classes and their tags were

@@ -1,0 +1,53 @@
+# pre-commit configuration
+---
+repos:
+  # Manually run this every now and again .....................................
+  # Command:  pre-commit run --all-files --hook-stage manual
+
+  # Run if desiring to make use of newer language features
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.4.0
+    hooks:
+    - id: pyupgrade
+      name: upgrade python syntax
+      args:
+        - --py3-plus
+        - --py36-plus
+      stages: [manual]
+
+  # Run when having added new package dependencies
+  - repo: https://github.com/asottile/seed-isort-config
+    rev: v2.1.1
+    hooks:
+      - id: seed-isort-config
+        name: seed isort config
+        stages: [manual]
+
+  # Default pre-commit hooks ..................................................
+  - repo: https://github.com/timothycrosley/isort
+    rev: master
+    hooks:
+      - id: isort
+        name: sort imports
+        additional_dependencies: [toml]
+        files: \.py$
+        args: [--project=paramspace]
+
+  - repo: https://github.com/psf/black
+    rev: stable
+    hooks:
+      - id: black
+        name: black code formatting
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v1.2.3
+    hooks:
+      - id: check-yaml
+        name: check YAML
+
+      - id: end-of-file-fixer
+        name: fix end of files
+
+      - id: trailing-whitespace
+        name: fix trailing whitespace
+        args: [--markdown-linebreak-ext=md]

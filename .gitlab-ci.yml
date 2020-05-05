@@ -1,7 +1,9 @@
-# CI/CD based on tox and pytest
+# paramspace GitLab CI/CD, based on tox and pytest
+---
 image: python
 
 stages:
+  - check
   - test
   - test_minimal_deps
   - deploy
@@ -9,7 +11,18 @@ stages:
 before_script:
   - pip install tox
 
-# -----------------------------------------------------------------------------
+# Checks ----------------------------------------------------------------------
+
+check:hooks:
+  stage: check
+  allow_failure: true
+  before_script:
+    - pip install pre-commit
+  script:
+    - pre-commit run --all-files --verbose --show-diff-on-failure
+
+
+# Tests -----------------------------------------------------------------------
 
 test:py36:
   image: python:3.6
@@ -29,8 +42,7 @@ test:py38:
   script:
     - tox -e py38
 
-# -----------------------------------------------------------------------------
-# Test again using the lower bound of the python dependencies
+# Test again using the lower bound of the python dependencies .................
 
 test_minimal_deps:py36: &minimal
   image: python:3.6
@@ -58,8 +70,7 @@ test_minimal_deps:py38:
     - tox -e py38-minimal_deps
 
 
-# -----------------------------------------------------------------------------
-# Deployment to PyPI
+# Deployment ------------------------------------------------------------------
 
 deploy:pypi:
   image: python:3.6
