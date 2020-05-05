@@ -206,7 +206,7 @@ class ParamSpace:
 
             # Filter out those entries that are only including themselves and
             # create a set, containing the colliding indices
-            return set([tuple(c) for c in colls if len(c) > 1])
+            return {tuple(c) for c in colls if len(c) > 1}
 
         # Extract paths and pdims
         paths = [("",) + path for path, _ in kv_pairs]
@@ -654,18 +654,18 @@ class ParamSpace:
         l = ["ParamSpace Information"]
 
         # General information about the Parameter Space
-        l += ["  Dimensions:  {}".format(self.num_dims)]
-        l += ["  Coupled:     {}".format(self.num_coupled_dims)]
-        l += ["  Shape:       {}".format(self.shape)]
-        l += ["  Volume:      {}".format(self.volume)]
+        l += [f"  Dimensions:  {self.num_dims}"]
+        l += [f"  Coupled:     {self.num_coupled_dims}"]
+        l += [f"  Shape:       {self.shape}"]
+        l += [f"  Volume:      {self.volume}"]
 
         # ParamDim information
         l += ["", "Parameter Dimensions"]
         l += ["  (First dimensions are iterated over least often)", ""]
 
         for name, pdim in self.dims.items():
-            l += ["  * {}".format(name)]
-            l += ["      {}".format(pdim.values)]
+            l += [f"  * {name}"]
+            l += [f"      {pdim.values}"]
             # TODO add information on length?!
             if pdim.mask is True:
                 l += [
@@ -674,7 +674,7 @@ class ParamSpace:
                 ]
 
             if pdim.order < np.inf:
-                l += ["      Order: {}".format(pdim.order)]
+                l += [f"      Order: {pdim.order}"]
 
             l += [""]
 
@@ -684,8 +684,8 @@ class ParamSpace:
             l += ["  (Move alongside the state of the coupled ParamDim)", ""]
 
             for name, cpdim in self.coupled_dims.items():
-                l += ["  * {}".format(name)]
-                l += ["      Coupled to:  {}".format(cpdim.target_name)]
+                l += [f"  * {name}"]
+                l += [f"      Coupled to:  {cpdim.target_name}"]
 
                 # Add resolved target name, if it differs
                 for pdim_name, pdim in self.dims.items():
@@ -695,9 +695,9 @@ class ParamSpace:
                         break
 
                 if resolved_target_name != cpdim.target_name:
-                    l[-1] += "  [resolves to: {}]".format(resolved_target_name)
+                    l[-1] += f"  [resolves to: {resolved_target_name}]"
 
-                l += ["      Values:      {}".format(cpdim.values)]
+                l += [f"      Values:      {cpdim.values}"]
                 l += [""]
 
         return "\n".join(l)

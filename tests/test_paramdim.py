@@ -160,7 +160,7 @@ def test_iteration(various_pdims):
         pd.__next__()
 
     # State should be reset to 0 now
-    assert pd.state is 0
+    assert pd.state == 0
 
     # And as a loop
     for _ in pd:
@@ -235,7 +235,7 @@ def test_mask():
     # No further iteration should be possible for this one
     with pytest.raises(StopIteration):
         pd.iterate_state()
-    assert pd.state is 0
+    assert pd.state == 0
 
     # Check iteration again
     assert list(pd) == [2, 4]
@@ -392,13 +392,13 @@ def test_yaml_unsafe_dump_and_load(tmpdir, various_pdims):
         yaml.dump(d_out, stream=out_file)
 
     # Read what was written
-    with open(path, "r") as in_file:
+    with open(path) as in_file:
         print("Content of written file:\n")
         print("".join(in_file.readlines()))
         print("--- end of file ---")
 
     # Now load it
-    with open(path, "r") as in_file:
+    with open(path) as in_file:
         d_in = yaml.load(in_file)
 
     print("Loaded object:", type(d_in))
@@ -422,7 +422,7 @@ def test_yaml_safe_dump_and_load(tmpdir, various_pdims):
             dump_func(d_out, stream=out_file)
 
         # Read it in again
-        with open(path, "r") as in_file:
+        with open(path) as in_file:
             d_in = load_func(in_file)
 
         # Check that the contents are equivalent
@@ -446,7 +446,7 @@ def test_yaml_safe_dump_and_load(tmpdir, various_pdims):
         fname = prefix + ".yml"
         path = tmpdir.join(fname)
 
-        print("Now testing combination:  {}  ... ".format(prefix), end="")
+        print(f"Now testing combination:  {prefix}  ... ", end="")
 
         # Call the test function
         dump_load_assert_equal(

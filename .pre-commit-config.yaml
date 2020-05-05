@@ -1,17 +1,30 @@
 # pre-commit configuration
 ---
 repos:
+  # Manually run this every now and again .....................................
+  # Command:  pre-commit run --all-files --hook-stage manual
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.4.0
+    hooks:
+    - id: pyupgrade
+      name: upgrade python syntax
+      args:
+        - --py36-plus
+      stages: [manual]
+
+  # Default pre-commit hooks ..................................................
   - repo: https://github.com/asottile/seed-isort-config
     rev: v2.1.1
     hooks:
       - id: seed-isort-config
+        name: seed isort config
 
   - repo: https://github.com/timothycrosley/isort
     rev: master
     hooks:
       - id: isort
+        name: sort imports
         additional_dependencies: [toml]
-        verbose: true
         files: \.py$
         args: [--project=paramspace]
 
@@ -19,27 +32,17 @@ repos:
     rev: stable
     hooks:
       - id: black
-        verbose: true
+        name: black code formatting
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v1.2.3
     hooks:
+      - id: check-yaml
+        name: check YAML
+
       - id: end-of-file-fixer
+        name: fix end of files
 
       - id: trailing-whitespace
+        name: fix trailing whitespace
         args: [--markdown-linebreak-ext=md]
-
-      - id: check-yaml
-        # args: [--unsafe]
-
-      - id: forbid-new-submodules
-
-  # Run this every now and again
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v2.4.0
-    hooks:
-    - id: pyupgrade
-      args:
-        - --py36-plus
-      stages: [manual]
-      verbose: true

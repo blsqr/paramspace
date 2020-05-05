@@ -32,7 +32,7 @@ class Masked:
         return self._val
 
     def __str__(self) -> str:
-        return "<{}>".format(self.value)
+        return f"<{self.value}>"
 
     def __repr__(self) -> str:
         return "<Masked object, value: {}>".format(repr(self.value))
@@ -296,7 +296,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         """If in an iteration: return the value according to the current
         state. If not in an iteration, return the default value.
         """
-        if self.state is 0:
+        if self.state == 0:
             return self.default
         return self.values[self.state - 1]
 
@@ -1120,7 +1120,7 @@ class CoupledParamDim(ParamDimBase):
         """If in an iteration: return the value according to the current
         state. If not in an iteration, return the default value.
         """
-        if self.state is 0:
+        if self.state == 0:
             return self.default
         return self.values[self.state - 1]
 

@@ -485,7 +485,7 @@ def test_state_no(small_psp, basic_psp, adv_psp, psp_with_coupled):
 
     def test_state_nos(psp):
         # Check that the state number is zero outside an iteration
-        assert psp.state_no is 0
+        assert psp.state_no == 0
 
         # Get all points, then check them
         nos = [n for _, n in psp.iterator(with_info=("state_no",))]
@@ -1062,13 +1062,13 @@ def test_yaml_unsafe_dump_and_load(
         yaml.dump(d_out, stream=out_file)
 
     # Read what was written
-    with open(path, "r") as in_file:
+    with open(path) as in_file:
         print("Content of written file:\n")
         print("".join(in_file.readlines()))
         print("--- end of file ---")
 
     # Load it again
-    with open(path, "r") as in_file:
+    with open(path) as in_file:
         d_in = yaml.load(in_file)
 
     # Check that the contents are equivalent
@@ -1081,16 +1081,12 @@ def test_yaml_unsafe_dump_and_load(
         )
         print(
             "  dims:   \n   ",
-            "\n    ".join(
-                ["{}: {}".format(k, v) for k, v in psp.dims.items()]
-            ),
+            "\n    ".join([f"{k}: {v}" for k, v in psp.dims.items()]),
         )
 
         print(
             "  coupled:\n   ",
-            "\n    ".join(
-                ["{}: {}".format(k, v) for k, v in psp.coupled_dims.items()]
-            ),
+            "\n    ".join([f"{k}: {v}" for k, v in psp.coupled_dims.items()]),
         )
 
         assert v_out == psp
@@ -1108,7 +1104,7 @@ def test_yaml_safe_dump_and_load(tmpdir, small_psp, adv_psp, psp_with_coupled):
             dump_func(d_out, stream=out_file)
 
         # Read it in again
-        with open(path, "r") as in_file:
+        with open(path) as in_file:
             d_in = load_func(in_file)
 
         # Check that the contents are equivalent
@@ -1130,7 +1126,7 @@ def test_yaml_safe_dump_and_load(tmpdir, small_psp, adv_psp, psp_with_coupled):
         fname = prefix + ".yml"
         path = tmpdir.join(fname)
 
-        print("Now testing combination:  {}  ... ".format(prefix), end="")
+        print(f"Now testing combination:  {prefix}  ... ", end="")
 
         # Call the test function
         dump_load_assert_equal(
