@@ -20,6 +20,8 @@ py:class collections.abc.Mapping
 py:class collections.abc.MutableMapping
 py:class collections.abc.MutableSequence
 py:class logging.Logger
+py:class Generator
+py:class Generator[dict, None, None]
 
 # Exceptions, both as exception reference and type reference
 py:exc Exception

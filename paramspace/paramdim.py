@@ -22,6 +22,7 @@ class Masked:
 
     def __init__(self, value):
         """Initialize a Masked object that is a placeholder for the given value
+
         Args:
             value: The value to mask
         """
@@ -43,11 +44,11 @@ class Masked:
     # YAML representation .....................................................
 
     @classmethod
-    def to_yaml(cls, representer, node):
+    def to_yaml(cls, representer, node: "Masked"):
         """
         Args:
             representer (ruamel.yaml.representer): The representer module
-            node (type(self)): The node, i.e. an instance of this class
+            node (Masked): The node, i.e. an instance of this class
 
         Returns:
             the scalar value that this object masks
@@ -161,6 +162,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         # Done.
 
     def _init_vals(self, *, as_type: str, assert_unique: bool, **kwargs):
+        """Parses the arguments and invokes ``_set_vals``"""
 
         # Now check for unexpected ones and set the valid ones
         if any([k not in self._VKWARGS for k in kwargs.keys()]):
@@ -242,7 +244,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
     @property
     def coords(self) -> tuple:
-        """Returns the coordinates of this parameter dimension, i.e.: the
+        """Returns the coordinates of this parameter dimension, i.e., the
         combined default value and the sequence of iteration values.
 
         Returns:
@@ -252,7 +254,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
     @property
     def pure_coords(self) -> tuple:
-        """Returns the pure coordinates of this parameter dimension, i.e.: the
+        """Returns the pure coordinates of this parameter dimension, i.e., the
         combined default value and the sequence of iteration values, but with
         masked values resolved.
 
@@ -274,7 +276,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
     @property
     def num_states(self) -> int:
-        """The number of possible states, i.e.: including the default state
+        """The number of possible states, i.e., including the default state
 
         Returns:
             int: The number of possible states
@@ -293,8 +295,8 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
     @property
     def current_value(self):
-        """If in an iteration: return the value according to the current
-        state. If not in an iteration, return the default value.
+        """If in an iteration, returns the value according to the current
+        state. Otherwise, returns the default value.
         """
         if self.state == 0:
             return self.default
@@ -574,25 +576,27 @@ class ParamDim(ParamDimBase):
 
         Args:
             mask (Union[bool, Tuple[bool]], optional): Which values of the
-                dimension to mask, i.e.: skip in iteration. Note that masked
+                dimension to mask, i.e., skip in iteration. Note that masked
                 values still count to the length of the parameter dimension!
-            **kwargs: Passed to ParamDimBase.__init__. Possible arguments:
-                default: default value of this parameter dimension
-                values (Iterable, optional): Which discrete values this
+            **kwargs: Passed to ``ParamDimBase.__init__``.
+                Possible arguments:
+
+                - default: default value of this parameter dimension
+                - values (Iterable, optional): Which discrete values this
                     parameter dimension can take. This argument takes
                     precedence over any constructors given in the kwargs
                     (like range, linspace, …).
-                order (float, optional): If given, this allows to specify an
+                - order (float, optional): If given, this allows to specify an
                     order within a ParamSpace that includes this ParamDim. If
-                    not given, np.inf will be used, i.e.: dimension is last.
-                name (str, optional): If given, this is an *additional* name of
-                    this ParamDim object, and can be used by the ParamSpace to
-                    access this object.
-                **kwargs: Constructors for the `values` argument, valid keys
-                    are `range`, `linspace`, and `logspace`; corresponding
-                    values are expected to be iterables and are passed to
-                    `range(*args)`, `np.linspace(*args)`, or
-                    `np.logspace(*args)`, respectively.
+                    not given, np.inf will be used, i.e., dimension is last.
+                - name (str, optional): If given, this is an *additional* name
+                    of this ParamDim object, and can be used by the ParamSpace
+                    to access this object.
+                - ``**kwargs``: Constructors for the ``values`` argument, valid
+                    keys are ``range``, ``linspace``, and ``logspace``;
+                    corresponding values are expected to be iterables and are
+                    passed to ``range(*args)``, ``np.linspace(*args)``, or
+                    ``np.logspace(*args)``, respectively.
         """
         super().__init__(**kwargs)
 
@@ -1019,7 +1023,7 @@ class CoupledParamDim(ParamDimBase):
         elif not isinstance(target_name, (tuple, list, str)):
             raise TypeError(
                 "Argument `target_name` should be a tuple or list "
-                "(i.e.: a key sequence) or a string! Was {}: {}"
+                "(i.e., a key sequence) or a string! Was {}: {}"
                 "".format(type(target_name), target_name)
             )
 
@@ -1117,8 +1121,8 @@ class CoupledParamDim(ParamDimBase):
 
     @property
     def current_value(self):
-        """If in an iteration: return the value according to the current
-        state. If not in an iteration, return the default value.
+        """If in an iteration, returns the value according to the current
+        state. Otherwise, returns the default value.
         """
         if self.state == 0:
             return self.default

@@ -1236,18 +1236,20 @@ class ParamSpace:
             reset_all_others (bool, optional): If True, resets all masks before
                 activating the subspace. If False, the previously applied masks
                 are untouched.
-            **selector: A dict specifying the _active_ states. A key of the
-                key: value pairs should be the name of the dimension, the
-                value should be a dict with one of the following keys.
-                    idx: to select by index
-                    loc: to select by coordinate values
-                    **tol_kwargs: passed on to ``np.isclose`` when comparing
-                        coordinate values.
+            **selector: A dict specifying the *active* states. A key of the
+                key-value pairs should be the name of the dimension, the
+                value should be a dict with one of the following keys:
+
+                    - idx: to select by index
+                    - loc: to select by coordinate values
+                    - ``**tol_kwargs``: passed on to ``np.isclose`` when
+                        comparing coordinate values.
+
                 Non-sequence values will be put into lists. Alternatively,
                 slices can be specified, which are applied on the list of all
                 available indices or coordinates, respectively.
                 As a shorthand, not specifying a dict but directly a list or a
-                slice defaults to "loc"-behaviour.
+                slice defaults to ``loc``-behaviour.
 
         Raises:
             ValueError: Description
