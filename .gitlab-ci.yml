@@ -9,6 +9,10 @@ stages:
   - build
   - deploy
 
+workflow:
+  rules:
+    - when: always
+
 before_script:
   - pip install tox
 
@@ -62,28 +66,23 @@ test_minimal_deps:py36: &minimal
   stage: test_minimal_deps
   rules:
     - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^prepare-release/'
-      when: always
     - if: '$CI_MERGE_REQUEST_TITLE =~ /.*prepare release.*/i'
-      when: always
   allow_failure: true
-  needs:
-    - test:py36
+  needs: ["test:py36"]
   script:
     - tox -e py36-minimal_deps
 
 test_minimal_deps:py37:
   <<: *minimal
   image: python:3.7
-  needs:
-    - test:py37
+  needs: ["test:py37"]
   script:
     - tox -e py37-minimal_deps
 
 test_minimal_deps:py38:
   <<: *minimal
   image: python:3.8
-  needs:
-    - test:py38
+  needs: ["test:py38"]
   script:
     - tox -e py38-minimal_deps
 
