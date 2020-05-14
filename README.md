@@ -2,6 +2,7 @@
 [![Python Versions](https://img.shields.io/pypi/pyversions/paramspace)](https://pypi.org/project/paramspace/)
 [![Documentation](https://img.shields.io/readthedocs/paramspace)](https://paramspace.readthedocs.io/en/latest/)
 [![License](https://img.shields.io/pypi/l/paramspace)](https://opensource.org/licenses/BSD-2-Clause)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3826470.svg)](https://doi.org/10.5281/zenodo.3826470)
 
 [![Pipeline Status](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/badges/master/pipeline.svg)](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/commits/master)
 [![Coverage](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/badges/master/coverage.svg)](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/-/blob/master/tox.ini)
