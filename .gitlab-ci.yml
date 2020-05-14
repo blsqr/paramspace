@@ -189,5 +189,5 @@ deploy:pypi:
     - twine upload -u ${PYPI_USER} -p ${PYPI_PASSWORD} dist/*
 
     # ... and check that it downloads as desired
-    - sleep 10
+    - sleep 60
     - pip install paramspace==${CI_COMMIT_TAG:1}
