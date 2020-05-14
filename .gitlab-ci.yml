@@ -118,7 +118,7 @@ deploy:pypi:
       when: always
   variables:
     # If true, there will only be a push to the PyPI _test_ repository
-    TEST_DEPLOY_ONLY: false
+    TEST_DEPLOY_ONLY: "false"
   before_script:
     - pip install -U twine setuptools
   script:
