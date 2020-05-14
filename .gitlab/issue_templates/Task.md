@@ -1,11 +1,11 @@
-<!-- Short description of the context can go here -->
+<!-- Short description of the context of this task -->
 
 ### Proposal
-<!-- What should actually be done? -->
+<!-- What should actually be done? Why and how? -->
 
 
 ### How to test the implementation?
-<!-- Describe possible ways of testing the implementation -->
+<!-- Briefly describe possible ways of testing the implementation -->
 
 
 ### People involved

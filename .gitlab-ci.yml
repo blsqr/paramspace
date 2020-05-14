@@ -50,12 +50,21 @@ test:py38:
   script:
     - tox -e py38
 
+
 # Test again using the lower bound of the python dependencies .................
+# These are only carried out when:
+#   - The branch name starts with `prepare-release`
+#   - The MR title contains "prepare release" (not case-sensitive)
 
 test_minimal_deps:py36: &minimal
   <<: *defaults
   image: python:3.6
   stage: test_minimal_deps
+  rules:
+    - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^prepare-release/'
+      when: always
+    - if: '$CI_MERGE_REQUEST_TITLE =~ /.*prepare release.*/i'
+      when: always
   allow_failure: true
   needs:
     - test:py36
