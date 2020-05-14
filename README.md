@@ -1,3 +1,14 @@
+[![PyPI](https://img.shields.io/pypi/v/paramspace)](https://pypi.org/project/paramspace/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/paramspace)](https://pypi.org/project/paramspace/)
+[![Documentation](https://img.shields.io/readthedocs/paramspace)](https://paramspace.readthedocs.io/en/latest/)
+[![License](https://img.shields.io/pypi/l/paramspace)](https://opensource.org/licenses/BSD-2-Clause)
+
+[![Pipeline Status](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/badges/master/pipeline.svg)](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/commits/master)
+[![Coverage](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/badges/master/coverage.svg)](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/-/blob/master/tox.ini)
+[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Pre-Commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen)](https://github.com/pre-commit/pre-commit)
+
+
 # The `paramspace` package
 
 The `paramspace` package supplies classes that make it easy to iterate over a multi-dimensional parameter space while maintaining a data structure that is convenient for passing hierarchically structured arguments around: `dict`s.
@@ -10,7 +21,7 @@ For example, having a model with six parameters that are worth varying, an itera
 To that end, this package supplies the `ParamSpace` class, which is initialised with a Python `dict`; it holds the whole set of parameters that are required by a simulation (i.e., _not_ only those that correspond to a parameter dimension).
 To add a parameter dimension that can be iterated over, an entry in the dictionary can be replaced by a `ParamDim` object, for which the discrete values to iterate over are defined.
 
-After initialsation of such a `ParamSpace` object, this package allows operations like the following:
+After initialisation of such a `ParamSpace` object, this package allows operations like the following:
 
 ```python
 for params in pspace:
