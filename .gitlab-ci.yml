@@ -67,6 +67,7 @@ test_minimal_deps:py36: &minimal
   rules:
     - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^prepare-release/'
     - if: '$CI_MERGE_REQUEST_TITLE =~ /.*prepare release.*/i'
+    - if: '$CI_COMMIT_REF_NAME =~ /^master$/'
   allow_failure: true
   needs: ["test:py36"]
   script:
