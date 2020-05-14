@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.4.1
+- _Internal:_ !41 and !42 improve the CI/CD configuration
+
 ## v2.4.0
 - !34 reformats the whole code base using `black` (see #40) and implements `pre-commit` hooks to maintain formatting.
 - !35 and !38 add a Sphinx documentation and configures deployment to [ReadTheDocs](https://paramspace.readthedocs.io/en/latest) (see #37).
