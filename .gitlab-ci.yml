@@ -107,18 +107,20 @@ build:docs:
 # Deployment ------------------------------------------------------------------
 
 # PyPI Deployment. Triggered manually or when a new tag is added.
+# NOTE:
+#   - If tag-created, this job still needs to be _started_ manually
+#   - If web-created, this job will only deploy to the PyPI staging server
+#     and never exit successfully.
 deploy:pypi:
   <<: *defaults
-  image: python:3.6
+  image: python:3.8
   stage: deploy
   rules:
     - if: '$CI_COMMIT_TAG'
-      when: always
+      when: manual
     - if: '$CI_PIPELINE_SOURCE == "web"'
       when: always
-  variables:
-    # If true, there will only be a push to the PyPI _test_ repository
-    TEST_DEPLOY_ONLY: "false"
+      allow_failure: true
   before_script:
     - pip install -U twine setuptools
   script:
@@ -136,21 +138,26 @@ deploy:pypi:
     - "[[ \"v1.2.3\" =~ ${VERSION_PATTERN} ]]"
     - "[[ \"v1.23.4a5\" =~ ${VERSION_PATTERN} ]]"
 
-    # Now do the actual check
+    # Now do the actual check (if not in manual mode)
     - "[[ ${CI_COMMIT_TAG} =~ ${VERSION_PATTERN} ]]"
     # Tag is of the correct form, yay!
 
     # Create distribution files
     - python setup.py sdist bdist_wheel
 
-    # Make sure the Python version is the same as the tag
-    - 'cat paramspace.egg-info/PKG-INFO | grep "^Version: ${CI_COMMIT_TAG}$"'
+    # Make sure the package version is the same as the tag, if a tag was given.
+    - 'if [ -n "${CI_COMMIT_TAG}" ]; then cat paramspace.egg-info/PKG-INFO | grep "^Version: ${CI_COMMIT_TAG:1}$"; else echo "Got no commit tag!"; fi'
 
     # Upload to the TEST PyPI index (using separate credentials)
     - twine upload --repository-url https://test.pypi.org/legacy/ -u ${PYPI_TEST_USER} -p ${PYPI_TEST_PASSWORD} dist/*
 
-    # Exit here if only a test deployment was to be carried out
-    - if [ "${TEST_DEPLOY_ONLY}" = true ]; then exit 0; fi
+    # Exit here if there is no commit tag; every actual release should also
+    # have a commit tag set, so there's no point in continuing otherwise.
+    - if [ -n "${CI_COMMIT_TAG}" ]; then echo "Exiting now ..." && exit 1; fi
 
-    # If this worked, continue and upload to actual package index
+    # If all of the above passed, continue and upload to actual package index
     - twine upload -u ${PYPI_USER} -p ${PYPI_PASSWORD} dist/*
+
+    # ... and check that it downloads as desired
+    - sleep 10
+    - pip install paramspace==${CI_COMMIT_TAG:1}
