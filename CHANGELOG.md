@@ -4,9 +4,10 @@
 
 ## v2.4.0 _(WIP)_
 - !34 reformats the whole code base using `black` (see #40) and implements `pre-commit` hooks to maintain formatting.
-- !35 adds a Sphinx documentation and configures deployment to [ReadTheDocs](https://paramspace.readthedocs.io/en/latest) (see #37).
+- !35 and !38 add a Sphinx documentation and configures deployment to [ReadTheDocs](https://paramspace.readthedocs.io/en/latest) (see #37).
   Furthermore, it applies internal improvements to docstrings and format strings.
 - !36 adds safety measures to the PyPI deployment CI job
+- !37 updates and extends GitLab Issue and MR templates
 
 ## v2.3.1
 - !33 adds a `.coveragerc` file for pytest
