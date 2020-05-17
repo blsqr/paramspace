@@ -117,7 +117,7 @@ def seq_psp():
         mutable=[0, 0, 0],
         s=[
             ParamDim(default=0, values=[1, 2, 3]),
-            ParamDim(default=1, values=[1, 2, 3], order=1),
+            [ParamDim(default=1, values=[1, 2, 3], order=1), 2, 3],
         ],
         d=dict(
             a=1,
@@ -235,7 +235,7 @@ def test_default(small_psp, adv_psp, seq_psp):
 
     # Same for the dict with parameter dimensions inside sequences
     d3 = seq_psp.default
-    assert d3["s"] == [0, 1]
+    assert d3["s"] == [0, [1, 2, 3]]
     assert d3["d"]["s"] == [0, 1, 2, 3]
     assert d3["d"]["d"]["p"] == 0
     assert d3["d"]["d"]["s"] == [0, 1, 2, 3]
@@ -367,11 +367,16 @@ def test_dim_name_creation():
 
     check_names(
         (("d", "d", "s", 1), "d.d.s.1", None),
-        (("d", "d", "s", 2), "s.2", None),
+        (("d", "d", "s", 2), "d.s.2", None),
+        (("d", "d", "s", 3), "d.s.3", None),
         (("d", "s", 0), ".d.s.0", None),
         (("d", "s", 1), ".d.s.1", None),
         (("s", 0), ".s.0", None),
         (("s", 1), ".s.1", None),
+        (("s", 3, 0), "s.3.0", None),
+        (("s", 2, 0), "s.2.0", None),
+        (("t", 1, 0), "t.1.0", None),
+        (("t", 1, 1), "t.1.1", None),
     )
 
     # Can also be other numerical values (although not a super idea, typically)
@@ -470,8 +475,11 @@ def test_dim_access(basic_psp, adv_psp, seq_psp):
     psp = seq_psp
     get_dim = psp._get_dim
 
-    assert get_dim(".s.1") == psp._dict["s"][1]
-    assert get_dim(("", "s", 1)) == psp._dict["s"][1]
+    assert get_dim(".s.0") == psp._dict["s"][0]
+    assert get_dim(("", "s", 0)) == psp._dict["s"][0]
+
+    assert get_dim("s.1.0") == psp._dict["s"][1][0]
+    assert get_dim(("", "s", 1, 0)) == psp._dict["s"][1][0]
 
     assert get_dim("ds1") == psp._dict["d"]["s"][1]
     assert get_dim(("", "d", "s", 1)) == psp._dict["d"]["s"][1]
@@ -585,14 +593,14 @@ def test_dim_order(basic_psp, adv_psp, seq_psp):
     seq_psp_locs = (  # sorting includes indices
         ("d", "s", 0),
         ("d", "s", 1),
-        ("s", 1),
+        ("s", 1, 0),
         ("d", "d", "p"),
         ("d", "d", "s", 1),
         ("d", "d", "s", 2),
         ("s", 0),
     )
-    for name_is, name_should in zip(seq_psp.dims_by_loc, seq_psp_locs):
-        assert name_is == name_should
+    for actual, expected in zip(seq_psp.dims_by_loc, seq_psp_locs):
+        assert actual == expected
 
 
 def test_state_no(small_psp, basic_psp, adv_psp, seq_psp, psp_with_coupled):

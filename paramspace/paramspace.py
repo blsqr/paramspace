@@ -6,7 +6,7 @@ import warnings
 from collections import OrderedDict
 from functools import reduce
 from itertools import chain
-from typing import Any, Dict, Generator, List, Sequence, Tuple, Union
+from typing import Any, Dict, Generator, List, Sequence, Set, Tuple, Union
 
 import numpy as np
 import numpy.ma
@@ -190,17 +190,27 @@ class ParamSpace:
             """Check for uniqueness of the given list of names"""
             return len(set(names)) == len(names)
 
-        def collisions(names) -> List[List[int]]:
-            """Lists the set of indices that create collisions"""
+        def collisions(names: List[str]) -> Set[Tuple[int]]:
+            """For each name, find the collisons with other names and return
+            a set of indicies that collide with other names, such that those
+            names can be adjusted.
+            """
+
+            def collide(a: str, b: str) -> bool:
+                """Returns True if two names collide, with collisions defined
+                as the following:
+
+                    * The shorter one is part of the longer one, seen from the
+                      back, e.g. ``foo`` vs ``spamfoo``
+                    * The sorter one is part of the longer one, seen from the
+                      front, e.g. ``spamfoo`` vs ``spam``
+                """
+                L = min(len(a), len(b))
+                return (a[-L:] == b[-L:]) or (a[:L] == b[:L])
+
+            # First, determine colliding names for each combination
             colls = [
-                [
-                    j
-                    for j, other in enumerate(names)
-                    if (
-                        other[-min([len(other), len(name)]) :]
-                        == name[-min([len(other), len(name)]) :]
-                    )
-                ]
+                [j for j, other in enumerate(names) if collide(name, other)]
                 for name in names
             ]
 
@@ -313,9 +323,17 @@ class ParamSpace:
                             f"path {paths[cidx]}."
                         )
 
-                    # All checks passed. Join the path segement together and
-                    # write it to the list of names
-                    names[cidx] = join_path(path_seg)
+                    # If the resulting name would be shorter than the existing
+                    # one, discard it. This is to ensure that initial names
+                    # that were longer due to an index access segment are not
+                    # overwritten by the above path segment selection
+                    new_name = join_path(path_seg)
+
+                    if len(new_name) < len(names[cidx]):
+                        continue
+
+                    # All checks passed
+                    names[cidx] = new_name
 
             # Done with this iteration. Check for uniqueness again ...
             i += 1
@@ -749,8 +767,13 @@ class ParamSpace:
             ]
 
         elif mode in ["both"]:
+            max_name_len = max([len(n) for n in self.dims])
             lines = [
-                "{}:  {}".format(name, join_str.join([str(s) for s in path]))
+                "{name:>{w:d}} :  {path:}".format(
+                    name=name,
+                    w=max_name_len,
+                    path=join_str.join([str(s) for s in path]),
+                )
                 for name, path in zip(
                     self.dims.keys(), self.dims_by_loc.keys()
                 )
