@@ -107,6 +107,45 @@ def adv_psp():
 
 
 @pytest.fixture()
+def seq_psp():
+    """A parameter space with dimensions within sequences"""
+    d = dict(
+        a=1,
+        b=2,
+        foo="bar",
+        spam="eggs",
+        mutable=[0, 0, 0],
+        s=[
+            ParamDim(default=0, values=[1, 2, 3]),
+            ParamDim(default=1, values=[1, 2, 3], order=1),
+        ],
+        d=dict(
+            a=1,
+            b=2,
+            s=[
+                ParamDim(default=0, values=[1, 2, 3], order=-1),
+                ParamDim(default=1, values=[1, 2, 3], order=0, name="ds1"),
+                2,
+                3,
+            ],
+            d=dict(
+                a=1,
+                b=2,
+                p=ParamDim(default=0, values=[1, 2, 3]),
+                s=[
+                    0,
+                    ParamDim(default=1, values=[1, 2, 3]),
+                    ParamDim(default=2, values=[1, 2, 3], name="dds2"),
+                    3,
+                ],
+            ),
+        ),
+    )
+
+    return ParamSpace(d)
+
+
+@pytest.fixture()
 def psp_with_coupled():
     """Used to setup a pspace object with coupled param dims"""
     d = dict(
@@ -137,7 +176,7 @@ def psp_nested(basic_psp):
 # Tests -----------------------------------------------------------------------
 
 
-def test_init(basic_psp, adv_psp):
+def test_init(basic_psp, adv_psp, seq_psp):
     """Test whether initialisation behaves as expected"""
     # These should work
     ParamSpace(dict(a=1))
@@ -163,7 +202,7 @@ def test_init(basic_psp, adv_psp):
             ParamSpace(lambda x: None)
 
 
-def test_default(small_psp, adv_psp):
+def test_default(small_psp, adv_psp, seq_psp):
     """Tests whether the default values can be retrieved."""
     d1 = small_psp.default
 
@@ -177,7 +216,7 @@ def test_default(small_psp, adv_psp):
     assert not isinstance(d1["p1"], Masked)
     assert not isinstance(d1["p2"], Masked)
 
-    # Same for the deeper array
+    # Same for the deeper dict
     d2 = adv_psp.default
     assert d2["p1"] == 0
     assert d2["p2"] == 0
@@ -194,10 +233,25 @@ def test_default(small_psp, adv_psp):
     assert not isinstance(d2["d"]["d"]["p1"], Masked)
     assert not isinstance(d2["d"]["d"]["p2"], Masked)
 
+    # Same for the dict with parameter dimensions inside sequences
+    d3 = seq_psp.default
+    assert d3["s"] == [0, 1]
+    assert d3["d"]["s"] == [0, 1, 2, 3]
+    assert d3["d"]["d"]["p"] == 0
+    assert d3["d"]["d"]["s"] == [0, 1, 2, 3]
 
-def test_strings(basic_psp, adv_psp, psp_with_coupled):
+    assert not isinstance(d3["s"][0], Masked)
+    assert not isinstance(d3["s"][1], Masked)
+    assert not isinstance(d3["d"]["s"][0], Masked)
+    assert not isinstance(d3["d"]["s"][1], Masked)
+    assert not isinstance(d3["d"]["d"]["p"], Masked)
+    assert not isinstance(d3["d"]["d"]["s"][1], Masked)
+    assert not isinstance(d3["d"]["d"]["s"][2], Masked)
+
+
+def test_strings(basic_psp, adv_psp, psp_with_coupled, seq_psp):
     """Test whether the string generation works correctly."""
-    for psp in [basic_psp, adv_psp, psp_with_coupled]:
+    for psp in [basic_psp, adv_psp, psp_with_coupled, seq_psp]:
         str(psp)
         repr(psp)
 
@@ -257,8 +311,9 @@ def test_dim_name_creation():
             else (path, ParamDim(default=0, values=[1, 2]))
             for path, _, pd_name in name_check_pdim
         ]
-        names_out = [name_out for _, name_out, _ in name_check_pdim]
-        assert names_out == [k for k, _ in create_names(kv_pairs)]
+        expected_names = [name_out for _, name_out, _ in name_check_pdim]
+        actual_names = [k for k, _ in create_names(kv_pairs)]
+        assert expected_names == actual_names
 
     # Start with the tests
     # Arguments for check_names: (input path, expected name, custom name)
@@ -266,8 +321,8 @@ def test_dim_name_creation():
     check_names(
         (("foo", "bar"), "bar", None),
         (("foo", "baz"), "foo.baz", None),
-        (("bar", "baz"), "bar.baz", None),
         (("abc", "def"), "spam", "spam"),
+        (("bar", "baz"), "bar.baz", None),
     )
 
     # Repeating pattern -> resolved up unto root
@@ -302,6 +357,31 @@ def test_dim_name_creation():
         (("d", "d", "d", "p0"), "d.d.d.p0", None),
     )
 
+    # Can have integer elements in there
+    check_names(
+        (("foo", "bar", 0), "bar.0", None),
+        (("foo", "baz", 1), "baz.1", None),
+        (("abc", "def", 23, "foo"), "def.23.foo", None),
+        ((12, "bar", "baz", 0, "foo"), ".12.bar.baz.0.foo", None),
+    )
+
+    check_names(
+        (("d", "d", "s", 1), "d.d.s.1", None),
+        (("d", "d", "s", 2), "s.2", None),
+        (("d", "s", 0), ".d.s.0", None),
+        (("d", "s", 1), ".d.s.1", None),
+        (("s", 0), ".s.0", None),
+        (("s", 1), ".s.1", None),
+    )
+
+    # Can also be other numerical values (although not a super idea, typically)
+    check_names(
+        (("foo", "bar", -2), "bar.-2", None),
+        (("foo", "baz", 1.5), "baz.1.5", None),
+        (("abc", "def", 23.45, "foo"), "def.23.45.foo", None),
+        ((12.34, "bar", "baz", -0.1, "foo"), ".12.34.bar.baz.-0.1.foo", None),
+    )
+
     # Paths cannot include '.', require a custom name
     with pytest.raises(ValueError, match="Please select a custom name for"):
         check_names(
@@ -318,6 +398,10 @@ def test_dim_name_creation():
             (("d", "d", "d", "p0"), "d.d.d.p0", "d.p0"),
         )
 
+    # Custom names need be strings
+    with pytest.raises(TypeError, match="need to be strings"):
+        check_names((("p0",), "p0", 1.23),)
+
     # Colliding custom names -> ValueError
     with pytest.raises(ValueError, match="There were duplicates among"):
         check_names(
@@ -332,8 +416,9 @@ def test_dim_name_creation():
         check_names((("d", "p0"), ".d.p0", None), (("d", "p0"), ".d.p0", None))
 
 
-def test_dim_access(basic_psp, adv_psp):
+def test_dim_access(basic_psp, adv_psp, seq_psp):
     """Test the _get_dim helper"""
+    # -- Basics
     psp = basic_psp
     get_dim = psp._get_dim
 
@@ -348,18 +433,18 @@ def test_dim_access(basic_psp, adv_psp):
     assert get_dim(("d", "dd", "ppp1")) == psp._dict["d"]["dd"]["ppp1"]
 
     # Non-existant name or location should fail
-    with pytest.raises(KeyError, match="A parameter dimension with name"):
+    with pytest.raises(ValueError, match="A parameter dimension with name"):
         get_dim("foo")
 
-    with pytest.raises(KeyError, match="A parameter dimension matching locat"):
+    with pytest.raises(ValueError, match="parameter dimension matching locat"):
         get_dim(("foo",))
 
-    # More complicated setup, e.g. with ambiguous and custom names
+    # -- More complicated setup, e.g. with ambiguous and custom names
     psp = adv_psp
     get_dim = psp._get_dim
 
     # p1 is now ambiguous
-    with pytest.raises(KeyError, match="A parameter dimension with name 'p1'"):
+    with pytest.raises(ValueError, match="parameter dimension with name 'p1'"):
         get_dim("p1")
 
     with pytest.raises(ValueError, match="Could not unambiguously find a"):
@@ -381,12 +466,29 @@ def test_dim_access(basic_psp, adv_psp):
     assert get_dim(("d", "d", "p1")) == psp._dict["d"]["d"]["p1"]
     assert get_dim(("d", "d", "p2")) == psp._dict["d"]["d"]["p2"]
 
+    # -- And now with item access
+    psp = seq_psp
+    get_dim = psp._get_dim
 
-def test_volume(small_psp, basic_psp, adv_psp):
+    assert get_dim(".s.1") == psp._dict["s"][1]
+    assert get_dim(("", "s", 1)) == psp._dict["s"][1]
+
+    assert get_dim("ds1") == psp._dict["d"]["s"][1]
+    assert get_dim(("", "d", "s", 1)) == psp._dict["d"]["s"][1]
+
+    assert get_dim("p") == psp._dict["d"]["d"]["p"]
+    assert get_dim(("", "d", "d", "p")) == psp._dict["d"]["d"]["p"]
+
+    assert get_dim("d.s.1") == psp._dict["d"]["d"]["s"][1]
+    assert get_dim(("", "d", "d", "s", 1)) == psp._dict["d"]["d"]["s"][1]
+
+
+def test_volume(small_psp, basic_psp, adv_psp, seq_psp):
     """Asserts that the volume calculation is correct"""
     assert small_psp.volume == 2 * 3 * 5
     assert basic_psp.volume == 3 ** 6
     assert adv_psp.volume == 3 ** 6
+    assert seq_psp.volume == 3 ** 7
 
     p = ParamSpace(
         dict(
@@ -403,11 +505,12 @@ def test_volume(small_psp, basic_psp, adv_psp):
     assert empty_psp.volume == 0 == empty_psp.full_volume
 
 
-def test_shape(small_psp, basic_psp, adv_psp):
+def test_shape(small_psp, basic_psp, adv_psp, seq_psp):
     """Asserts that the returned shape is correct"""
     assert small_psp.shape == (2, 3, 5)
     assert basic_psp.shape == (3, 3, 3, 3, 3, 3)
     assert adv_psp.shape == (3, 3, 3, 3, 3, 3)
+    assert seq_psp.shape == (3, 3, 3, 3, 3, 3, 3)
 
     p = ParamSpace(
         dict(
@@ -455,7 +558,7 @@ def test_coords(small_psp):
     assert all(isinstance(v, Masked) for v in psp.current_coords.values())
 
 
-def test_dim_order(basic_psp, adv_psp):
+def test_dim_order(basic_psp, adv_psp, seq_psp):
     """Tests whether the dimension order is correct."""
     basic_psp_locs = (  # alphabetically sorted
         ("d", "dd", "ppp1",),
@@ -479,8 +582,20 @@ def test_dim_order(basic_psp, adv_psp):
     for name_is, name_should in zip(adv_psp.dims_by_loc, adv_psp_locs):
         assert name_is == name_should
 
+    seq_psp_locs = (  # sorting includes indices
+        ("d", "s", 0),
+        ("d", "s", 1),
+        ("s", 1),
+        ("d", "d", "p"),
+        ("d", "d", "s", 1),
+        ("d", "d", "s", 2),
+        ("s", 0),
+    )
+    for name_is, name_should in zip(seq_psp.dims_by_loc, seq_psp_locs):
+        assert name_is == name_should
 
-def test_state_no(small_psp, basic_psp, adv_psp, psp_with_coupled):
+
+def test_state_no(small_psp, basic_psp, adv_psp, seq_psp, psp_with_coupled):
     """Test that state number calculation is correct"""
 
     def test_state_nos(psp):
@@ -512,13 +627,14 @@ def test_state_no(small_psp, basic_psp, adv_psp, psp_with_coupled):
     test_state_nos(small_psp)
     test_state_nos(basic_psp)
     test_state_nos(adv_psp)
+    test_state_nos(seq_psp)
     test_state_nos(psp_with_coupled)
     # TODO add a masked one
 
 
-def test_state_map(small_psp, basic_psp, adv_psp):
+def test_state_map(small_psp, basic_psp, adv_psp, seq_psp):
     """Test whether the state mapping is correct."""
-    psps = [small_psp, basic_psp, adv_psp]
+    psps = [small_psp, basic_psp, adv_psp, seq_psp]
 
     for psp in psps:
         assert psp._smap is None
@@ -593,7 +709,7 @@ def test_mapping_funcs(small_psp):
         psp.get_dim_values(state_no=123, state_vector=(1, 2, 3))
 
 
-def test_basic_iteration(small_psp, adv_psp):
+def test_basic_iteration(small_psp, seq_psp):
     """Tests whether the iteration goes through all points"""
     # Test on the __iter__ and __next__ level
     psp = small_psp
@@ -652,12 +768,12 @@ def test_basic_iteration(small_psp, adv_psp):
 
     # For the explicit call
     check_counts(
-        (small_psp.iterator(), adv_psp.iterator()),
-        (small_psp.volume, adv_psp.volume),
+        (small_psp.iterator(), seq_psp.iterator()),
+        (small_psp.volume, seq_psp.volume),
     )
 
     # For the call via __iter__ and __next__
-    check_counts((small_psp, adv_psp), (small_psp.volume, adv_psp.volume))
+    check_counts((small_psp, seq_psp), (small_psp.volume, seq_psp.volume))
 
     # Also test all information tuples and the dry run
     info = ("state_no", "state_vec", "state_no_str", "current_coords")
@@ -673,7 +789,7 @@ def test_basic_iteration(small_psp, adv_psp):
     )
 
     # ... and whether invalid values lead to failure
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="No such information 'foo bar' avai"):
         info = ("state_no", "foo bar")
         check_counts(
             (small_psp.iterator(with_info=info),), (small_psp.volume,)
@@ -884,7 +1000,7 @@ def test_subspace(small_psp, basic_psp):
         psp.activate_subspace(p0=dict())
 
     # Bad paramdim name
-    with pytest.raises(KeyError, match="foo"):
+    with pytest.raises(ValueError, match="'foo' was not found in this"):
         psp.activate_subspace(foo=1)
 
     # Bad index values
@@ -960,6 +1076,20 @@ def test_subspace_str_locs(str_valued_psp):
     assert psp.volume == 1 * 3 * 6
     assert (psp.active_state_map.coords["p0"] == ["foo"]).all()
     assert (psp.active_state_map.coords["p1"] == ["1", "3", "4"]).all()
+
+
+def test_subspace_idx_paths(seq_psp):
+    """Test that parameter spaces with paramter dimensions that include indices
+    can also be reliably selected
+    """
+    psp = seq_psp
+    assert psp.volume == 3 ** 7
+
+    # Select subspace via location
+    psp.activate_subspace(**{".s.0": 1}, dds2=[1, 2])
+    assert psp.volume == 1 * 2 * 3 ** (7 - 2)
+    assert (psp.active_state_map.coords[".s.0"] == [1]).all()
+    assert (psp.active_state_map.coords["dds2"] == [1, 2]).all()
 
 
 def test_subspace_mixed_values():
@@ -1049,12 +1179,14 @@ def test_nested(psp_nested, basic_psp):
 
 
 def test_yaml_unsafe_dump_and_load(
-    tmpdir, small_psp, adv_psp, psp_with_coupled
+    tmpdir, small_psp, adv_psp, seq_psp, psp_with_coupled
 ):
     """Tests that YAML dumping and reloading works"""
     yaml = yaml_unsafe
 
-    d_out = dict(small=small_psp, adv=adv_psp, coupled=psp_with_coupled)
+    d_out = dict(
+        small=small_psp, adv=adv_psp, seq=seq_psp, coupled=psp_with_coupled
+    )
     path = tmpdir.join("out.yml")
 
     # Dump it
@@ -1092,7 +1224,9 @@ def test_yaml_unsafe_dump_and_load(
         assert v_out == psp
 
 
-def test_yaml_safe_dump_and_load(tmpdir, small_psp, adv_psp, psp_with_coupled):
+def test_yaml_safe_dump_and_load(
+    tmpdir, small_psp, adv_psp, seq_psp, psp_with_coupled
+):
     """Tests that YAML dumping and reloading works with both default dump and
     load methods as well as with the safe versions.
     """
@@ -1111,7 +1245,9 @@ def test_yaml_safe_dump_and_load(tmpdir, small_psp, adv_psp, psp_with_coupled):
         assert d_out == d_in
 
     # Use the dict of ParamDim objects for testing
-    d_out = dict(small=small_psp, adv=adv_psp, coupled=psp_with_coupled)
+    d_out = dict(
+        small=small_psp, adv=adv_psp, seq=seq_psp, coupled=psp_with_coupled
+    )
 
     # Test all possible combinations of dump and load methods
     methods = [
