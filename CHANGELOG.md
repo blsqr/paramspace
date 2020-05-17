@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.5.0 _(WIP)_
+- !43 makes it possible to define `ParamDim`s inside sequence-like parts of the parameter space dictionary (#39).
+
 ## v2.4.1
 - _Internal:_ !41 and !42 improve the CI/CD configuration
 

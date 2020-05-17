@@ -78,6 +78,7 @@ $ pip3 install -e paramspace/
 
 ### Basics
 The example below illustrates how `ParamDim` and `ParamSpace` objects can be created and used together.
+
 ```python
 from paramspace import ParamSpace, ParamDim
 
@@ -124,6 +125,26 @@ sim_params: !pspace    # <- will construct a ParamSpace from what is inside
       default: 100
       logspace: [1, 5, 9]
       as_type: int
+
+  more_params:
+    foo: 42
+    deep:
+      down:
+        magic_number: !pdim
+          default: 2
+          values: [2, 8, 20, 28, 50, 82, 126]
+
+    # Can also have parameter dimensions inside a sequence
+    things_to_do:
+      - do_this
+      - do_that
+      - !pdim
+        default: do_some_thing
+        values:
+          - do_foo
+          - do_bar
+          - do_spam
+      - do_final_things
 
   # ... and so on
 ```
