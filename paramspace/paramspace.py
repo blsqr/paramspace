@@ -6,7 +6,7 @@ import warnings
 from collections import OrderedDict
 from functools import reduce
 from itertools import chain
-from typing import Dict, Generator, List, Sequence, Tuple, Union
+from typing import Any, Dict, Generator, List, Sequence, Set, Tuple, Union
 
 import numpy as np
 import numpy.ma
@@ -190,23 +190,63 @@ class ParamSpace:
             """Check for uniqueness of the given list of names"""
             return len(set(names)) == len(names)
 
-        def collisions(names) -> List[List[int]]:
-            """Lists the set of indices that create collisions"""
+        def collisions(names: List[str]) -> Set[Tuple[int]]:
+            """For each name, find the collisons with other names and return
+            a set of indicies that collide with other names, such that those
+            names can be adjusted.
+            """
+
+            def collide(a: str, b: str) -> bool:
+                """Returns True if two names collide, with collisions defined
+                as the following:
+
+                    * The shorter one is part of the longer one, seen from the
+                      back, e.g. ``foo`` vs ``spamfoo``
+                    * The sorter one is part of the longer one, seen from the
+                      front, e.g. ``spamfoo`` vs ``spam``
+                """
+                L = min(len(a), len(b))
+                return (a[-L:] == b[-L:]) or (a[:L] == b[:L])
+
+            # First, determine colliding names for each combination
             colls = [
-                [
-                    j
-                    for j, other in enumerate(names)
-                    if (
-                        other[-min([len(other), len(name)]) :]
-                        == name[-min([len(other), len(name)]) :]
-                    )
-                ]
+                [j for j, other in enumerate(names) if collide(name, other)]
                 for name in names
             ]
 
             # Filter out those entries that are only including themselves and
             # create a set, containing the colliding indices
             return {tuple(c) for c in colls if len(c) > 1}
+
+        def join_path(path: Sequence[Union[str, int]]) -> str:
+            """Joins a path sequence to a string, handling integer entries"""
+            return ".".join([str(seg) for seg in path])
+
+        def initial_name(path: Sequence[Union[str, int]]) -> str:
+            """Given a path sequence, returns an initial name, i.e. a guess for
+            a good unique name.
+
+            For purely key-based paths, simply start with the last path
+            segment.
+            For paths that contain some index-based access, start with a longer
+            sequence that includes the name of the parent key.
+
+            Examples:
+                * ``foo.bar.baz.spam`` becomes ``spam``
+                * ``foo.bar.0.baz.1.spam`` becomes ``bar.0.baz.1.spam``
+
+            Args:
+                path (Sequence[Union[str, int]]): The path sequence
+
+            Returns:
+                str: The joined path sequence that serves as initial name
+            """
+            key_is_str = [isinstance(seg, str) for seg in path]
+            if all(key_is_str):
+                return path[-1]
+
+            first_non_str = key_is_str.index(False)
+            return join_path(path[max(0, first_non_str - 1) :])
 
         # Extract paths and pdims
         paths = [("",) + path for path, _ in kv_pairs]
@@ -216,7 +256,13 @@ class ParamSpace:
         # First, check the custom names
         pdim_names = [pdim.name for pdim in pdims if pdim.name]
 
-        if any(["." in name for name in pdim_names]):
+        if any([not isinstance(name, str) for name in pdim_names]):
+            raise TypeError(
+                f"Custom parameter dimension names need to be strings, but at "
+                f"least one of the custom names was not a string: {pdim_names}"
+            )
+
+        elif any(["." in name for name in pdim_names]):
             raise ValueError(
                 f"Custom parameter dimension names cannot contain the "
                 f"hierarchy-separating character '.'! Please remove it from "
@@ -229,10 +275,10 @@ class ParamSpace:
                 f"parameter dimensions!\nList of names: {pdim_names}"
             )
 
-        # Set the custom names; with the others, start with the end of the path
-        # segment, such that a name is given for all dimensions
+        # Set the custom names; with the others, determine an initial name
+        # depending on the contents of the path sequence.
         names = [
-            pdim.name if pdim.name else paths[cidx][-1]
+            pdim.name if pdim.name else initial_name(paths[cidx])
             for cidx, pdim in enumerate(pdims)
         ]
 
@@ -268,7 +314,7 @@ class ParamSpace:
                         )
 
                     # Check there is no '.' in the (relevant!) path segement
-                    elif any(["." in seg for seg in path_seg]):
+                    elif any(["." in str(seg) for seg in path_seg]):
                         raise ValueError(
                             f"A path segement of {path_seg} contains the '.' "
                             f"character which interferes with automatically "
@@ -277,15 +323,23 @@ class ParamSpace:
                             f"path {paths[cidx]}."
                         )
 
-                    # All checks passed. Join the path segement together and
-                    # write it to the list of names
-                    names[cidx] = ".".join(path_seg)
+                    # If the resulting name would be shorter than the existing
+                    # one, discard it. This is to ensure that initial names
+                    # that were longer due to an index access segment are not
+                    # overwritten by the above path segment selection
+                    new_name = join_path(path_seg)
+
+                    if len(new_name) < len(names[cidx]):
+                        continue
+
+                    # All checks passed
+                    names[cidx] = new_name
 
             # Done with this iteration. Check for uniqueness again ...
             i += 1
 
-        # Parse the names all to strings
-        return [(name, pdim) for name, pdim in zip(names, pdims)]
+        # Generate the list of (name, ParamDim) tuples
+        return list(zip(names, pdims))
 
     def _get_dim(self, name: Union[str, Tuple[str]]) -> ParamDimBase:
         """Get the ParamDim object with the given name or location.
@@ -312,11 +366,11 @@ class ParamSpace:
 
             except KeyError as err:
                 _dim_info = self._parse_dims(mode="both")
-                raise KeyError(
+                raise ValueError(
                     f"A parameter dimension with name '{name}' was not found "
                     f"in this ParamSpace. Available parameter dimensions:\n"
                     f"{_dim_info}"
-                )
+                ) from err
 
         # else: is assumed to be a path segement, i.e. a sequence of strings
         # Need to check whether the given key sequence suggests an abs. path
@@ -350,7 +404,7 @@ class ParamSpace:
         # If still None after all this, no such name was found
         if pdim is None:
             _dim_info = self._parse_dims(mode="both")
-            raise KeyError(
+            raise ValueError(
                 f"A parameter dimension matching location {name} was not "
                 f"found in this ParamSpace. Available parameter dimensions:\n"
                 f"{_dim_info}"
@@ -707,11 +761,19 @@ class ParamSpace:
             lines = [n for n in self.dims.keys()]
 
         elif mode in ["locs"]:
-            lines = [join_str.join(p) for p in self.dims_by_loc.keys()]
+            lines = [
+                join_str.join([str(s) for s in p])
+                for p in self.dims_by_loc.keys()
+            ]
 
         elif mode in ["both"]:
+            max_name_len = max([len(n) for n in self.dims])
             lines = [
-                "{}:  {}".format(name, join_str.join(path))
+                "{name:>{w:d}} :  {path:}".format(
+                    name=name,
+                    w=max_name_len,
+                    path=join_str.join([str(s) for s in path]),
+                )
                 for name, path in zip(
                     self.dims.keys(), self.dims_by_loc.keys()
                 )
@@ -1277,7 +1339,7 @@ class ParamSpace:
                     "`idx` and `loc`, but got both!"
                 )
 
-            pdim = self.dims[name]
+            pdim = self._get_dim(name)
 
             # Distinguish idx and loc
             if idx is not None:
