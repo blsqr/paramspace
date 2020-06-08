@@ -96,6 +96,17 @@ def yamlstrs() -> dict:
                sort: true
              - !listgen [5, 10, 2]
         """,
+        "copy": """
+            copy:
+              foo: !deepcopy &foo
+                bar: baz
+              foo2:
+                <<: *foo
+              seq: !deepcopy
+               - 1
+               - 2
+              scalar: !deepcopy 123
+        """,
         #
         # Failing or warning cases
         ("_pspace_scalar", TypeError): "scalar_node: !pspace 1",

@@ -8,7 +8,7 @@ Note that they are not registered in this module but in the
 import logging
 import warnings
 from collections import OrderedDict
-from typing import Iterable, Union
+from typing import Callable, Iterable, Union
 
 import ruamel.yaml
 
@@ -155,7 +155,7 @@ def _coupled_pdim_constructor(loader, node) -> ParamDim:
 
 # Some other constructors -----------------------------------------------------
 
-# ...for constructing slice objects
+
 def _slice_constructor(loader, node):
     """Constructor for slices"""
     log.debug("Encountered !slice tag.")
@@ -208,6 +208,21 @@ def _list_constructor(loader, node):
 
     log.debug("  kwargs:  %s", kwargs)
     return create_indices(**kwargs)
+
+
+def _func_constructor(loader, node, *, func: Callable):
+    """A constructor that constructs a scalar, mapping, or sequence from the
+    given node and subsequently applies the given unary function on it"""
+    if isinstance(node, ruamel.yaml.nodes.MappingNode):
+        s = loader.construct_mapping(node, deep=True)
+
+    elif isinstance(node, ruamel.yaml.nodes.SequenceNode):
+        s = loader.construct_sequence(node, deep=True)
+
+    else:
+        s = loader.construct_scalar(node)
+
+    return func(s)
 
 
 # Helpers ---------------------------------------------------------------------

@@ -6,11 +6,15 @@ Furthermore, it defines a shared ``ruamel.yaml.YAML`` object that can be
 imported and used for loading and storing YAML files using the representers and
 constructors.
 """
+import copy as _copy
+from functools import partial as _partial
+
 from ruamel.yaml import YAML
 
 from .paramdim import CoupledParamDim, Masked, ParamDim
 from .paramspace import ParamSpace
 from .yaml_constructors import (
+    _func_constructor,
     _list_constructor,
     _range_constructor,
     _slice_constructor,
@@ -64,6 +68,9 @@ _constructors = [
     ("!slice", _slice_constructor),
     ("!range", _range_constructor),
     ("!listgen", _list_constructor),
+    #
+    # ... and some utility constructors
+    ("!deepcopy", _partial(_func_constructor, func=_copy.deepcopy)),
 ]
 # NOTE entries marked with '***' overwrite a default constructor. Thus, they
 #      need to be defined down here, after the classes and their tags were
