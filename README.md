@@ -186,6 +186,9 @@ for params in pspace:
 * YAML representation is quite fragile, especially for `CoupledParamDim`. This
   will require some rewriting sooner or later, quite possibly accompanied by an
   interface change ...
+* [#47](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/-/issues/47): When defining `ParamDim` inside a YAML mapping or sequence that is also an anchor, it may occur multiple times inside `ParamDim`, thus leading to an infinite iteration. (Workaround introduced in [!44](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/-/merge_requests/44).)
+
+For more information, see the [issue tracker](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/-/issues).
 
 
 ## Information for Developers
