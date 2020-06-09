@@ -15,6 +15,13 @@ In the meantime, refer to the `README on the project page <https://ts-gitlab.iup
 ----
 
 .. toctree::
+    :caption: YAML Tools
+    :maxdepth: 1
+    :glob:
+
+    yaml/*
+
+.. toctree::
     :caption: API Reference
     :maxdepth: 1
 
