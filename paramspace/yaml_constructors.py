@@ -215,8 +215,8 @@ def _func_constructor(loader, node, *, func: Callable, unpack: bool = True):
     given node and subsequently applies the given function on it.
 
     Args:
-        loader (TYPE): The selected YAML loader
-        node (TYPE): The node from which to construct a Python object
+        loader: The selected YAML loader
+        node: The node from which to construct a Python object
         func (Callable): The callable to invoke on the resulting
         unpack (bool, optional): Whether to unpack sequences or mappings into
             the ``func`` call
