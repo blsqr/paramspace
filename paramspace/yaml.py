@@ -7,7 +7,9 @@ imported and used for loading and storing YAML files using the representers and
 constructors.
 """
 import copy as _copy
+import operator as _operator
 from functools import partial as _partial
+from functools import reduce as _reduce
 
 from ruamel.yaml import YAML
 
@@ -68,15 +70,70 @@ _constructors = [
     ("!slice", _slice_constructor),
     ("!range", _range_constructor),
     ("!listgen", _list_constructor),
-    #
-    # ... and some utility constructors
-    ("!deepcopy", _partial(_func_constructor, func=_copy.deepcopy)),
 ]
 # NOTE entries marked with '***' overwrite a default constructor. Thus, they
 #      need to be defined down here, after the classes and their tags were
 #      registered with the YAML objects.
 
-# Add the constructors to all YAML objects
+# Programmatically define and add a bunch of utility constructors, which
+# evaluate nodes directly during construction. Distinguish between those where
+# sequence or mapping arguments are NOT to be unpacked and those where
+# unpacking them as positional and/or keyword arguments makes sense.
+_util_constructors_no_unpack = [
+    # built-ins operating on iterables
+    ("!any", any),
+    ("!all", all),
+    ("!min", min),
+    ("!max", max),
+    ("!sum", sum),
+    ("!prod", lambda a: _reduce(_operator.mul, a, 1)),
+    ("!sorted", lambda a: list(sorted(a))),
+    ("!isorted", lambda a: list(sorted(a, reverse=True))),
+    #
+    # built-ins operating on scalars
+    ("!abs", lambda v: abs(float(v))),
+    ("!int", lambda v: int(float(v))),
+    ("!round", lambda v: round(float(v))),
+    #
+    # misc
+    ("!deepcopy", _copy.deepcopy),
+]
+_util_constructors_unpack = [
+    # from operators module
+    ("!add", _operator.add),
+    ("!sub", _operator.sub),
+    ("!mul", _operator.mul),
+    ("!truediv", _operator.truediv),
+    ("!floordiv", _operator.floordiv),
+    ("!mod", _operator.mod),
+    ("!pow", lambda x, y, z=None: pow(x, y, z)),
+    ("!not", _operator.not_),
+    ("!and", _operator.and_),
+    ("!or", _operator.or_),
+    ("!xor", _operator.xor),
+    ("!lt", _operator.lt),
+    ("!le", _operator.le),
+    ("!eq", _operator.eq),
+    ("!ne", _operator.ne),
+    ("!ge", _operator.ge),
+    ("!gt", _operator.gt),
+    ("!negate", _operator.neg),
+    ("!invert", _operator.invert),
+    ("!contains", _operator.contains),
+    ("!concat", lambda *l: _reduce(_operator.concat, l, [])),
+]
+
+# Register them
+_constructors += [
+    (tag, _partial(_func_constructor, func=func, unpack=False))
+    for tag, func in _util_constructors_no_unpack
+]
+_constructors += [
+    (tag, _partial(_func_constructor, func=func, unpack=True))
+    for tag, func in _util_constructors_unpack
+]
+
+# Now, add all the above constructors to all YAML objects
 for tag, constr_func in _constructors:
     yaml_safe.constructor.add_constructor(tag, constr_func)
     yaml_unsafe.constructor.add_constructor(tag, constr_func)

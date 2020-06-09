@@ -210,14 +210,26 @@ def _list_constructor(loader, node):
     return create_indices(**kwargs)
 
 
-def _func_constructor(loader, node, *, func: Callable):
+def _func_constructor(loader, node, *, func: Callable, unpack: bool = True):
     """A constructor that constructs a scalar, mapping, or sequence from the
-    given node and subsequently applies the given unary function on it"""
+    given node and subsequently applies the given function on it.
+
+    Args:
+        loader (TYPE): The selected YAML loader
+        node (TYPE): The node from which to construct a Python object
+        func (Callable): The callable to invoke on the resulting
+        unpack (bool, optional): Whether to unpack sequences or mappings into
+            the ``func`` call
+    """
     if isinstance(node, ruamel.yaml.nodes.MappingNode):
         s = loader.construct_mapping(node, deep=True)
+        if unpack:
+            return func(**s)
 
     elif isinstance(node, ruamel.yaml.nodes.SequenceNode):
         s = loader.construct_sequence(node, deep=True)
+        if unpack:
+            return func(*s)
 
     else:
         s = loader.construct_scalar(node)

@@ -1,5 +1,6 @@
 """Tests the yaml constructors"""
 import io
+import operator
 
 import numpy as np
 import pytest
@@ -106,6 +107,43 @@ def yamlstrs() -> dict:
                - 1
                - 2
               scalar: !deepcopy 123
+        """,
+        "utils": """
+            utils:
+              any:      !any [false, false, false, true]
+              all:      !all [true, true, true]
+              abs:      !abs -1
+              int:      !int 1.23
+              round:    !round 1.23
+              min:      !min [1,2,3]
+              max:      !max [1,2,3]
+              sorted:   !sorted [2,1,3]
+              isorted:  !isorted [2,1,3]
+              sum:      !sum [1,2,3]
+              prod:     !prod [1,2,3]
+              add:      !add [1,2]
+              sub:      !sub [2,1]
+              mul:      !mul [3,4]
+              truediv:  !truediv [3,2]
+              floordiv: !floordiv [3,2]
+              mod:      !mod [3,2]
+              pow:      !pow [2,4]
+              pow3:     !pow [2,4,3]
+              pow3d:    !pow {x: 2, y: 4, z: 3}
+              not:      !not [true]
+              and:      !and [true, false]
+              or:       !or [true, false]
+              xor:      !xor [true, true]
+              lt:       !lt [1, 2]
+              le:       !le [2, 2]
+              eq:       !eq [3, 3]
+              ne:       !ne [3, 1]
+              ge:       !ge [1, -1]
+              gt:       !gt [1, -1]
+              negate:   !negate [1]
+              invert:   !invert [true]
+              contains: !contains [[1,2,3], a]
+              concat:   !concat [[1,2,3], [4,5,6], [7,8,9]]
         """,
         #
         # Failing or warning cases
@@ -219,3 +257,40 @@ def test_correctness(yamlstrs):
     # Test the ParamSpace's
     for psp in res["pspace_only"].values():
         assert isinstance(psp, ParamSpace)
+
+    # Test the utility constructors
+    utils = res["utils"]["utils"]
+    assert utils["any"] == any([False, False, False, True])
+    assert utils["all"] == all([True, True, True])
+    assert utils["abs"] == abs(-1)
+    assert utils["int"] == int(1.23)
+    assert utils["round"] == round(1.23)
+    assert utils["min"] == min([1, 2, 3])
+    assert utils["max"] == max([1, 2, 3])
+    assert utils["sorted"] == sorted([2, 1, 3])
+    assert utils["isorted"] == sorted([2, 1, 3], reverse=True)
+    assert utils["sum"] == sum([1, 2, 3])
+    assert utils["prod"] == 1 * 2 * 3
+    assert utils["add"] == operator.add(*[1, 2])
+    assert utils["sub"] == operator.sub(*[2, 1])
+    assert utils["mul"] == operator.mul(*[3, 4])
+    assert utils["truediv"] == operator.truediv(*[3, 2])
+    assert utils["floordiv"] == operator.floordiv(*[3, 2])
+    assert utils["mod"] == operator.mod(*[3, 2])
+    assert utils["pow"] == 2 ** 4
+    assert utils["pow3"] == 2 ** 4 % 3 == pow(2, 4, 3)
+    assert utils["pow3d"] == 2 ** 4 % 3 == pow(2, 4, 3)
+    assert utils["not"] == operator.not_(*[True])
+    assert utils["and"] == operator.and_(*[True, False])
+    assert utils["or"] == operator.or_(*[True, False])
+    assert utils["xor"] == operator.xor(*[True, True])
+    assert utils["lt"] == operator.lt(*[1, 2])
+    assert utils["le"] == operator.le(*[2, 2])
+    assert utils["eq"] == operator.eq(*[3, 3])
+    assert utils["ne"] == operator.ne(*[3, 1])
+    assert utils["ge"] == operator.ge(*[1, -1])
+    assert utils["gt"] == operator.gt(*[1, -1])
+    assert utils["negate"] == operator.neg(*[1])
+    assert utils["invert"] == operator.invert(*[True])
+    assert utils["contains"] == operator.contains(*[[1, 2, 3], "a"])
+    assert utils["concat"] == [1, 2, 3] + [4, 5, 6] + [7, 8, 9]
