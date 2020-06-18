@@ -2,7 +2,7 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
-## v2.5.0 _(WIP)_
+## v2.5.0
 - !43 makes it possible to define `ParamDim`s inside sequence-like parts of the parameter space dictionary (#39).
 - !44 adds the `!deepcopy` tag, which can be used as a workaround for #47
 - !45 and !46 add YAML constructors for a number of Python built-in functions and operators, see [here](https://paramspace.readthedocs.io/en/latest/yaml/supported_tags.html)
