@@ -153,6 +153,17 @@ def yamlstrs() -> dict:
               contains: !contains   [[1,2,3], 4]    # 4 in [1,2,3] == False
 
               concat:   !concat     [[1,2,3], [4,5], [6,7,8]]  # […]+[…]+[…]+…
+
+              format1:  !format     ["{} is not {}", foo, bar]
+              format2:  !format
+                fstr: "{some_key:}: {some_value:}"
+                some_key: fish
+                some_value: spam
+              format3:  !format
+                fstr: "results: {stats[mean]:.2f} ± {stats[std]:.2f}"
+                stats:
+                  mean: 1.632
+                  std:  0.026
               # END ---- utility-yaml-tags
 
               pow_mod2: !pow {x: 2, y: 4, z: 3}
@@ -306,3 +317,6 @@ def test_correctness(yamlstrs):
     assert utils["invert"] == operator.invert(*[True])
     assert utils["contains"] == operator.contains(*[[1, 2, 3], 4])
     assert utils["concat"] == [1, 2, 3] + [4, 5] + [6, 7, 8]
+    assert utils["format1"] == "foo is not bar"
+    assert utils["format2"] == "fish: spam"
+    assert utils["format3"] == "results: 1.63 ± 0.03"

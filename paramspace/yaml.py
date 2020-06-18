@@ -121,6 +121,7 @@ _util_constructors_unpack = [
     ("!invert", _operator.invert),
     ("!contains", _operator.contains),
     ("!concat", lambda *l: _reduce(_operator.concat, l, [])),
+    ("!format", lambda fstr, *a, **k: fstr.format(*a, **k)),
 ]
 
 # Register them
