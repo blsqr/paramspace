@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.5.1
+- !48 includes the [`LICENSE`](LICENSE) file into the package build, necessary for deployment to conda-forge (see #50).
+
 ## v2.5.0
 - !43 makes it possible to define `ParamDim`s inside sequence-like parts of the parameter space dictionary (#39).
 - !44 adds the `!deepcopy` tag, which can be used as a workaround for #47
