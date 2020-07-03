@@ -121,7 +121,7 @@ setup(
     author="Yunus Sevinchan",
     author_email="Yunus.Sevinchan@iup.uni-heidelberg.de",
     url="https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace",
-    license="BSD-2",
+    license="BSD-2-Clause",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Science/Research",
@@ -145,4 +145,5 @@ setup(
         dev=dev_deps,
         doc=doc_deps,
     ),
+    data_files=[("", ["LICENSE"])],
 )
