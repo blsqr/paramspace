@@ -1,4 +1,5 @@
 [![PyPI](https://img.shields.io/pypi/v/paramspace)](https://pypi.org/project/paramspace/)
+[![conda-forge](https://img.shields.io/conda/vn/conda-forge/paramspace)](https://anaconda.org/conda-forge/paramspace)
 [![Python Versions](https://img.shields.io/pypi/pyversions/paramspace)](https://pypi.org/project/paramspace/)
 [![Documentation](https://img.shields.io/readthedocs/paramspace)](https://paramspace.readthedocs.io/en/latest/)
 [![License](https://img.shields.io/pypi/l/paramspace)](https://opensource.org/licenses/BSD-2-Clause)
@@ -50,12 +51,15 @@ In other words: each point in this parameter space refers to a specific state of
 
 
 ## Install
-The `paramspace` package is tested for Python 3.6 - 3.8 and is available [on the Python Package Index](https://pypi.org/project/paramspace/).
-You can install it using:
+The `paramspace` package is tested for Python 3.6 - 3.8 and is available [on the Python Package Index](https://pypi.org/project/paramspace/) or [via `conda-forge`](https://anaconda.org/conda-forge/paramspace).
+
+You can install it via `pip` or `conda` using the respective command:
 
 ```bash
 pip install paramspace
+conda install -c conda-forge paramspace
 ```
+
 
 ### For Developers
 For installation of versions that are not on the PyPI, `pip` allows specifying a git repository:
