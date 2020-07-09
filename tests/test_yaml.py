@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from paramspace import ParamDim, ParamSpace
+from paramspace.tools import recursive_update
 from paramspace.yaml import *
 
 # Fixtures --------------------------------------------------------------------
@@ -166,6 +167,24 @@ def yamlstrs() -> dict:
                   std:  0.026
               # END ---- utility-yaml-tags
 
+              # START -- rec-update-yaml-tag
+              some_map: &some_map
+                foo: bar
+                spam: fish
+              some_other_map: &some_other_map
+                foo:
+                  bar: baz
+                  baz: bar
+                fish: spam
+
+              # Create a new map by recursively updating the first map with
+              # the second one (uses deep copies to avoid side effects)
+              merged: !rec-update [<<: *some_map, <<: *some_other_map]
+              # NOTE: Need to use  ^^-- inheritance here, otherwise this will
+              #       result in empty mappings (for some reason)
+              # END ---- rec-update-yaml-tag
+
+              # More tests that don't need to be part of the docs
               pow_mod2: !pow {x: 2, y: 4, z: 3}
         """,
         #
@@ -320,3 +339,14 @@ def test_correctness(yamlstrs):
     assert utils["format1"] == "foo is not bar"
     assert utils["format2"] == "fish: spam"
     assert utils["format3"] == "results: 1.63 ± 0.03"
+
+    assert utils["some_map"]
+    assert utils["some_other_map"]
+    assert utils["merged"] == {
+        "foo": {"bar": "baz", "baz": "bar",},
+        "spam": "fish",
+        "fish": "spam",
+    }
+    assert utils["merged"] == recursive_update(
+        utils["some_map"], utils["some_other_map"]
+    )

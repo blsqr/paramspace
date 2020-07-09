@@ -43,3 +43,21 @@ Example:
     :start-after: # START -- utility-yaml-tags
     :end-before: # END ---- utility-yaml-tags
     :dedent: 14
+
+
+Recursively updating maps
+-------------------------
+While YAML already provides the ``<<`` operator to update a mapping, this operator does not work recursively.
+The ``!rec-update`` YAML tag supplies exactly that functionality using the :py:func:`~paramspace.tools.recursive_update` function.
+
+.. literalinclude:: ../../tests/test_yaml.py
+    :language: yaml
+    :start-after: # START -- rec-update-yaml-tag
+    :end-before: # END ---- rec-update-yaml-tag
+    :dedent: 14
+
+.. warning:: Always include via ``<<: *my_ref``!
+
+    If supplying references to mappings (as shown in the example), the references **have** to be included using ``<<: *my_ref``!
+
+    Otherwise, if using the simple ``*my_ref`` as argument, the YAML parser does not properly resolve the reference to the anchor but only returns an empty mapping.

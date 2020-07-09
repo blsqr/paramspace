@@ -15,6 +15,7 @@ from ruamel.yaml import YAML
 
 from .paramdim import CoupledParamDim, Masked, ParamDim
 from .paramspace import ParamSpace
+from .tools import recursive_update as _recursive_update
 from .yaml_constructors import (
     _func_constructor,
     _list_constructor,
@@ -122,6 +123,12 @@ _util_constructors_unpack = [
     ("!contains", _operator.contains),
     ("!concat", lambda *l: _reduce(_operator.concat, l, [])),
     ("!format", lambda fstr, *a, **k: fstr.format(*a, **k)),
+    #
+    # misc
+    (
+        "!rec-update",
+        lambda d, u: _recursive_update(_copy.deepcopy(d), _copy.deepcopy(u)),
+    ),
 ]
 
 # Register them

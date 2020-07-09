@@ -95,7 +95,9 @@ https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace
 # A function to extract version number from __init__.py
 def find_version(*file_paths) -> str:
     """Tries to extract a version from the given path sequence"""
-    import os, re, codecs
+    import codecs
+    import os
+    import re
 
     def read(*parts):
         """Reads a file from the given path sequence, relative to this file"""
