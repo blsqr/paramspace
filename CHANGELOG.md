@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.5.2
+- !49 adds the `!rec-update` YAML tag to perform recursive updates of mappings, extending the YAML update (`<<:`) feature.
+
 ## v2.5.1
 - !48 includes the [`LICENSE`](LICENSE) file into the package build, necessary for deployment to conda-forge (see #50).
 
