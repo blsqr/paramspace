@@ -3,7 +3,7 @@ import copy
 
 import pytest
 
-import paramspace.tools as t
+from paramspace import tools as t
 
 
 # Dummy objects to find using the tools
