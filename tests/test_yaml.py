@@ -155,6 +155,22 @@ def yamlstrs() -> dict:
 
               concat:   !concat     [[1,2,3], [4,5], [6,7,8]]  # […]+[…]+[…]+…
 
+              # List generation
+              # ... using the paramspace.tools.create_indices function
+              list1:    !listgen    [0, 10, 2]   # [0, 2, 4, 6, 8]
+              list2:    !listgen
+                from_range: [0, 10, 3]
+                unique: true
+                append: [100]
+                remove: [0]
+                sort: true
+
+              # ... using np.linspace, np.logspace, np.arange
+              lin:      !linspace   [-1, 1, 5]   # [-1., -.5, 0., .5, 1.]
+              log:      !logspace   [1, 4, 4]    # [10., 100., 1000., 10000.]
+              arange:   !arange     [0, 1, .2]   # [0., .2, .4, .6, .8]
+
+              # String formatting
               format1:  !format     ["{} is not {}", foo, bar]
               format2:  !format
                 fstr: "{some_key:}: {some_value:}"
@@ -339,6 +355,12 @@ def test_correctness(yamlstrs):
     assert utils["format1"] == "foo is not bar"
     assert utils["format2"] == "fish: spam"
     assert utils["format3"] == "results: 1.63 ± 0.03"
+
+    assert utils["list1"] == [0, 2, 4, 6, 8]
+    assert utils["list2"] == [3, 6, 9, 100]
+    assert utils["lin"] == [-1.0, -0.5, 0.0, 0.5, 1.0]
+    assert utils["log"] == [10.0, 100.0, 1000.0, 10000.0]
+    assert np.isclose(utils["arange"], [0.0, 0.2, 0.4, 0.6, 0.8]).all()
 
     assert utils["some_map"]
     assert utils["some_other_map"]
