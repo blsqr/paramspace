@@ -179,7 +179,7 @@ deploy:pypi:
       ; fi'
 
     # Upload to the TEST PyPI index (using separate credentials)
-    - twine upload --repository-url https://test.pypi.org/legacy/ -u ${PYPI_TEST_USER} -p ${PYPI_TEST_PASSWORD} dist/*
+    - twine upload --repository testpypi -u ${PYPI_TEST_USER} -p ${PYPI_TEST_PASSWORD} dist/*
 
     # Exit here if there is no commit tag; every actual release should also
     # have a commit tag set, so there's no point in continuing otherwise.
