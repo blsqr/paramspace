@@ -11,6 +11,7 @@ import operator as _operator
 from functools import partial as _partial
 from functools import reduce as _reduce
 
+import numpy as np
 from ruamel.yaml import YAML
 
 from .paramdim import CoupledParamDim, Masked, ParamDim
@@ -123,6 +124,11 @@ _util_constructors_unpack = [
     ("!contains", _operator.contains),
     ("!concat", lambda *l: _reduce(_operator.concat, l, [])),
     ("!format", lambda fstr, *a, **k: fstr.format(*a, **k)),
+    #
+    # numpy
+    ("!arange", lambda *a: [float(f) for f in np.arange(*a)]),
+    ("!linspace", lambda *a: [float(f) for f in np.linspace(*a)]),
+    ("!logspace", lambda *a: [float(f) for f in np.logspace(*a)]),
     #
     # misc
     (
