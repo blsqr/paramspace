@@ -698,36 +698,47 @@ class ParamSpace:
         """
         # Gather lines in a list
         l = ["ParamSpace Information"]
+        l += ["======================"]
+        l += [""]
 
         # General information about the Parameter Space
         l += [f"  Dimensions:  {self.num_dims}"]
         l += [f"  Coupled:     {self.num_coupled_dims}"]
         l += [f"  Shape:       {self.shape}"]
         l += [f"  Volume:      {self.volume}"]
+        l += [""]
 
         # ParamDim information
-        l += ["", "Parameter Dimensions"]
-        l += ["  (First dimensions are iterated over least often)", ""]
+        l += ["Parameter Dimensions"]
+        l += ["--------------------"]
+        l += [
+            "  (Dimensions further up in the list are iterated over less "
+            "frequently)"
+        ]
+        l += [""]
 
         for name, pdim in self.dims.items():
-            l += [f"  * {name}"]
+            l += [f"  - {name}"]
             l += [f"      {pdim.values}"]
-            # TODO add information on length?!
+
             if pdim.mask is True:
                 l += [f"      fully masked -> using default:  {pdim.default}"]
 
             if pdim.order < np.inf:
-                l += [f"      Order: {pdim.order}"]
+                l += [f"      order: {pdim.order}"]
 
             l += [""]
 
         # CoupledParamDim information
         if self.num_coupled_dims:
-            l += ["", "Coupled Parameter Dimensions"]
-            l += ["  (Move alongside the state of the coupled ParamDim)", ""]
+            l += [""]
+            l += ["Coupled Parameter Dimensions"]
+            l += ["----------------------------"]
+            l += ["  (Move alongside the state of the coupled ParamDim)"]
+            l += [""]
 
             for name, cpdim in self.coupled_dims.items():
-                l += [f"  * {name}"]
+                l += [f"  - {name}"]
                 l += [f"      Coupled to:  {cpdim.target_name}"]
 
                 # Add resolved target name, if it differs
