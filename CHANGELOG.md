@@ -4,6 +4,7 @@
 
 ## v2.5.3
 - !50 extends the `yaml` module with three list-generating tags: `!linspace`, `!logspace`, `!arange`, based on the corresponding numpy functions.
+- !51 improves formatting of `ParamSpace.get_info_str`
 
 ## v2.5.2
 - !49 adds the `!rec-update` YAML tag to perform recursive updates of mappings, extending the YAML update (`<<:`) feature.
