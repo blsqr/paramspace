@@ -576,8 +576,14 @@ class ParamDim(ParamDimBase):
     yaml_tag = "!pdim"
 
     # And the other yaml representer settings
-    _YAML_UPDATE = dict(mask="mask",)
-    _YAML_REMOVE_IF = dict(name=(None,), order=(None,), mask=(None, False),)
+    _YAML_UPDATE = dict(
+        mask="mask",
+    )
+    _YAML_REMOVE_IF = dict(
+        name=(None,),
+        order=(None,),
+        mask=(None, False),
+    )
 
     # .........................................................................
 
@@ -853,7 +859,9 @@ class CoupledParamDim(ParamDimBase):
     yaml_tag = "!coupled-pdim"
 
     # And the other yaml representer settings
-    _YAML_UPDATE = dict(target_name="_target_name_as_list",)
+    _YAML_UPDATE = dict(
+        target_name="_target_name_as_list",
+    )
     _YAML_REMOVE_IF = dict(
         name=(None,),
         order=(None,),

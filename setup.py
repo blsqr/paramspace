@@ -85,7 +85,7 @@ Learn More
 ----------
 
 For more information, visit the project page and have a look at the README:
-https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace
+https://gitlab.com/blsqr/paramspace
 
 """
 
@@ -121,8 +121,8 @@ setup(
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     author="Yunus Sevinchan",
-    author_email="Yunus.Sevinchan@iup.uni-heidelberg.de",
-    url="https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace",
+    author_email="yunussevinchan@gmail.com",
+    url="https://gitlab.com/blsqr/paramspace",
     license="BSD-2-Clause",
     classifiers=[
         "Development Status :: 5 - Production/Stable",

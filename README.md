@@ -5,8 +5,8 @@
 [![License](https://img.shields.io/pypi/l/paramspace)](https://opensource.org/licenses/BSD-2-Clause)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3826470.svg)](https://doi.org/10.5281/zenodo.3826470)
 
-[![Pipeline Status](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/badges/master/pipeline.svg)](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/commits/master)
-[![Coverage](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/badges/master/coverage.svg)](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/-/blob/master/tox.ini)
+[![Pipeline Status](https://gitlab.com/blsqr/paramspace/badges/master/pipeline.svg)](https://gitlab.com/blsqr/paramspace/commits/master)
+[![Coverage](https://gitlab.com/blsqr/paramspace/badges/master/coverage.svg)](https://gitlab.com/blsqr/paramspace/-/blob/master/tox.ini)
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Pre-Commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen)](https://github.com/pre-commit/pre-commit)
 
@@ -190,9 +190,9 @@ for params in pspace:
 * YAML representation is quite fragile, especially for `CoupledParamDim`. This
   will require some rewriting sooner or later, quite possibly accompanied by an
   interface change ...
-* [#47](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/-/issues/47): When defining `ParamDim` inside a YAML mapping or sequence that is also an anchor, it may occur multiple times inside `ParamDim`, thus leading to an infinite iteration. (Workaround introduced in [!44](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/-/merge_requests/44).)
+* [#47](https://gitlab.com/blsqr/paramspace/-/issues/47): When defining `ParamDim` inside a YAML mapping or sequence that is also an anchor, it may occur multiple times inside `ParamDim`, thus leading to an infinite iteration. (Workaround introduced in [!44](https://gitlab.com/blsqr/paramspace/-/merge_requests/44).)
 
-For more information, see the [issue tracker](https://ts-gitlab.iup.uni-heidelberg.de/yunus/paramspace/-/issues).
+For more information, see the [issue tracker](https://gitlab.com/blsqr/paramspace/-/issues).
 
 
 ## Information for Developers

@@ -18,27 +18,10 @@ workflow:
 before_script:
   - pip install tox
 
-# Some shared default configuration that cannot be set on root level
-.defaults: &defaults
-  tags:
-    - default
 
 # Checks ----------------------------------------------------------------------
 
-check:noop:  # This is a no-op job, used as `needs` for all later jobs
-  <<: *defaults
-  stage: check
-  image: alpine:latest
-  cache: {}
-  variables:
-    GIT_STRATEGY: none
-  before_script: []
-  script:
-    - echo "Let's get testing!"
-    - echo "(This is a workaround for 'https://gitlab.com/gitlab-org/gitlab/issues/30631')"
-
 check:hooks:
-  <<: *defaults
   stage: check
   allow_failure: true
   before_script:
@@ -50,10 +33,9 @@ check:hooks:
 # Tests -----------------------------------------------------------------------
 
 test:py36: &test
-  <<: *defaults
   image: python:3.6
   stage: test
-  needs: ["check:noop"]
+  needs: []
   script:
     - tox -e py36
 
@@ -76,7 +58,6 @@ test:py38:
 #   - The MR title contains "prepare release" (not case-sensitive)
 
 test_minimal_deps:py36: &minimal
-  <<: *defaults
   image: python:3.6
   stage: test_minimal_deps
   rules:
@@ -107,9 +88,8 @@ test_minimal_deps:py38:
 # Build -----------------------------------------------------------------------
 
 build:docs:
-  <<: *defaults
   stage: build
-  needs: ["check:noop"]
+  needs: []
   allow_failure: true
   before_script:
     - pip install -e .[doc]
@@ -136,7 +116,6 @@ build:docs:
 #   - If web-created, this job will only deploy to the PyPI staging server
 #     and never exit successfully.
 deploy:pypi:
-  <<: *defaults
   image: python:3.8
   stage: deploy
   rules:

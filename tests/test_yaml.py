@@ -365,7 +365,10 @@ def test_correctness(yamlstrs):
     assert utils["some_map"]
     assert utils["some_other_map"]
     assert utils["merged"] == {
-        "foo": {"bar": "baz", "baz": "bar",},
+        "foo": {
+            "bar": "baz",
+            "baz": "bar",
+        },
         "spam": "fish",
         "fish": "spam",
     }
