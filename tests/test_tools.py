@@ -208,7 +208,15 @@ def test_update():
         l2=[2, 3, 4],  # not a list in obj
         l3=[2, 3],  # shorter here
         l4=[2, 3],  # tuple in obj,
-        l5=[2, 3, 4, dict(a=2, b=3,)],  # tuple in obj,
+        l5=[
+            2,
+            3,
+            4,
+            dict(
+                a=2,
+                b=3,
+            ),
+        ],  # tuple in obj,
         l6=[t.SKIP, t.SKIP, 4],  # skip updating
         fail_conversion=["none"],
     )

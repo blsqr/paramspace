@@ -405,7 +405,9 @@ def test_dim_name_creation():
 
     # Custom names need be strings
     with pytest.raises(TypeError, match="need to be strings"):
-        check_names((("p0",), "p0", 1.23),)
+        check_names(
+            (("p0",), "p0", 1.23),
+        )
 
     # Colliding custom names -> ValueError
     with pytest.raises(ValueError, match="There were duplicates among"):
@@ -434,7 +436,15 @@ def test_dim_access(basic_psp, adv_psp, seq_psp):
 
     # And by location
     assert get_dim(("p1",)) == psp._dict["p1"]
-    assert get_dim(("d", "pp1",)) == psp._dict["d"]["pp1"]
+    assert (
+        get_dim(
+            (
+                "d",
+                "pp1",
+            )
+        )
+        == psp._dict["d"]["pp1"]
+    )
     assert get_dim(("d", "dd", "ppp1")) == psp._dict["d"]["dd"]["ppp1"]
 
     # Non-existant name or location should fail
@@ -457,7 +467,15 @@ def test_dim_access(basic_psp, adv_psp, seq_psp):
 
     # Thus, the unique name is different
     assert get_dim(".p1") == psp._dict["p1"]
-    assert get_dim(("", "p1",)) == psp._dict["p1"]
+    assert (
+        get_dim(
+            (
+                "",
+                "p1",
+            )
+        )
+        == psp._dict["p1"]
+    )
 
     # Also test the next level
     assert get_dim("d.p1") == psp._dict["d"]["p1"]
@@ -569,10 +587,24 @@ def test_coords(small_psp):
 def test_dim_order(basic_psp, adv_psp, seq_psp):
     """Tests whether the dimension order is correct."""
     basic_psp_locs = (  # alphabetically sorted
-        ("d", "dd", "ppp1",),
-        ("d", "dd", "ppp2",),
-        ("d", "pp1",),
-        ("d", "pp2",),
+        (
+            "d",
+            "dd",
+            "ppp1",
+        ),
+        (
+            "d",
+            "dd",
+            "ppp2",
+        ),
+        (
+            "d",
+            "pp1",
+        ),
+        (
+            "d",
+            "pp2",
+        ),
         ("p1",),
         ("p2",),
     )
@@ -1217,7 +1249,8 @@ def test_yaml_unsafe_dump_and_load(
         psp = d_in[k_out]
 
         print(
-            k_out, ":",
+            k_out,
+            ":",
         )
         print(
             "  dims:   \n   ",
