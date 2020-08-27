@@ -19,9 +19,7 @@ before_script:
   - pip install tox
 
 # Some shared default configuration that cannot be set on root level
-.defaults: &defaults
-  tags:
-    - default
+.defaults: &defaults {}
 
 # Checks ----------------------------------------------------------------------
 
