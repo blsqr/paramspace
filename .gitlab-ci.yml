@@ -17,9 +17,7 @@ workflow:
 
 include:
   - template: Dependency-Scanning.gitlab-ci.yml
-
-before_script:
-  - pip install tox
+  - template: Security/License-Scanning.gitlab-ci.yml
 
 
 # Checks ----------------------------------------------------------------------
@@ -39,6 +37,8 @@ test:py36: &test
   image: python:3.6
   stage: test
   needs: []
+  before_script:
+    - pip install tox
   script:
     - tox -e py36
 
@@ -70,6 +70,8 @@ test_minimal_deps:py36: &minimal
     - if: '$CI_COMMIT_TAG'
   allow_failure: true
   needs: ["test:py36"]
+  before_script:
+    - pip install tox
   script:
     - tox -e py36-minimal_deps
 
