@@ -15,6 +15,9 @@ workflow:
       when: never
     - when: always
 
+include:
+  - template: Dependency-Scanning.gitlab-ci.yml
+
 before_script:
   - pip install tox
 
