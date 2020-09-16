@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.5.4
+- !57 adds the `ParamSpace.get_info_dict` method that supplies information about a parameter space using native data types; this can be useful when working with paramspace-structure data on a platform that cannot load this package.
+
 ## v2.5.3
 - !50 extends the `yaml` module with three list-generating tags: `!linspace`, `!logspace`, `!arange`, based on the corresponding numpy functions.
 - !51 improves formatting of `ParamSpace.get_info_str`

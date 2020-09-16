@@ -692,6 +692,84 @@ class ParamSpace:
 
     # TODO implement __format__
 
+    # Information .............................................................
+
+    def get_info_dict(self) -> dict:
+        """Returns a dict with information about this ParamSpace object.
+
+        The returned dict contains similar information as
+        :py:meth:`~paramspace.paramspace.ParamSpace.get_info_str`.
+        Furthermore, it uses only native data types (scalars, sequences, and
+        mappings) such that it is easily serializable and usable in scenarios
+        where the paramspace package is not available.
+
+        .. note::
+
+            This information is not meant to fully recreate the ParamSpace
+            object, but merely to provide essential metadata like the volume
+            or shape of the parameter space and the coordinates of each of its
+            dimensions.
+
+        Raises:
+            NotImplementedError: If any of the parameter dimensions is masked.
+        """
+
+        def prepare_pdim_info(
+            pdim: Union[ParamDim, ParamDimBase],
+            *,
+            name: str,
+            keyseq: Tuple[str],
+        ) -> dict:
+            """Helper function to gather relevant ParamDim information"""
+            if pdim.mask:
+                raise NotImplementedError(
+                    "Retrieving information of ParamSpace objects with masked "
+                    "parameter dimensions is not yet possible."
+                )
+                # NOTE This is a safety measure, as it is is currently unclear
+                #      how to clearly and robustly communicate a masked
+                #      parameter space via this metadata method.
+
+            info = dict()
+            info["name"] = name
+            info["full_path"] = list(keyseq)
+            info["values"] = list(pdim.values)
+
+            if isinstance(pdim, CoupledParamDim):
+                target_name = pdim.target_name
+                if isinstance(target_name, str):
+                    info["target_name"] = target_name
+                else:
+                    info["target_name"] = list(target_name)
+
+            return info
+
+        d = dict()
+
+        # ParamSpace information
+        d["shape"] = self.shape
+        d["volume"] = self.volume
+        d["num_dims"] = self.num_dims
+        d["num_coupled_dims"] = self.num_coupled_dims
+
+        # Information of individual ParamDim objects
+        pdim_iter = zip(self.dims.items(), self.dims_by_loc.keys())
+        d["dims"] = [
+            prepare_pdim_info(pdim, name=name, keyseq=keyseq)
+            for (name, pdim), keyseq in pdim_iter
+        ]
+
+        # Information of individual CoupledParamDim objects
+        cpdim_iter = zip(
+            self.coupled_dims.items(), self.coupled_dims_by_loc.keys()
+        )
+        d["coupled_dims"] = [
+            prepare_pdim_info(cpdim, name=name, keyseq=keyseq)
+            for (name, cpdim), keyseq in cpdim_iter
+        ]
+
+        return d
+
     def get_info_str(self) -> str:
         """Returns a string that gives information about shape and size of
         this ParamSpace.
