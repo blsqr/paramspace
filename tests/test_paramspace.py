@@ -264,6 +264,54 @@ def test_strings(basic_psp, adv_psp, psp_with_coupled, seq_psp):
             psp._parse_dims(mode="foo")
 
 
+def test_info_dict(basic_psp, adv_psp, psp_with_coupled, seq_psp):
+    """Tests the get_info_dict method"""
+    for psp in [basic_psp, adv_psp, psp_with_coupled, seq_psp]:
+        d = psp.get_info_dict()
+
+        assert set(d.keys()) == {
+            "shape",
+            "volume",
+            "num_dims",
+            "num_coupled_dims",
+            "dims",
+            "coupled_dims",
+        }
+        assert d["shape"] == psp.shape
+        assert d["volume"] == psp.volume
+        assert d["num_dims"] == psp.num_dims
+        assert d["num_coupled_dims"] == psp.num_coupled_dims
+
+        assert isinstance(d["dims"], list)
+        assert isinstance(d["coupled_dims"], list)
+
+        assert len(d["dims"]) == psp.num_dims
+        assert len(d["coupled_dims"]) == psp.num_coupled_dims
+
+        for pd in d["dims"]:
+            assert set(pd.keys()) == {"name", "full_path", "values"}
+            assert isinstance(pd["name"], str)
+            assert isinstance(pd["full_path"], list)
+            assert isinstance(pd["values"], list)
+
+        for cpd in d["coupled_dims"]:
+            assert set(cpd.keys()) == {
+                "name",
+                "full_path",
+                "values",
+                "target_name",
+            }
+            assert isinstance(cpd["name"], str)
+            assert isinstance(cpd["target_name"], (str, list))
+            assert isinstance(cpd["full_path"], list)
+            assert isinstance(cpd["values"], list)
+
+        # With any mask applied, this should not (yet) work
+        psp.set_mask(name=list(psp.dims.keys())[-1], mask=True)
+        with pytest.raises(NotImplementedError, match="with masked param"):
+            psp.get_info_dict()
+
+
 def test_eq(adv_psp):
     """Test that __eq__ works"""
     psp = adv_psp
