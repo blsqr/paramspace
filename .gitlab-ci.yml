@@ -21,6 +21,22 @@ include:
   - template: Security/License-Scanning.gitlab-ci.yml
 
 
+# Hidden Jobs -----------------------------------------------------------------
+
+# Add cobertura coverage report visualization for MRs
+# Includes patch against https://gitlab.com/gitlab-org/gitlab/-/issues/217664,
+# see also: https://forum.gitlab.com/t/enabling-cobertura/36918
+.cobertura:
+  variables:
+    SRC_DIR: paramspace
+  after_script:
+    - sed -i "s=<source>.*${SRC_DIR}</source>=<source>./${SRC_DIR}</source>=g" coverage.xml
+    - sed -i "s;filename=\";filename=\"${SRC_DIR}/;g" coverage.xml
+  artifacts:
+    reports:
+      cobertura: coverage.xml
+
+
 # Checks ----------------------------------------------------------------------
 
 check:hooks:
@@ -34,9 +50,10 @@ check:hooks:
 
 # Tests -----------------------------------------------------------------------
 
-test:py36: &test
+test:py36:
   image: python:3.6
   stage: test
+  extends: .cobertura
   needs: []
   before_script:
     - pip install tox
@@ -44,14 +61,14 @@ test:py36: &test
     - tox -e py36
 
 test:py37:
-  <<: *test
   image: python:3.7
+  extends: test:py36
   script:
     - tox -e py37
 
 test:py38:
-  <<: *test
   image: python:3.8
+  extends: test:py36
   script:
     - tox -e py38
 
@@ -61,9 +78,10 @@ test:py38:
 #   - The branch name starts with `prepare-release`
 #   - The MR title contains "prepare release" (not case-sensitive)
 
-test_minimal_deps:py36: &minimal
+test_minimal_deps:py36:
   image: python:3.6
   stage: test_minimal_deps
+  extends: .cobertura
   rules:
     - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^prepare-release/'
     - if: '$CI_MERGE_REQUEST_TITLE =~ /.*prepare release.*/i'
@@ -77,14 +95,14 @@ test_minimal_deps:py36: &minimal
     - tox -e py36-minimal_deps
 
 test_minimal_deps:py37:
-  <<: *minimal
+  extends: test_minimal_deps:py36
   image: python:3.7
   needs: ["test:py37"]
   script:
     - tox -e py37-minimal_deps
 
 test_minimal_deps:py38:
-  <<: *minimal
+  extends: test_minimal_deps:py36
   image: python:3.8
   needs: ["test:py38"]
   script:
