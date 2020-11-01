@@ -72,6 +72,12 @@ test:py38:
   script:
     - tox -e py38
 
+test:py39:
+  image: python:3.9
+  extends: test:py36
+  script:
+    - tox -e py39
+
 
 # Test again using the lower bound of the python dependencies .................
 # These are only carried out when:
@@ -107,6 +113,13 @@ test_minimal_deps:py38:
   needs: ["test:py38"]
   script:
     - tox -e py38-minimal_deps
+
+test_minimal_deps:py39:
+  extends: test_minimal_deps:py36
+  image: python:3.9
+  needs: ["test:py39"]
+  script:
+    - tox -e py39-minimal_deps
 
 
 # Build -----------------------------------------------------------------------
