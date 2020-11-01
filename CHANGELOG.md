@@ -4,6 +4,7 @@
 
 ## v2.5.5 _(WIP)_
 - !58 improves the CI/CD to show test coverage in the Merge Request diff view
+- !59 extends the CI/CD tests to include Python 3.9 environments
 
 ## v2.5.4
 - !57 adds the `ParamSpace.get_info_dict` method that supplies information about a parameter space using native data types; this can be useful when working with paramspace-structure data on a platform that cannot load this package.

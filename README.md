@@ -51,7 +51,7 @@ In other words: each point in this parameter space refers to a specific state of
 
 
 ## Install
-The `paramspace` package is tested for Python 3.6 - 3.8 and is available [on the Python Package Index](https://pypi.org/project/paramspace/) or [via `conda-forge`](https://anaconda.org/conda-forge/paramspace).
+The `paramspace` package is tested for Python 3.6 - 3.9 and is available [on the Python Package Index](https://pypi.org/project/paramspace/) or [via `conda-forge`](https://anaconda.org/conda-forge/paramspace).
 
 You can install it via `pip` or `conda` using the respective command:
 
