@@ -3,9 +3,9 @@ from setuptools import setup
 
 # Dependencies for paramspace itself
 install_deps = [
-    "numpy >= 1.17.3",
-    "xarray >= 0.10.9",
-    "ruamel.yaml >= 0.16.5",
+    "numpy >= 1.19.4",
+    "xarray >= 0.16.2",
+    "ruamel.yaml >= 0.16.12",
 ]
 
 # Derive an extra that uses strict versions; allows testing for these via tox
