@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.5.6
+- !62 (internal) drops patch release versions from dependencies to simplify dependency resolution in downstream packages
+
 ## v2.5.5
 - !58 improves the CI/CD to show test coverage in the Merge Request diff view
 - !59 extends the CI/CD tests to include Python 3.9 environments
