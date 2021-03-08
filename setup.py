@@ -139,6 +139,7 @@ setup(
     ],
     packages=["paramspace"],
     include_package_data=True,
+    python_requires=">=3.6",
     install_requires=install_deps,
     tests_require=test_deps,
     test_suite="tox",
