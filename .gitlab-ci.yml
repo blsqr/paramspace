@@ -20,6 +20,9 @@ include:
   - template: Dependency-Scanning.gitlab-ci.yml
   - template: Security/License-Scanning.gitlab-ci.yml
 
+variables:
+  RUN_MINIMAL_TESTS: "false"
+
 
 # Hidden Jobs -----------------------------------------------------------------
 
@@ -46,6 +49,18 @@ check:hooks:
     - pip install pre-commit
   script:
     - pre-commit run --all-files --verbose --show-diff-on-failure
+
+gemnasium-python-dependency_scanning:
+  stage: check
+  # Workaround for https://gitlab.com/gitlab-org/gitlab/-/issues/7006
+  before_script:
+    - rm -f pyproject.toml
+
+bandit-sast:
+  stage: check
+
+license_scanning:
+  stage: check
 
 
 # Tests -----------------------------------------------------------------------
@@ -78,11 +93,6 @@ test:py39:
   script:
     - tox -e py39
 
-gemnasium-python-dependency_scanning:
-  # Workaround for https://gitlab.com/gitlab-org/gitlab/-/issues/7006
-  before_script:
-    - rm -f pyproject.toml
-
 
 # Test again using the lower bound of the python dependencies .................
 # These are only carried out when:
@@ -101,6 +111,7 @@ test:py36_min:
     - if: '$CI_COMMIT_BRANCH =~ /^prepare-release/i ||
            $CI_MERGE_REQUEST_TITLE =~ /.*prepare\srelease.*/i'
       allow_failure: false
+    - if: '$RUN_MINIMAL_TESTS == "true"'
     - when: never
   allow_failure: true
   before_script:
