@@ -99,6 +99,12 @@ test:py39:
   script:
     - tox -e py39
 
+test:py310:
+  image: python:3.10-rc
+  extends: test:py36
+  script:
+    - tox -e py310
+
 
 # Test again using the lower bound of the python dependencies .................
 # These are only carried out when:
@@ -143,6 +149,12 @@ test:py39_min:
   image: python:3.9
   script:
     - tox -e py39-minimal_deps
+
+test:py310_min:
+  extends: test:py36_min
+  image: python:3.10-rc
+  script:
+    - tox -e py310-minimal_deps
 
 
 # Build -----------------------------------------------------------------------
