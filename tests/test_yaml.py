@@ -133,8 +133,8 @@ def yamlstrs() -> dict:
               mul:      !mul        [3, 4]      # 3 * 4
               mod:      !mod        [3, 2]      # 3 % 2
               pow:      !pow        [2, 4]      # 2 ** 4
-              truediv:  !truediv    [3, 2]      # 3 // 2
-              floordiv: !floordiv   [3, 2]      # 3 / 2
+              truediv:  !truediv    [3, 2]      # 3 / 2
+              floordiv: !floordiv   [3, 2]      # 3 // 2
               pow_mod:  !pow        [2, 4, 3]   # 2 ** 4 % 3
 
               not:      !not        [true]
