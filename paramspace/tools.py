@@ -338,8 +338,6 @@ def recursive_collect(
     Raises:
         ValueError: Raised if invalid ``prepend_info`` entries were set
     """
-    log.debug("recursive_collect called")
-
     # Return value list
     coll = []
 
@@ -433,8 +431,6 @@ def recursive_replace(
         was selected was replaced by the return value of the replacement
         function.
     """
-
-    log.debug("recursive_replace called")
 
     def replace(ms, *, key, replace_by):
         """Try to replace the entry; catch exception"""
