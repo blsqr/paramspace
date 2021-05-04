@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.5.7
+- !64 improves performance of `recursive_replace` and `recursive_collect` for hierarchical structures with many string-like objects.
+
 ## v2.5.6
 - !62 (internal) drops patch release versions from dependencies to simplify dependency resolution in downstream packages
 
