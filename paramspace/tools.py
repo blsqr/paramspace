@@ -350,7 +350,7 @@ def recursive_collect(
     else:
         # Assure that strings are never recursed further
         if str not in stop_recursion_types:
-            stop_recursion_types += (str,)
+            stop_recursion_types = (str,) + stop_recursion_types
 
     # Now go through all values
     for key, val in get_key_val_iter(obj):
@@ -384,7 +384,7 @@ def recursive_collect(
             # Add it to the return list
             coll.append(entry)
 
-        elif is_iterable(val) and not isinstance(val, stop_recursion_types):
+        elif not isinstance(val, stop_recursion_types) and is_iterable(val):
             # Not the desired element, but recursion possible ...
             coll += recursive_collect(
                 val,
@@ -454,7 +454,7 @@ def recursive_replace(
     else:
         # Assure that strings are never recursed further
         if str not in stop_recursion_types:
-            stop_recursion_types += (str,)
+            stop_recursion_types = (str,) + stop_recursion_types
 
     # Go through all items
     for key, val in get_key_val_iter(obj):
@@ -463,7 +463,7 @@ def recursive_replace(
             # the replace_func
             replace(obj, key=key, replace_by=replace_func(val))
 
-        elif is_iterable(val) and not isinstance(val, stop_recursion_types):
+        elif not isinstance(val, stop_recursion_types) and is_iterable(val):
             # Not the desired element, but recursion possible ...
             replace(
                 obj,
