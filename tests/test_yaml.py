@@ -181,7 +181,13 @@ def yamlstrs() -> dict:
                 stats:
                   mean: 1.632
                   std:  0.026
+
+              # Reading environment variables, optionally with fallback
+              PATH:           !getenv PATH   # fails if variable is missing
+              username:       !getenv [USER, "unknown_user"]
+              home_directory: !getenv [HOME, "/"]
               # END ---- utility-yaml-tags
+              # NOTE Need to choose env. variables that are available in CI
 
               # START -- rec-update-yaml-tag
               some_map: &some_map
