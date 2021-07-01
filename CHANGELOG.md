@@ -2,6 +2,11 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.5.8
+- !65 includes minor improvements:
+    - slightly improves performance by removing unnecessary log messages
+    - adds the `!getenv` YAML constructor, allowing to read environment variables
+
 ## v2.5.7
 - !64 improves performance of `recursive_replace` and `recursive_collect` for hierarchical structures with many string-like objects.
 

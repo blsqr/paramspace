@@ -1035,8 +1035,6 @@ class ParamSpace:
         Returns:
             bool: Returns False when iteration finishes
         """
-        log.debug("ParamSpace._next_state called")
-
         # Iterate at least one parameter dimensions' state.
         # Do this in reverse such that the last dimensions are iterated over
         # most frequently.
@@ -1082,10 +1080,10 @@ class ParamSpace:
         # Parse the tuple and add information
         info_tup = tuple()
         for info in with_info:
-            if info in ["state_no"]:
+            if info == "state_no":
                 info_tup += (self.state_no,)
 
-            elif info in ["state_no_str", "padded_state_no"]:
+            elif info in ("state_no_str", "padded_state_no"):
                 info_tup += (
                     "{sno:0{digs:d}d}"
                     "".format(
@@ -1093,10 +1091,10 @@ class ParamSpace:
                     ),
                 )
 
-            elif info in ["state_vector", "state_vec"]:
+            elif info in ("state_vector", "state_vec"):
                 info_tup += (self.state_vector,)
 
-            elif info in ["current_coords", "coords"]:
+            elif info in ("current_coords", "coords"):
                 info_tup += (self.current_coords,)
 
             else:

@@ -19,6 +19,7 @@ from .paramspace import ParamSpace
 from .tools import recursive_update as _recursive_update
 from .yaml_constructors import (
     _func_constructor,
+    _get_from_env,
     _list_constructor,
     _range_constructor,
     _slice_constructor,
@@ -72,6 +73,9 @@ _constructors = [
     ("!slice", _slice_constructor),
     ("!range", _range_constructor),
     ("!listgen", _list_constructor),
+    #
+    # value retrieval constructors
+    ("!getenv", _get_from_env),
 ]
 # NOTE entries marked with '***' overwrite a default constructor. Thus, they
 #      need to be defined down here, after the classes and their tags were

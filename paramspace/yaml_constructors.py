@@ -6,6 +6,7 @@ Note that they are not registered in this module but in the
 :py:mod:`paramspace.yaml` module.
 """
 import logging
+import os
 import warnings
 from collections import OrderedDict
 from typing import Callable, Iterable, Union
@@ -235,6 +236,16 @@ def _func_constructor(loader, node, *, func: Callable, unpack: bool = True):
         s = loader.construct_scalar(node)
 
     return func(s)
+
+
+# Value retrieval -------------------------------------------------------------
+
+
+def _get_from_env(loader, node):
+    """Retrieves an environment variable by name, optionally with fallback"""
+    if isinstance(node, ruamel.yaml.nodes.SequenceNode):
+        return os.environ.get(*loader.construct_sequence(node, deep=True))
+    return os.environ[str(loader.construct_scalar(node))]
 
 
 # Helpers ---------------------------------------------------------------------
