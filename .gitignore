@@ -7,6 +7,7 @@ dist
 .tox
 .pytest_cache
 .coverage
+report.xml
 
 # Don't ignore some specific files
 !.coveragerc
