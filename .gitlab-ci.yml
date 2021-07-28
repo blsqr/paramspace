@@ -26,18 +26,23 @@ variables:
 
 # Hidden Jobs -----------------------------------------------------------------
 
-# Add cobertura coverage report visualization for MRs
-# Includes patch against https://gitlab.com/gitlab-org/gitlab/-/issues/217664,
-# see also: https://forum.gitlab.com/t/enabling-cobertura/36918
-.cobertura:
+# Reports
+# 1) cobertura coverage report visualization for MRs
+#    Includes patch against https://gitlab.com/gitlab-org/gitlab/-/issues/217664,
+#    see also: https://forum.gitlab.com/t/enabling-cobertura/36918
+# 2) unit test reports
+.reports:
   variables:
     SRC_DIR: paramspace
   after_script:
     - sed -i "s=<source>.*${SRC_DIR}</source>=<source>./${SRC_DIR}</source>=g" coverage.xml
     - sed -i "s;filename=\";filename=\"${SRC_DIR}/;g" coverage.xml
   artifacts:
+    when: always
+    expire_in: 6 months
     reports:
       cobertura: coverage.xml
+      junit: report.xml
 
 
 # Checks ----------------------------------------------------------------------
@@ -68,7 +73,8 @@ license_scanning:
 test:py36:
   image: python:3.6
   stage: test
-  extends: .cobertura
+  extends:
+    - .reports
   needs: []
   before_script:
     - pip install tox
@@ -103,7 +109,8 @@ test:py39:
 test:py36_min:
   image: python:3.6
   stage: test
-  extends: .cobertura
+  extends:
+    - .reports
   rules:
     - if: '$CI_COMMIT_BRANCH == "master" ||
            $CI_COMMIT_BRANCH =~ /^release/ ||
