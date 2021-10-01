@@ -60,6 +60,7 @@ py:class Dict
 py:class np.ndarray
 py:class xr.Dataset
 py:class xr.DataArray
+py:class xarray.core.dataarray.DataArray
 py:class ruamel.yaml.representer
 
 # paramspace-internal

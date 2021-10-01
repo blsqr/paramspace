@@ -17,7 +17,7 @@ workflow:
 
 include:
   - template: SAST.gitlab-ci.yml
-  - template: Dependency-Scanning.gitlab-ci.yml
+  # - template: Dependency-Scanning.gitlab-ci.yml  # aka gemnasium: not working
   - template: Security/License-Scanning.gitlab-ci.yml
 
 variables:
@@ -55,13 +55,19 @@ check:hooks:
   script:
     - pre-commit run --all-files --verbose --show-diff-on-failure
 
-gemnasium-python-dependency_scanning:
-  stage: check
-  # Workaround for https://gitlab.com/gitlab-org/gitlab/-/issues/7006
-  before_script:
-    - rm -f pyproject.toml
+
+# Included ....................................................................
+
+# gemnasium-python-dependency_scanning:  # FIXME
+#   stage: check
+#   # Workaround for https://gitlab.com/gitlab-org/gitlab/-/issues/7006
+#   before_script:
+#     - rm -f pyproject.toml
 
 bandit-sast:
+  stage: check
+
+semgrep-sast:
   stage: check
 
 license_scanning:
@@ -98,6 +104,12 @@ test:py39:
   extends: test:py36
   script:
     - tox -e py39
+
+test:py310:
+  image: python:3.10-rc
+  extends: test:py36
+  script:
+    - tox -e py310
 
 
 # Test again using the lower bound of the python dependencies .................
@@ -143,6 +155,12 @@ test:py39_min:
   image: python:3.9
   script:
     - tox -e py39-minimal_deps
+
+test:py310_min:
+  extends: test:py36_min
+  image: python:3.10-rc  # NOTE Drop -rc once fully released
+  script:
+    - tox -e py310-minimal_deps
 
 
 # Build -----------------------------------------------------------------------
