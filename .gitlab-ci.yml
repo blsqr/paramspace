@@ -158,7 +158,7 @@ test:py39_min:
 
 test:py310_min:
   extends: test:py36_min
-  image: python:3.10-rc
+  image: python:3.10-rc  # NOTE Drop -rc once fully released
   script:
     - tox -e py310-minimal_deps
 

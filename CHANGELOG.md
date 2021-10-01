@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.5.9 (WIP)
+- !63 extends the CI/CD tests to include Python 3.10 environments
+
 ## v2.5.8
 - !65 includes minor improvements:
     - slightly improves performance by removing unnecessary log messages
