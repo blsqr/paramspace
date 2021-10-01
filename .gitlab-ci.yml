@@ -17,7 +17,7 @@ workflow:
 
 include:
   - template: SAST.gitlab-ci.yml
-  - template: Dependency-Scanning.gitlab-ci.yml
+  # - template: Dependency-Scanning.gitlab-ci.yml  # aka gemnasium: not working
   - template: Security/License-Scanning.gitlab-ci.yml
 
 variables:
@@ -55,13 +55,19 @@ check:hooks:
   script:
     - pre-commit run --all-files --verbose --show-diff-on-failure
 
-gemnasium-python-dependency_scanning:
-  stage: check
-  # Workaround for https://gitlab.com/gitlab-org/gitlab/-/issues/7006
-  before_script:
-    - rm -f pyproject.toml
+
+# Included ....................................................................
+
+# gemnasium-python-dependency_scanning:  # FIXME
+#   stage: check
+#   # Workaround for https://gitlab.com/gitlab-org/gitlab/-/issues/7006
+#   before_script:
+#     - rm -f pyproject.toml
 
 bandit-sast:
+  stage: check
+
+semgrep-sast:
   stage: check
 
 license_scanning:
