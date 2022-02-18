@@ -106,7 +106,7 @@ test:py39:
     - tox -e py39
 
 test:py310:
-  image: python:3.10-rc
+  image: python:3.10
   extends: test:py36
   script:
     - tox -e py310
@@ -116,7 +116,8 @@ test:py310:
 # These are only carried out when:
 #   - The branch name starts with `prepare-release`
 #   - The MR title contains "prepare release" (not case-sensitive)
-#   - On master and for tags
+#   - On master and for tags (currently deactivated)
+#   - If the `RUN_MINIMAL_TESTS` flag is set to `true`
 
 test:py36_min:
   image: python:3.6
@@ -124,12 +125,11 @@ test:py36_min:
   extends:
     - .reports
   rules:
-    - if: '$CI_COMMIT_BRANCH == "master" ||
-           $CI_COMMIT_BRANCH =~ /^release/ ||
-           $CI_COMMIT_TAG'
+    # - if: '$CI_COMMIT_BRANCH == "master" ||
+    #        $CI_COMMIT_BRANCH =~ /^release/ ||
+    #        $CI_COMMIT_TAG'
     - if: '$CI_COMMIT_BRANCH =~ /^prepare-release/i ||
            $CI_MERGE_REQUEST_TITLE =~ /.*prepare\srelease.*/i'
-      allow_failure: false
     - if: '$RUN_MINIMAL_TESTS == "true"'
     - when: never
   allow_failure: true
@@ -158,7 +158,7 @@ test:py39_min:
 
 test:py310_min:
   extends: test:py36_min
-  image: python:3.10-rc  # NOTE Drop -rc once fully released
+  image: python:3.10
   script:
     - tox -e py310-minimal_deps
 
