@@ -267,7 +267,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
             tuple: coordinates associated with the indices of this dimension
         """
         return tuple(
-            [c if not isinstance(c, Masked) else c.value for c in self.coords]
+            c if not isinstance(c, Masked) else c.value for c in self.coords
         )
 
     @property
@@ -500,10 +500,8 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         # Recursive branch
         if isinstance(obj, list):
             return tuple(
-                [
-                    o if not isinstance(o, list) else self._rec_tuple_conv(o)
-                    for o in obj
-                ]
+                o if not isinstance(o, list) else self._rec_tuple_conv(o)
+                for o in obj
             )
 
         # End of recursion
@@ -680,7 +678,7 @@ class ParamDim(ParamDimBase):
         """Returns a tuple representation of the current mask"""
         if self._mask_cache is None:
             self._mask_cache = tuple(
-                [isinstance(v, Masked) for v in self.values]
+                isinstance(v, Masked) for v in self.values
             )
         return self._mask_cache
 
@@ -747,7 +745,7 @@ class ParamDim(ParamDimBase):
         self._mask_cache = None
 
         # Now build a new values container and store as attribute
-        self._vals = tuple([set_val(m, v) for m, v in zip(mask, self.values)])
+        self._vals = tuple(set_val(m, v) for m, v in zip(mask, self.values))
 
         # Mask the default value, if all other values are masked
         self._default = set_val(not all(mask), self.default)

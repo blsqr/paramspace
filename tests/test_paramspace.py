@@ -842,7 +842,7 @@ def test_basic_iteration(small_psp, seq_psp):
 
     # Check the dry run
     psp.reset()
-    snos = list([s for s in psp.iterator(with_info="state_no", omit_pt=True)])
+    snos = list(s for s in psp.iterator(with_info="state_no", omit_pt=True))
     assert snos[:4] == [31, 32, 33, 34]
 
     # Check that the counts match using a helper function . . . . . . . . . . .
