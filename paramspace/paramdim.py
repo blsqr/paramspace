@@ -2,6 +2,7 @@
 can be assumed. While they provide iteration abilities on their own, they make
 sense mostly to use as objects in a dict that is converted to a ParamSpace.
 """
+
 import abc
 import copy
 import logging
@@ -10,7 +11,6 @@ from typing import Hashable, Iterable, List, Sequence, Tuple, Union
 
 import numpy as np
 
-# Get logger
 log = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------

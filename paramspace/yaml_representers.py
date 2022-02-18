@@ -1,10 +1,10 @@
 """This module implements custom YAML representer functions"""
+
 import logging
 from typing import Iterable, Union
 
 import ruamel.yaml
 
-# Get logger
 log = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------

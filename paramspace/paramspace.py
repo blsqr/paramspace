@@ -1,4 +1,5 @@
 """Implementation of the ParamSpace class"""
+
 import collections
 import copy
 import logging
@@ -15,7 +16,6 @@ import xarray as xr
 from .paramdim import CoupledParamDim, Masked, ParamDim, ParamDimBase
 from .tools import recursive_collect, recursive_replace, recursive_update
 
-# Get logger
 log = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------

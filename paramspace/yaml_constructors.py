@@ -17,7 +17,6 @@ from .paramdim import CoupledParamDim, ParamDim
 from .paramspace import ParamSpace
 from .tools import create_indices
 
-# Get logger
 log = logging.getLogger(__name__)
 
 

@@ -6,12 +6,12 @@ Attributes:
     SKIP: A global :py:class:`paramspace.tools.Skip` object to signify a Skip
         operation in the ``recursive_*`` functions. Not supported everywhere.
 """
+
 import collections
 import logging
 import warnings
 from typing import Callable, Iterator, List, Mapping, Sequence, Tuple, Union
 
-# Get logger
 log = logging.getLogger(__name__)
 
 
