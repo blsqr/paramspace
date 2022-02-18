@@ -11,7 +11,6 @@ from typing import Any, Dict, Generator, List, Sequence, Set, Tuple, Union
 
 import numpy as np
 import numpy.ma
-import xarray as xr
 
 from .paramdim import CoupledParamDim, Masked, ParamDim, ParamDimBase
 from .tools import recursive_collect, recursive_replace, recursive_update
@@ -1116,7 +1115,7 @@ class ParamSpace:
     # Mapping .................................................................
 
     @property
-    def state_map(self) -> xr.DataArray:
+    def state_map(self) -> "xr.DataArray":
         """Returns an inverse mapping, i.e. an n-dimensional array where the
         indices along the dimensions relate to the states of the parameter
         dimensions and the content of the array relates to the state numbers.
@@ -1131,6 +1130,8 @@ class ParamSpace:
             RuntimeError: If -- for an unknown reason -- the iteration did not
                 cover all of the state mapping. Should not occur.
         """
+        import xarray as xr
+
         # Check if the cached result can be returned
         if self._smap is not None:
             log.debug("Returning previously cached inverse mapping ...")
@@ -1168,7 +1169,7 @@ class ParamSpace:
         return self._smap
 
     @property
-    def active_state_map(self) -> xr.DataArray:
+    def active_state_map(self) -> "xr.DataArray":
         """Returns a subset of the state map, where masked coordinates are
         removed and only the active coordinates are present.
 
@@ -1384,7 +1385,7 @@ class ParamSpace:
                 slice defaults to ``loc``-behaviour.
 
         Raises:
-            ValueError: Description
+            ValueError: If totally masking a parameter dimension
         """
 
         def calc_mask(name, *, idx=None, loc=None, **tol_kwargs) -> List[bool]:
@@ -1393,6 +1394,8 @@ class ParamSpace:
 
             The ``tol_kwargs`` are passed on to ``np.isclose`` for cases where
             a coordinate is selected by ``loc``.
+
+            TODO This should be outsourced!
             """
 
             def contains_close(a, seq, **tol_kwargs) -> bool:
@@ -1402,6 +1405,7 @@ class ParamSpace:
                 For non-numeric types, the regular ``__contains__`` is used.
 
                 NOTE: The decision is made via the type of ``a``
+
                 """
                 if isinstance(a, (float, int)):
                     try:
