@@ -1,4 +1,5 @@
 """Implementation of the ParamSpace class"""
+
 import collections
 import copy
 import logging
@@ -10,12 +11,10 @@ from typing import Any, Dict, Generator, List, Sequence, Set, Tuple, Union
 
 import numpy as np
 import numpy.ma
-import xarray as xr
 
 from .paramdim import CoupledParamDim, Masked, ParamDim, ParamDimBase
 from .tools import recursive_collect, recursive_replace, recursive_update
 
-# Get logger
 log = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
@@ -574,10 +573,8 @@ class ParamSpace:
             Tuple[int]: The iterator shape
         """
         return tuple(
-            [
-                len(pdim) if pdim.mask is not True else 1
-                for pdim in self.dims.values()
-            ]
+            len(pdim) if pdim.mask is not True else 1
+            for pdim in self.dims.values()
         )
 
     @property
@@ -587,7 +584,7 @@ class ParamSpace:
         Returns:
             Tuple[int]: The shape of the fully unmasked iterator
         """
-        return tuple([pdim.num_values for pdim in self.dims.values()])
+        return tuple(pdim.num_values for pdim in self.dims.values())
 
     @property
     def states_shape(self) -> Tuple[int]:
@@ -597,7 +594,7 @@ class ParamSpace:
         Returns:
             Tuple[int]: The shape tuple
         """
-        return tuple([pdim.num_states for pdim in self.dims.values()])
+        return tuple(pdim.num_states for pdim in self.dims.values())
 
     @property
     def max_state_no(self) -> int:
@@ -609,7 +606,7 @@ class ParamSpace:
     @property
     def state_vector(self) -> Tuple[int]:
         """Returns a tuple of all current parameter dimension states"""
-        return tuple([s.state for s in self.dims.values()])
+        return tuple(s.state for s in self.dims.values())
 
     @state_vector.setter
     def state_vector(self, vec: Tuple[int]):
@@ -856,7 +853,7 @@ class ParamSpace:
             ]
 
         elif mode in ["both"]:
-            max_name_len = max([len(n) for n in self.dims])
+            max_name_len = max(len(n) for n in self.dims)
             lines = [
                 "{name:>{w:d}} :  {path:}".format(
                     name=name,
@@ -1118,7 +1115,7 @@ class ParamSpace:
     # Mapping .................................................................
 
     @property
-    def state_map(self) -> xr.DataArray:
+    def state_map(self) -> "xr.DataArray":
         """Returns an inverse mapping, i.e. an n-dimensional array where the
         indices along the dimensions relate to the states of the parameter
         dimensions and the content of the array relates to the state numbers.
@@ -1133,6 +1130,8 @@ class ParamSpace:
             RuntimeError: If -- for an unknown reason -- the iteration did not
                 cover all of the state mapping. Should not occur.
         """
+        import xarray as xr
+
         # Check if the cached result can be returned
         if self._smap is not None:
             log.debug("Returning previously cached inverse mapping ...")
@@ -1170,7 +1169,7 @@ class ParamSpace:
         return self._smap
 
     @property
-    def active_state_map(self) -> xr.DataArray:
+    def active_state_map(self) -> "xr.DataArray":
         """Returns a subset of the state map, where masked coordinates are
         removed and only the active coordinates are present.
 
@@ -1215,7 +1214,7 @@ class ParamSpace:
             vec = np.argwhere(self.state_map.data == state_no)[0]
 
             # Convert entries to integers, as they might be np.int64 ...
-            return tuple([int(idx) for idx in vec])
+            return tuple(int(idx) for idx in vec)
 
         except IndexError as err:
             raise ValueError(
@@ -1283,7 +1282,7 @@ class ParamSpace:
         log.debug("  multipliers:  %s", mults)
 
         # Now, calculate the state number
-        state_no = sum([(s * m) for s, m in zip(state_vector, mults)])
+        state_no = sum((s * m) for s, m in zip(state_vector, mults))
         log.debug("  state no:     %s", state_no)
 
         return state_no
@@ -1386,7 +1385,7 @@ class ParamSpace:
                 slice defaults to ``loc``-behaviour.
 
         Raises:
-            ValueError: Description
+            ValueError: If totally masking a parameter dimension
         """
 
         def calc_mask(name, *, idx=None, loc=None, **tol_kwargs) -> List[bool]:
@@ -1395,6 +1394,8 @@ class ParamSpace:
 
             The ``tol_kwargs`` are passed on to ``np.isclose`` for cases where
             a coordinate is selected by ``loc``.
+
+            TODO This should be outsourced!
             """
 
             def contains_close(a, seq, **tol_kwargs) -> bool:
@@ -1404,6 +1405,7 @@ class ParamSpace:
                 For non-numeric types, the regular ``__contains__`` is used.
 
                 NOTE: The decision is made via the type of ``a``
+
                 """
                 if isinstance(a, (float, int)):
                     try:

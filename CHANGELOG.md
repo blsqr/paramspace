@@ -4,6 +4,7 @@
 
 ## v2.5.9 (WIP)
 - !63 extends the CI/CD tests to include Python 3.10 environments
+- !67 delays the xarray import to reduce the overall import time of the package
 
 ## v2.5.8
 - !65 includes minor improvements:
