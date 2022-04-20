@@ -560,9 +560,9 @@ def test_dim_access(basic_psp, adv_psp, seq_psp):
 def test_volume(small_psp, basic_psp, adv_psp, seq_psp):
     """Asserts that the volume calculation is correct"""
     assert small_psp.volume == 2 * 3 * 5
-    assert basic_psp.volume == 3 ** 6
-    assert adv_psp.volume == 3 ** 6
-    assert seq_psp.volume == 3 ** 7
+    assert basic_psp.volume == 3**6
+    assert adv_psp.volume == 3**6
+    assert seq_psp.volume == 3**7
 
     p = ParamSpace(
         dict(
@@ -1077,7 +1077,7 @@ def test_subspace(small_psp, basic_psp):
     assert psp.volume == 2 * 3 * 5
 
     basic_psp.activate_subspace()
-    assert basic_psp.volume == 3 ** 6
+    assert basic_psp.volume == 3**6
 
     # Test the error messages
     # Bad argument combination
@@ -1171,7 +1171,7 @@ def test_subspace_idx_paths(seq_psp):
     can also be reliably selected
     """
     psp = seq_psp
-    assert psp.volume == 3 ** 7
+    assert psp.volume == 3**7
 
     # Select subspace via location
     psp.activate_subspace(**{".s.0": 1}, dds2=[1, 2])

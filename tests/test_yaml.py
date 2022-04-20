@@ -341,9 +341,9 @@ def test_correctness(yamlstrs):
     assert utils["truediv"] == operator.truediv(*[3, 2])
     assert utils["floordiv"] == operator.floordiv(*[3, 2])
     assert utils["mod"] == operator.mod(*[3, 2])
-    assert utils["pow"] == 2 ** 4
-    assert utils["pow_mod"] == 2 ** 4 % 3 == pow(2, 4, 3)
-    assert utils["pow_mod2"] == 2 ** 4 % 3 == pow(2, 4, 3)
+    assert utils["pow"] == 2**4
+    assert utils["pow_mod"] == 2**4 % 3 == pow(2, 4, 3)
+    assert utils["pow_mod2"] == 2**4 % 3 == pow(2, 4, 3)
     assert utils["not"] == operator.not_(*[True])
     assert utils["and"] == operator.and_(*[True, False])
     assert utils["or"] == operator.or_(*[True, False])
