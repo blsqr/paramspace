@@ -2,6 +2,15 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.6.0 *(work in progress)*
+### Features and Improvements
+...
+
+### Internal
+- !71 drops version bounds for requirements, making dependency resolution easier.
+  This is also meant to promote always working with the latest package versions.
+
+
 ## v2.5.9
 - !63 extends the CI/CD tests to include Python 3.10 environments
 - !67 delays the xarray import to reduce the overall import time of the package
