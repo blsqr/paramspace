@@ -173,7 +173,10 @@ html_theme_options = {
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = []
+html_static_path = ["_static"]
+
+# Custom CSS files, assumed one of `html_static_path`
+html_css_files = ["css/custom.css"]
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -185,6 +188,12 @@ html_static_path = []
 #
 # html_sidebars = {}
 
+
+# Title, Logo, Favicon
+#
+html_title = "paramspace docs"
+html_logo = "_static/img/hypercube_pd.svg"
+html_favicon = "_static/img/hypercube_pd_480.png"
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
