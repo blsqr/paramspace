@@ -8,6 +8,7 @@ constructors.
 """
 import copy as _copy
 import operator as _operator
+import os as _os
 from functools import partial as _partial
 from functools import reduce as _reduce
 
@@ -101,6 +102,9 @@ _util_constructors_no_unpack = [
     ("!int", lambda v: int(float(v))),
     ("!round", lambda v: round(float(v))),
     #
+    # working with paths
+    ("!expanduser", _os.path.expanduser),
+    #
     # misc
     ("!deepcopy", _copy.deepcopy),
 ]
@@ -128,11 +132,16 @@ _util_constructors_unpack = [
     ("!contains", _operator.contains),
     ("!concat", lambda *l: _reduce(_operator.concat, l, [])),
     ("!format", lambda fstr, *a, **k: fstr.format(*a, **k)),
+    ("!join", lambda jstr, elements: jstr.join(elements)),
+    ("!split", lambda s, *a: s.split(*a)),
     #
     # numpy
     ("!arange", lambda *a: [float(f) for f in np.arange(*a)]),
     ("!linspace", lambda *a: [float(f) for f in np.linspace(*a)]),
     ("!logspace", lambda *a: [float(f) for f in np.logspace(*a)]),
+    #
+    # working with paths
+    ("!joinpath", _os.path.join),
     #
     # misc
     (

@@ -18,11 +18,14 @@ workflow:
 include:
   - template: SAST.gitlab-ci.yml
   - template: Security/License-Scanning.gitlab-ci.yml
-  # - template: Dependency-Scanning.gitlab-ci.yml  # aka gemnasium: not working
+  - template: Dependency-Scanning.gitlab-ci.yml
 
 variables:
   # The GitLab Pages URL at which build artifacts can be made available
   PAGES_URL: https://blsqr.gitlab.io/-/paramspace
+
+  # Whether to run all jobs in the test stage
+  RUN_ALL_CHECKS: "false"
 
 
 # -- Hidden Jobs --------------------------------------------------------------
@@ -53,6 +56,13 @@ variables:
         path: coverage.xml
       junit: report.xml
 
+.optional-checks: &optional_checks
+  stage: check
+  allow_failure: true
+  rules:
+    - if: ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH) && $RUN_ALL_CHECKS
+
+
 
 # Checks ----------------------------------------------------------------------
 
@@ -64,20 +74,19 @@ check:hooks:
   script:
     - pre-commit run --all-files --verbose --show-diff-on-failure
 
+license_scanning:
+  <<: *optional_checks
+
 bandit-sast:
-  stage: check
+  <<: *optional_checks
 
 semgrep-sast:
-  stage: check
+  <<: *optional_checks
 
-license_scanning:
-  stage: check
+gemnasium-python-dependency_scanning:
+  <<: *optional_checks
 
-# gemnasium-python-dependency_scanning:  # FIXME
-#   stage: check
-#   # Workaround for https://gitlab.com/gitlab-org/gitlab/-/issues/7006
-#   before_script:
-#     - rm -f pyproject.toml
+
 
 # Tests -----------------------------------------------------------------------
 

@@ -6,9 +6,14 @@ Supported YAML Tags
 YAML allows defining custom so-called tags which can be distinguished during loading and serialization of objects.
 :py:mod:`paramspace` makes heavy use of this possibility, as it greatly simplifies the definition and usage of configuration files.
 
+.. contents::
+    :local:
+    :depth: 2
 
-:py:mod:`paramspace`-related tags
----------------------------------
+----
+
+Parameter space tags
+--------------------
 The :py:mod:`paramspace.yaml` module implements constructors and representers for the following classes:
 
 * ``!pspace`` constructs a :py:class:`~paramspace.paramspace.ParamSpace`
@@ -35,13 +40,25 @@ Having these available while specifying configurations can make the definition o
     Don't overdo it.
     Configuration files should remain easy to read.
 
-The tags shown below call the equivalent Python builtin or the operators defined in the ``operator`` Python module.
+The tags shown below call the equivalent Python builtin or the operators defined in the :py:mod`operator` module.
 Example:
 
 .. literalinclude:: ../../tests/test_yaml.py
     :language: yaml
     :start-after: # START -- utility-yaml-tags
     :end-before: # END ---- utility-yaml-tags
+    :dedent: 14
+
+
+Reading environment variables and handling paths
+------------------------------------------------
+Sometimes, parameters depend on the machine that a program is running on.
+To not have to load certain variables manually, paramspace supports loading environment variables via :py:data:`os.environ` and simple path manipulations using :py:func:`os.path.expanduser` and :py:func:`os.path.join`.
+
+.. literalinclude:: ../../tests/test_yaml.py
+    :language: yaml
+    :start-after: # START -- envvars-and-path-handling
+    :end-before: # END ---- envvars-and-path-handling
     :dedent: 14
 
 
