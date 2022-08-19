@@ -120,6 +120,7 @@ test:py310:
 # Build -----------------------------------------------------------------------
 
 build:docs:
+  image: python:3.8  # same as in .readthedocs.yml, where py38 is the highest
   stage: build
   needs: []
   allow_failure: true
