@@ -3,24 +3,21 @@ from setuptools import setup
 
 # Dependencies for paramspace itself
 install_deps = [
-    "numpy >= 1.19",
-    "xarray >= 0.16",
-    "ruamel.yaml >= 0.16.12",
+    "numpy",
+    "xarray",
+    "ruamel.yaml",
 ]
-
-# Derive an extra that uses strict versions; allows testing for these via tox
-minimal_install_deps = [dep.replace(">=", "==") for dep in install_deps]
 
 # Dependencies for executing tests
 test_deps = [
-    "tox >= 3.1",
-    "pytest >= 3.4",
-    "pytest-cov >= 2.6",
+    "tox",
+    "pytest",
+    "pytest-cov",
 ]
 
 # Dependencies for documentation building
 doc_deps = [
-    "sphinx >= 3.0",
+    "sphinx == 4.*",
     "sphinx_rtd_theme",
 ]
 
@@ -87,6 +84,9 @@ Learn More
 For more information, visit the project page and have a look at the README:
 https://gitlab.com/blsqr/paramspace
 
+For use of paramspace, see `utopya <https://gitlab.com/utopia-project/utopya>`_
+or the `Utopia Project <https://utopia-project.org/>`_.
+
 """
 
 
@@ -146,7 +146,6 @@ setup(
     test_suite="tox",
     extras_require=dict(
         test=test_deps,
-        minimal=minimal_install_deps,
         dev=dev_deps,
         doc=doc_deps,
     ),
