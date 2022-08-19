@@ -183,15 +183,37 @@ def yamlstrs() -> dict:
                   mean: 1.632
                   std:  0.026
 
+              # Joining and splitting strings
+              joined_words: !join    # -> "foo | bar | baz"
+                - " | "
+                - [foo, bar, baz]
+
+              words: !split          # -> [there, are, many, words, in this, sentence]
+                - there are many words in this sentence
+                - " "
+                # - 3                # optional `maxsplit` argument
+              # END ---- utility-yaml-tags
+
+
+              # NOTE Need to choose env. variables that are available in CI
+              # START -- envvars-and-path-handling
               # Reading environment variables, optionally with fallback
-              PATH:           !getenv PATH   # fails if variable is missing
-              username:       !getenv [USER, "unknown_user"]
-              home_directory: !getenv [HOME, "/"]
+              PATH:             !getenv PATH   # fails if variable is missing
+              username:         !getenv [USER, "unknown_user"]
+              home_directory:   !getenv [HOME, "/"]
 
               # Expanding a path containing `~`
-              path_in_home:   !expanduser ~/some/path
-              # END ---- utility-yaml-tags
-              # NOTE Need to choose env. variables that are available in CI
+              some_user_path:   !expanduser ~/some/path
+
+              # Joining paths
+              some_joined_path: !joinpath      # -> "~/foo/bar/../spam.txt"
+                - "~"
+                - foo
+                - bar
+                - ..
+                - spam.txt
+              # END ---- envvars-and-path-handling
+
 
               # START -- rec-update-yaml-tag
               some_map: &some_map
@@ -365,6 +387,16 @@ def test_correctness(yamlstrs):
     assert utils["format1"] == "foo is not bar"
     assert utils["format2"] == "fish: spam"
     assert utils["format3"] == "results: 1.63 ± 0.03"
+    assert utils["joined_words"] == "foo | bar | baz"
+    assert utils["words"] == [
+        "there",
+        "are",
+        "many",
+        "words",
+        "in",
+        "this",
+        "sentence",
+    ]
 
     assert utils["list1"] == [0, 2, 4, 6, 8]
     assert utils["list2"] == [3, 6, 9, 100]
@@ -386,7 +418,7 @@ def test_correctness(yamlstrs):
         utils["some_map"], utils["some_other_map"]
     )
 
-    assert utils["path_in_home"] == os.path.expanduser("~/some/path")
+    assert utils["some_user_path"] == os.path.expanduser("~/some/path")
 
     assert utils["PATH"] == os.environ["PATH"]
     assert utils["username"] == os.environ.get("USER", "unknown_user")
