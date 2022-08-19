@@ -73,11 +73,12 @@ def setup(app):
 # -- Project information -----------------------------------------------------
 
 project = "paramspace"
-copyright = "2017 - 2020, Yunus Sevinchan"
+copyright = "2017 - 2022, Yunus Sevinchan"
 author = "Yunus Sevinchan"
 
 # The short X.Y version
 version = find_version("..", "paramspace", "__init__.py")
+
 # The full version, including alpha/beta/rc tags
 release = find_version("..", "paramspace", "__init__.py")
 
@@ -86,20 +87,29 @@ release = find_version("..", "paramspace", "__init__.py")
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-needs_sphinx = "3.0"
+needs_sphinx = "4.5"
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
-    "sphinx_rtd_theme",
     "sphinx.ext.autodoc",
+    "sphinx.ext.autodoc.typehints",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.doctest",
     "sphinx.ext.todo",
     "sphinx.ext.coverage",
     "sphinx.ext.mathjax",
     "sphinx.ext.ifconfig",
     "sphinx.ext.viewcode",
-    ### Additional extensions
-    "sphinx.ext.napoleon",  # pre-process Google-style Python docstrings
+    #
+    ### Additional extensions...
+    #   ... to allow toggling content
+    "sphinx_togglebutton",
+    #   ... to pre-process Google-style Python docstrings
+    "sphinx.ext.napoleon",
+    #   ... to have the IPython directive available for code examples
+    "IPython.sphinxext.ipython_console_highlighting",
+    "IPython.sphinxext.ipython_directive",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -119,7 +129,7 @@ master_doc = "index"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -144,13 +154,21 @@ autodoc_default_options = {
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "sphinx_book_theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    "repository_url": "https://gitlab.com/blsqr/paramspace",
+    "use_repository_button": True,
+    "use_issues_button": True,
+    "use_edit_page_button": False,  # NOTE Not working with GitLab repos yet
+    "use_download_button": True,
+    "use_fullscreen_button": False,
+}
+
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -226,7 +244,7 @@ texinfo_documents = [
         "paramspace Documentation",
         author,
         "paramspace",
-        "One line description of project.",
+        "Dictionary-based, multi-dimensional parameter space iteration",
         "Miscellaneous",
     ),
 ]
@@ -280,16 +298,55 @@ napoleon_include_special_with_doc = True
 # documentation. False to fall back to Sphinx’s default behavior. Default: True
 
 
+# -- IPython Configuration ----------------------------------------------------
+# See https://ipython.readthedocs.io/en/stable/sphinxext.html
+
+# NOTE Using default values.
+
+
+# -- Intersphinx --------------------------------------------------------------
+
+# Mappings can be looked up from the following GitHub gist:
+#   https://gist.github.com/bskinn/0e164963428d4b51017cebdb6cda5209
+#
+# Further documentation:
+#   https://docs.readthedocs.io/en/stable/guides/intersphinx.html
+#   https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html
+#
+# In case reference targeting fails, consider using the sphobjinv package
+#   https://github.com/bskinn/sphobjinv
+
+# fmt: off
+intersphinx_mapping = {
+    #
+    # Third-party docs
+    "python":       ("https://docs.python.org/3/", None),
+    "sphinx":       ("https://www.sphinx-doc.org/en/master/", None),
+    "numpy":        ("https://numpy.org/doc/stable/", None),
+    "xarray":       ("https://docs.xarray.dev/en/stable/", None),
+    "pytest":       ("https://pytest.org/en/stable/", None),
+    # "ruamel.yaml":  ("https://yaml.readthedocs.io/en/latest/", None),# broken
+}
+# fmt: on
+
+
 # -- Nitpicky Configuration ---------------------------------------------------
 
 # Be nitpicky about warnings, to show all references where the target could
 # not be found
 nitpicky = True
+nitpick_ignore = []
+nitpick_ignore_regex = []
 
 # ... however, we need to exclude quite a lot, so we load the to-be-ignored
 # references from a file. This is a list of (type, target) tuples, both entries
-# being strings, e.g. `('py:func', 'int')`
-nitpick_ignore = []
+# being strings, e.g. `('py:func', 'int')`.
+#
+# The individual entries can also be regex patterns. To add an entry to the
+# regex list instead of the non-regex list, prefix a line with "re: ", e.g.:
+#
+#       re: py:func ^int$
+#
 # See the following page for more information and syntax:
 #  www.sphinx-doc.org/en/master/usage/configuration.html#confval-nitpick_ignore
 
@@ -298,5 +355,10 @@ for line in open(".nitpick-ignore"):
     if not line or line.startswith("#"):
         continue
 
-    reftype, target = line.split(" ", 1)
-    nitpick_ignore.append((reftype, target.strip()))
+    if line.startswith("re: "):
+        _, reftype, target = line.split(" ", 2)
+        nitpick_ignore_regex.append((reftype, target.strip()))
+
+    else:
+        reftype, target = line.split(" ", 1)
+        nitpick_ignore.append((reftype, target.strip()))

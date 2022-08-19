@@ -6,7 +6,8 @@ This is the documentation of the :py:mod:`paramspace` package.
 
 It currently is very much *Work in Progress*; in its current state, it only contains an API reference.
 
-In the meantime, refer to the `README on the project page <https://gitlab.com/blsqr/paramspace#the-paramspace-package>`_ for installation instructions, example usage, and development information.
+In the meantime, refer to the `README on the project page <https://gitlab.com/blsqr/paramspace>`_ for installation instructions, example usage, and development information.
+For a software package where :py:mod:`paramspace` is in use, see `utopya <https://gitlab.com/utopia-project/utopya>`_ and the `Utopia project <https://utopia-project.org/>`_.
 
 .. note::
 

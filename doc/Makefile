@@ -3,7 +3,7 @@
 # You can set these variables from the command line
 # For available options, see:
 # 	http://www.sphinx-doc.org/en/stable/man/sphinx-build.html
-SPHINXOPTS    = -W --keep-going -w build_errors.log
+SPHINXOPTS    = -W --keep-going -w build_errors.log -T
 SPHINXBUILD   = sphinx-build
 SOURCEDIR     = .
 BUILDDIR      = _build
@@ -18,6 +18,15 @@ help:
 doc:
 	make html
 	@echo "Built HTML documentation."
+
+build_and_check:
+	make html
+	@echo ""
+	@echo ""
+	make linkcheck
+	@echo ""
+	@echo ""
+	make doctest
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).

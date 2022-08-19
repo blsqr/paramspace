@@ -18,7 +18,9 @@ test_deps = [
 # Dependencies for documentation building
 doc_deps = [
     "sphinx == 4.*",
-    "sphinx_rtd_theme",
+    "sphinx-book-theme == 0.3.*",
+    "sphinx-togglebutton",
+    "ipython",
 ]
 
 # Dependencies for development, code maintenance, ...
