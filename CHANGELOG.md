@@ -4,11 +4,15 @@
 
 ## v2.6.0 *(work in progress)*
 ### Features and Improvements
-...
+- !74 adds a number of new YAML tags:
+    - Splitting and joining strings via `!split` and `!join`
+    - Handling paths via `!expanduser` and `!joinpath`
 
 ### Internal
+- The repository now uses `main` as its default branch.
 - !71 drops version bounds for requirements, making dependency resolution easier.
   This is also meant to promote always working with the latest package versions.
+- !71 uses a more modern theme for the documentation.
 
 
 ## v2.5.9
