@@ -13,7 +13,7 @@ formats: all
 
 # Optionally, set the Python version and requirements to build the docs
 python:
-  version: 3.8
+  version: 3.10
   install:
     - method: pip
       path: .

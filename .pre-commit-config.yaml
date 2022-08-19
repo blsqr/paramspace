@@ -6,7 +6,7 @@ repos:
 
   # Run if desiring to make use of newer language features
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.31.0
+    rev: v2.37.3
     hooks:
     - id: pyupgrade
       name: upgrade python syntax
@@ -34,7 +34,7 @@ repos:
         args: [--project=paramspace]
 
   - repo: https://github.com/psf/black
-    rev: 22.3.0
+    rev: 22.6.0
     hooks:
       - id: black
         name: black code formatting
@@ -46,7 +46,7 @@ repos:
         name: check RST backticks
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.1.0
+    rev: v4.3.0
     hooks:
       - id: check-yaml
         name: check YAML
