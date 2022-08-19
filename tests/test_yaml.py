@@ -1,6 +1,7 @@
 """Tests the yaml constructors"""
 import io
 import operator
+import os
 
 import numpy as np
 import pytest
@@ -186,6 +187,9 @@ def yamlstrs() -> dict:
               PATH:           !getenv PATH   # fails if variable is missing
               username:       !getenv [USER, "unknown_user"]
               home_directory: !getenv [HOME, "/"]
+
+              # Expanding a path containing `~`
+              path_in_home:   !expanduser ~/some/path
               # END ---- utility-yaml-tags
               # NOTE Need to choose env. variables that are available in CI
 
@@ -381,3 +385,9 @@ def test_correctness(yamlstrs):
     assert utils["merged"] == recursive_update(
         utils["some_map"], utils["some_other_map"]
     )
+
+    assert utils["path_in_home"] == os.path.expanduser("~/some/path")
+
+    assert utils["PATH"] == os.environ["PATH"]
+    assert utils["username"] == os.environ.get("USER", "unknown_user")
+    assert utils["home_directory"] == os.environ.get("HOME", "/")

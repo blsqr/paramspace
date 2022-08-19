@@ -8,6 +8,7 @@ constructors.
 """
 import copy as _copy
 import operator as _operator
+import os as _os
 from functools import partial as _partial
 from functools import reduce as _reduce
 
@@ -103,6 +104,7 @@ _util_constructors_no_unpack = [
     #
     # misc
     ("!deepcopy", _copy.deepcopy),
+    ("!expanduser", _os.path.expanduser),
 ]
 _util_constructors_unpack = [
     # from operators module
