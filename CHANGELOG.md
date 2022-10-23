@@ -13,6 +13,7 @@
 - !71 drops version bounds for requirements, making dependency resolution easier.
   This is also meant to promote always working with the latest package versions.
 - !71 uses a more modern theme for the documentation.
+- !75 extends the CI/CD tests to include Python 3.11 environments
 
 
 ## v2.5.9
