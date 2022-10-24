@@ -97,10 +97,10 @@ def test_properties(various_pdims):
     vpd = various_pdims
 
     # Whether the values are write-protected
-    with pytest.raises(AttributeError, match="can't set attribute"):
+    with pytest.raises(AttributeError):
         vpd["one"].values = 0
 
-    with pytest.raises(AttributeError, match="can't set attribute"):
+    with pytest.raises(AttributeError):
         vpd["two"].values = [1, 2, 3]
 
     # Assert immutability of values
