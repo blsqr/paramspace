@@ -77,9 +77,6 @@ check:hooks:
 license_scanning:
   <<: *optional_checks
 
-bandit-sast:
-  <<: *optional_checks
-
 semgrep-sast:
   <<: *optional_checks
 
