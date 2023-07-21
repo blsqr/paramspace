@@ -3,9 +3,10 @@ from setuptools import setup
 
 # Dependencies for paramspace itself
 install_deps = [
-    "numpy",
+    "numpy < 2.0",
     "xarray",
     "ruamel.yaml",
+    "yayaml",
 ]
 
 # Dependencies for executing tests
@@ -94,6 +95,7 @@ or the `Utopia Project <https://utopia-project.org/>`_.
 
 # .............................................................................
 
+
 # A function to extract version number from __init__.py
 def find_version(*file_paths) -> str:
     """Tries to extract a version from the given path sequence"""
@@ -130,6 +132,7 @@ setup(
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: BSD License",
+        #
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.6",
@@ -138,6 +141,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        #
         "Topic :: Utilities",
         "Typing :: Typed",
     ],
@@ -152,5 +156,5 @@ setup(
         dev=dev_deps,
         doc=doc_deps,
     ),
-    data_files=[("", ["LICENSE"])],
+    data_files=[("", ["LICENSE", "README.md", "CHANGELOG.md"])],
 )

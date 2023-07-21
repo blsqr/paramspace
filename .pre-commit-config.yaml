@@ -6,7 +6,7 @@ repos:
 
   # Run if desiring to make use of newer language features
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.37.3
+    rev: v3.9.0
     hooks:
     - id: pyupgrade
       name: upgrade python syntax
@@ -25,7 +25,7 @@ repos:
 
   # Default pre-commit hooks ..................................................
   - repo: https://github.com/timothycrosley/isort
-    rev: 5.10.1
+    rev: 5.12.0
     hooks:
       - id: isort
         name: sort imports
@@ -34,19 +34,19 @@ repos:
         args: [--project=paramspace]
 
   - repo: https://github.com/psf/black
-    rev: 22.6.0
+    rev: 23.7.0
     hooks:
       - id: black
         name: black code formatting
 
   - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.9.0
+    rev: v1.10.0
     hooks:
       - id: rst-backticks
         name: check RST backticks
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.3.0
+    rev: v4.4.0
     hooks:
       - id: check-yaml
         name: check YAML
