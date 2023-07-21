@@ -3,17 +3,18 @@
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
 ## v2.6.0 *(work in progress)*
-### Features and Improvements
-- !74 adds a number of new YAML tags:
-    - Splitting and joining strings via `!split` and `!join`
-    - Handling paths via `!expanduser` and `!joinpath`
+This is a maintenance release, adding the following (mostly internal) improvements:
 
-### Internal
 - The repository now uses `main` as its default branch.
 - !71 drops version bounds for requirements, making dependency resolution easier.
   This is also meant to promote always working with the latest package versions.
 - !71 uses a more modern theme for the documentation.
-- !75 extends the CI/CD tests to include Python 3.11 environments
+- !75 extends the CI/CD tests to include Python 3.11 environments.
+- !78 outsources YAML tools into a separate package, [`yayaml`](https://gitlab.com/blsqr/yayaml)
+    - Functionality is equivalent, but the package makes it much easier to add constructors and representers *after* import time.
+    - Prior to outsourcing, !74 added a number of new YAML tags, which were carried over to `yayaml`:
+        - Splitting and joining strings via `!split` and `!join`
+        - Handling paths via `!expanduser` and `!joinpath`
 
 
 ## v2.5.9
