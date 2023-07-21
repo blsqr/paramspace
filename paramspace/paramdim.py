@@ -549,9 +549,11 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         return representer.represent_mapping(cls.yaml_tag, d)
 
     @classmethod
-    def from_yaml(cls, constructor, node):
-        """The default constructor for ParamDim-derived objects"""
-        return cls(**constructor.construct_mapping(node, deep=True))
+    def from_yaml(cls, loader, node):
+        """The default loader for ParamDim-derived objects"""
+        from .yaml_constructors import _pdim_constructor
+
+        return _pdim_constructor(loader, node, Cls=cls)
 
 
 # -----------------------------------------------------------------------------
@@ -709,6 +711,7 @@ class ParamDim(ParamDimBase):
             ValueError: If the length of the iterable does not match that of
                 this parameter dimension
         """
+
         # Helper function for setting a mask value
         def set_val(mask: bool, val):
             if mask and not isinstance(val, Masked):

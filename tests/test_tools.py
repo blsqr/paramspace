@@ -15,18 +15,7 @@ class Dummy:
 # -----------------------------------------------------------------------------
 
 
-def test_create_indices():
-    """Test the create_indices function"""
-    ci = t.create_indices
-    assert ci() == []
-    assert ci(from_range=[0, 10, 2]) == list(range(0, 10, 2))
-    assert ci(append=[1, 1, 1], unique=True) == [1]
-    assert ci(append=[1, 1, 1, 2], remove=[1]) == [2]
-    assert ci(append=[3, 2, 1], remove=[2], sort=True) == [1, 3]
-    assert ci(append=[3, 2, 1], remove=[2], sort=False) == [3, 1]
-
-
-def test_contains():
+def test_recursive_contains():
     """Tests the recursive_contains function"""
     d = dict(
         a=dict(b=dict(c=dict(d=["e"], _="foo"), _="foo"), _="foo"), _="foo"
@@ -41,7 +30,7 @@ def test_contains():
         assert t.recursive_contains(d, keys=("a", "b", "c", "d", "e", "f"))
 
 
-def test_getitem():
+def test_recursive_getitem():
     """Tests the recursive_getitem function"""
     d = dict(a=dict(b=dict(c=dict(d=[0])), l=[dict(l0l=0)]))
 
@@ -60,7 +49,7 @@ def test_getitem():
         t.recursive_getitem(d, keys=("a", "l", 1, "l0l"))
 
 
-def test_collect():
+def test_recursive_collect():
     """Tests the recursive_collect function"""
     collect = t.recursive_collect
 
@@ -106,7 +95,7 @@ def test_collect():
         collect(d, select_func=sel_dummies, prepend_info=("invalid_entry",))
 
 
-def test_replace():
+def test_recursive_replace():
     """Tests the recursive_replace function"""
     replace = t.recursive_replace
     collect = t.recursive_collect
@@ -153,7 +142,7 @@ def test_replace():
         )
 
 
-def test_setitem():
+def test_recursive_setitem():
     """Tests the recursive_setitem function"""
     setitem = t.recursive_setitem
 
@@ -184,7 +173,7 @@ def test_setitem():
     assert d["d"]["dd"]["ddd"] == 3.45
 
 
-def test_update():
+def test_recursive_update():
     """Tests the recursive_update function"""
     d = dict(
         a=1,

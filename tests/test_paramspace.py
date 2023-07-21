@@ -355,7 +355,7 @@ def test_dim_name_creation():
         """
         kv_pairs = [
             (path, ParamDim(default=0, values=[1, 2], name=pd_name))
-            if pdim is not None
+            if pd_name is not None
             else (path, ParamDim(default=0, values=[1, 2]))
             for path, _, pd_name in name_check_pdim
         ]

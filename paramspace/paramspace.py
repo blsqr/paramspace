@@ -6,8 +6,7 @@ import logging
 import warnings
 from collections import OrderedDict
 from functools import reduce
-from itertools import chain
-from typing import Any, Dict, Generator, List, Sequence, Set, Tuple, Union
+from typing import Dict, Generator, List, Sequence, Set, Tuple, Union
 
 import numpy as np
 import numpy.ma
@@ -902,9 +901,11 @@ class ParamSpace:
         return representer.represent_mapping(cls.yaml_tag, to_dict(d))
 
     @classmethod
-    def from_yaml(cls, constructor, node):
+    def from_yaml(cls, loader, node):
         """The default constructor for a ParamSpace object"""
-        return cls(**constructor.construct_mapping(node, deep=True))
+        from .yaml_constructors import _pspace_constructor
+
+        return _pspace_constructor(loader, node, Cls=cls)
 
     # Dict access .............................................................
     # This is a restricted interface for accessing dictionary items
