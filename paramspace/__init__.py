@@ -13,7 +13,7 @@ define the parameter space fully from YAML configuration files, using custom
 YAML tags.
 """
 
-__version__ = "2.6.0b3"
+__version__ = "2.6.0"
 
 from .paramdim import CoupledParamDim, ParamDim
 from .paramspace import ParamSpace

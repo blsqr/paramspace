@@ -2,7 +2,7 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
-## v2.6.0 *(work in progress)*
+## v2.6.0
 This is a maintenance release, adding the following (mostly internal) improvements:
 
 - The repository now uses `main` as its default branch.
