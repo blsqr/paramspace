@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.6.1
+Post-release of v2.6.0 due to botched PyPI deployment.
+
 ## v2.6.0
 This is a maintenance release, adding the following (mostly internal) improvements:
 
