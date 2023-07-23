@@ -6,8 +6,7 @@ sense mostly to use as objects in a dict that is converted to a ParamSpace.
 import abc
 import copy
 import logging
-import warnings
-from typing import Any, Iterable, List, Sequence, Tuple, Union
+from typing import Any, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -89,7 +88,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         *,
         default,
         values: Iterable = None,
-        order: float = None,
+        order: Optional[Union[int, float]] = 0,
         name: str = None,
         as_type: str = None,
         assert_unique: bool = True,
@@ -103,8 +102,9 @@ class ParamDimBase(metaclass=abc.ABCMeta):
                 dimension can take. This argument takes precedence over any
                 constructors given in the kwargs (like range, linspace, …).
             order (float, optional): If given, this allows to specify an order
-                within a ParamSpace that includes this ParamDim object. If not,
-                will use np.inf instead.
+                within a ParamSpace that includes this ParamDim object.
+                Dimensions with lowest ``order`` will then be iterated over
+                more frequently. Default is 0.
             name (str, optional): If given, this is an *additional* name of
                 this ParamDim object, and can be used by the ParamSpace to
                 access this object.
@@ -113,10 +113,12 @@ class ParamDimBase(metaclass=abc.ABCMeta):
                 are possible: str, int, bool, float
             assert_unique (bool, optional): Whether to assert uniqueness of
                 the values among them.
-            **kwargs: Constructors for the `values` argument, valid keys are
-                `range`, `linspace`, and `logspace`; corresponding values are
-                expected to be iterables and are passed to `range(*args)`,
-                `np.linspace(*args)`, or `np.logspace(*args)`, respectively.
+            **kwargs: Constructors for the ``values`` argument, valid keys are
+                ``range``, ``linspace``, and ``logspace``; corresponding
+                values are expected to be iterables and are passed to
+                ``range(*args)``, ``np.linspace(*args)``, or
+                ``np.logspace(*args)``, respectively.
+                See also: :py:func:`numpy.linspace`, :py:func:`numpy.logspace`.
 
         Raises:
             TypeError: For invalid arguments
@@ -126,7 +128,11 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
         # Set attributes that need no further checks
         self._name = name
-        self._order = order if order is not None else np.inf
+
+        # To allow for <2.6 `order` values, check against None.
+        if order is None:
+            order = 0
+        self._order = order
 
         # Package values into kwargs, for easier handling
         if values is not None:
@@ -515,7 +521,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     _YAML_UPDATE = dict()
 
     # Which entries to remove if they have a certain value
-    _YAML_REMOVE_IF = dict(name=(None,), order=(None,))
+    _YAML_REMOVE_IF = dict(name=(None,))
 
     @classmethod
     def to_yaml(cls, representer, node):
@@ -581,7 +587,6 @@ class ParamDim(ParamDimBase):
     )
     _YAML_REMOVE_IF = dict(
         name=(None,),
-        order=(None,),
         mask=(None, False),
     )
 
@@ -594,20 +599,23 @@ class ParamDim(ParamDimBase):
             mask (Union[bool, Tuple[bool]], optional): Which values of the
                 dimension to mask, i.e., skip in iteration. Note that masked
                 values still count to the length of the parameter dimension!
-            **kwargs: Passed to ``ParamDimBase.__init__``.
+            **kwargs: Passed to :py:meth:`ParamDimBase.__init__`.
                 Possible arguments:
 
-                - default: default value of this parameter dimension
-                - values (Iterable, optional): Which discrete values this
+                - ``default``: default value of this parameter dimension
+                - ``values`` (Iterable, optional): Which discrete values this
                     parameter dimension can take. This argument takes
                     precedence over any constructors given in the kwargs
                     (like range, linspace, …).
-                - order (float, optional): If given, this allows to specify an
-                    order within a ParamSpace that includes this ParamDim. If
-                    not given, np.inf will be used, i.e., dimension is last.
-                - name (str, optional): If given, this is an *additional* name
-                    of this ParamDim object, and can be used by the ParamSpace
-                    to access this object.
+                - ``order`` (float, optional): If given, this allows to
+                    specify an order within a ParamSpace that includes this
+                    ParamDim. If not given, 0 will be used.
+                    See :py:meth:`~paramspace.paramspace.ParamSpace.iterator`
+                    for more information on iteration order.
+                - ``name`` (str, optional): If given, this is an *additional*
+                    name of this ParamDim object, and can be used by the
+                    :py:class:`~paramspace.paramspace.ParamSpace` to access
+                    this object.
                 - ``**kwargs``: Constructors for the ``values`` argument, valid
                     keys are ``range``, ``linspace``, and ``logspace``;
                     corresponding values are expected to be iterables and are

@@ -5,6 +5,7 @@
 import logging
 from collections import OrderedDict
 
+import numpy as np
 import ruamel.yaml
 import yayaml as yay
 
@@ -25,6 +26,21 @@ def pspace_unsorted(loader, node) -> ParamSpace:
     Unlike the regular constructor, this one does NOT sort the input before
     instantiating ParamSpace."""
     return _pspace_constructor(loader, node, sort_if_mapping=False)
+
+
+@yay.is_constructor("!pdim")
+def pdim(loader, node) -> ParamDim:
+    """constructor for creating a ParamDim object from a mapping, but only
+    return the default value."""
+    print("!pdim constructor")
+    return _pdim_constructor(loader, node, Cls=ParamDim, default_order=np.inf)
+
+
+@yay.is_constructor("!coupled-pdim")
+def coupled_pdim(loader, node) -> ParamDim:
+    """constructor for creating a ParamDim object from a mapping, but only
+    return the default value."""
+    return _pdim_constructor(loader, node, Cls=CoupledParamDim)
 
 
 @yay.is_constructor("!sweep-default", aliases=("!pdim-default",))
@@ -88,18 +104,34 @@ def _pspace_constructor(
     return Cls(d)
 
 
-def _pdim_constructor(loader, node, *, Cls=ParamDim) -> ParamDimBase:
+def _pdim_constructor(
+    loader, node, *, Cls=ParamDim, default_order: float = None
+) -> ParamDimBase:
     """Constructor for creating a ParamDim object from a mapping
 
     For it to be incorported into a ParamSpace, one parent (or higher) of this
     node needs to be tagged such that the pspace_constructor is invoked.
     """
-    log.debug("Encountered tag associated with parameter dimension.")
+    log.debug(
+        "Encountered tag '%s' associated with parameter dimension.", node.tag
+    )
 
     if isinstance(node, ruamel.yaml.nodes.MappingNode):
         log.debug("Constructing mapping ...")
-        mapping = loader.construct_mapping(node, deep=True)
-        pdim = Cls(**mapping)
+        kwargs = loader.construct_mapping(node, deep=True)
+
+        # To be backwards-compatible to <2.6, where ParamDims do not store the
+        # order value unless it is explicitly set.
+        # This is IMPORTANT because otherwise loading dumps from <2.6 will
+        # yield different state numbers and thus different iteration order.
+        if default_order is not None:
+            if "order" not in kwargs or kwargs.get("order") is None:
+                kwargs["order"] = default_order
+
+        # Can now construct the object:
+        print(kwargs)
+        pdim = Cls(**kwargs)
+        print("order:", pdim.order)
 
     else:
         raise TypeError(

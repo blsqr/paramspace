@@ -78,14 +78,38 @@ def yamlstrs() -> dict:
                     default: 10
                     values: [1,2,3]
                     name: some_nested_param
+                    order: 10
               another:
-                nesting:
+                level:
                   - !sweep
                     default: 0
                     range: [0, 20, 2]
                   - !coupled-sweep
                     target_name: some_nested_param
                   - !coupled-sweep-default
+                    target_name: some_nested_param
+                    default: 123
+        """,
+        "pspace_and_pdims_v2.5": """
+            pspace: !pspace
+              foo: bar
+              spam:
+                fish: 123
+              some:
+                nested:
+                  param: !pdim
+                    default: 10
+                    values: [1,2,3]
+                    name: some_nested_param
+                    order: 10
+              another:
+                level:
+                  - !pdim
+                    default: 0
+                    range: [0, 20, 2]
+                  - !coupled-pdim
+                    target_name: some_nested_param
+                  - !coupled-pdim-default
                     target_name: some_nested_param
                     default: 123
         """,
@@ -191,3 +215,12 @@ def test_correctness(yamlstrs):
     # Test the ParamSpace's
     for psp in res["pspace_only"].values():
         assert isinstance(psp, ParamSpace)
+
+    # Compare legacy construction for v2.5 (<2.6)
+    ps = res["pspace_and_pdims"]["pspace"]
+    ps25 = res["pspace_and_pdims_v2.5"]["pspace"]
+
+    # ... iteration order should be different
+    print(">= 2.6:", ps.dims_by_loc.keys())
+    print(" < 2.6:", ps25.dims_by_loc.keys())
+    assert list(ps.dims_by_loc.keys()) != list(ps25.dims_by_loc.keys())

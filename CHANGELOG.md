@@ -15,6 +15,19 @@ This is a maintenance release, adding the following (mostly internal) improvemen
     - Prior to outsourcing, !74 added a number of new YAML tags, which were carried over to `yayaml`:
         - Splitting and joining strings via `!split` and `!join`
         - Handling paths via `!expanduser` and `!joinpath`
+- !78 also changes the default YAML tag for representing parameter dimensions to `!sweep` (instead of `!pdim`).
+  This behaviour is backwards-compatible.
+
+#### Bug fixes
+- !78 addresses a bug where `!sweep-default` returned a `Masked` object.
+
+#### Breaking changes & Removals
+- !78 changes the default value for the `order` parameter to 0, such that it is easier to define parameter dimensions that should be *last* (addressing #79).
+  This is a breaking change, because state number association changes if non-negative `order` values were set!
+  However, to retain backwards-compatibility with `ParamSpace` objects dumped from previous versions, objects that are constructed with `!pdim` will still have `inf` as their default value.
+  In practice, this should remedy all issues with dumps from before or after changing to version 2.6.
+- !78 removes the `!rec-update` YAML tag, which was highly error-prone.
+- !78 removes the deprecated arguments `use_coupled_default` and `use_coupled_values` from `CoupledParamDim`.
 
 
 ## v2.5.9
