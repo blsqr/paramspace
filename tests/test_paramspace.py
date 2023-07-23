@@ -87,13 +87,13 @@ def adv_psp():
         foo="bar",
         spam="eggs",
         mutable=[0, 0, 0],
-        p1=ParamDim(default=0, values=[1, 2, 3], order=0),
+        p1=ParamDim(default=0, values=[1, 2, 3], order=2),
         p2=ParamDim(default=0, values=[1, 2, 3], order=1),
         d=dict(
             a=1,
             b=2,
             p1=ParamDim(default=0, values=[1, 2, 3], order=-1),
-            p2=ParamDim(default=0, values=[1, 2, 3], order=0),
+            p2=ParamDim(default=0, values=[1, 2, 3], order=1),
             d=dict(
                 a=1,
                 b=2,
@@ -116,7 +116,7 @@ def seq_psp():
         spam="eggs",
         mutable=[0, 0, 0],
         s=[
-            ParamDim(default=0, values=[1, 2, 3]),
+            ParamDim(default=0, values=[1, 2, 3], order=1),
             [ParamDim(default=1, values=[1, 2, 3], order=1), 2, 3],
         ],
         d=dict(
@@ -124,14 +124,14 @@ def seq_psp():
             b=2,
             s=[
                 ParamDim(default=0, values=[1, 2, 3], order=-1),
-                ParamDim(default=1, values=[1, 2, 3], order=0, name="ds1"),
+                ParamDim(default=1, values=[1, 2, 3], name="ds1"),
                 2,
                 3,
             ],
             d=dict(
                 a=1,
                 b=2,
-                p=ParamDim(default=0, values=[1, 2, 3]),
+                p=ParamDim(default=0, values=[1, 2, 3], order=10),
                 s=[
                     0,
                     ParamDim(default=1, values=[1, 2, 3]),
@@ -149,7 +149,7 @@ def seq_psp():
 def psp_with_coupled():
     """Used to setup a pspace object with coupled param dims"""
     d = dict(
-        a=ParamDim(default=0, values=[1, 2, 3], order=0),
+        a=ParamDim(default=0, values=[1, 2, 3]),
         c1=CoupledParamDim(target_name=("a",)),
         d=dict(
             aa=ParamDim(default=0, values=[1, 2, 3], order=-1),
@@ -178,12 +178,13 @@ def psp_nested(basic_psp):
 
 def test_init(basic_psp, adv_psp, seq_psp):
     """Test whether initialisation behaves as expected"""
-    # These should work
+    # These should work without warnings
     ParamSpace(dict(a=1))
     ParamSpace(OrderedDict(a=1))
 
     # These should also work, albeit not that practical
-    ParamSpace(list(range(10)))
+    with pytest.warns(UserWarning, match="Got unusual type <class 'list'>"):
+        ParamSpace(list(range(10)))
 
     # These should create a warning (not mutable)
     with pytest.warns(UserWarning, match="Got unusual type <class 'tuple'>"):
@@ -355,7 +356,7 @@ def test_dim_name_creation():
         """
         kv_pairs = [
             (path, ParamDim(default=0, values=[1, 2], name=pd_name))
-            if pdim is not None
+            if pd_name is not None
             else (path, ParamDim(default=0, values=[1, 2]))
             for path, _, pd_name in name_check_pdim
         ]
@@ -635,24 +636,10 @@ def test_coords(small_psp):
 def test_dim_order(basic_psp, adv_psp, seq_psp):
     """Tests whether the dimension order is correct."""
     basic_psp_locs = (  # alphabetically sorted
-        (
-            "d",
-            "dd",
-            "ppp1",
-        ),
-        (
-            "d",
-            "dd",
-            "ppp2",
-        ),
-        (
-            "d",
-            "pp1",
-        ),
-        (
-            "d",
-            "pp2",
-        ),
+        ("d", "dd", "ppp1"),
+        ("d", "dd", "ppp2"),
+        ("d", "pp1"),
+        ("d", "pp2"),
         ("p1",),
         ("p2",),
     )
@@ -660,24 +647,32 @@ def test_dim_order(basic_psp, adv_psp, seq_psp):
         assert name_is == name_should
 
     adv_psp_locs = (  # sorted by order parameter
-        ("d", "p1"),
-        ("d", "p2"),
-        ("p1",),
-        ("p2",),
-        ("d", "d", "p1"),
-        ("d", "d", "p2"),
+        ("d", "p1"),  # -1
+        ("d", "d", "p1"),  # 0
+        ("d", "d", "p2"),  # 0
+        ("d", "p2"),  # 1
+        ("p2",),  # 1
+        ("p1",),  # 2
+    )
+    print("adv_psp_locs:")
+    print(
+        "\n".join(f"{d}:  {pd.order}" for d, pd in adv_psp.dims_by_loc.items())
     )
     for name_is, name_should in zip(adv_psp.dims_by_loc, adv_psp_locs):
         assert name_is == name_should
 
-    seq_psp_locs = (  # sorting includes indices
-        ("d", "s", 0),
-        ("d", "s", 1),
-        ("s", 1, 0),
-        ("d", "d", "p"),
-        ("d", "d", "s", 1),
-        ("d", "d", "s", 2),
-        ("s", 0),
+    seq_psp_locs = (  # sorting includes indices and order
+        ("d", "s", 0),  # -1
+        ("d", "d", "s", 1),  # 0
+        ("d", "d", "s", 2),  # 0
+        ("d", "s", 1),  # 0
+        ("s", 0),  # 1
+        ("s", 1, 0),  # 1
+        ("d", "d", "p"),  # 10
+    )
+    print("seq_psp_locs:")
+    print(
+        "\n".join(f"{d}:  {pd.order}" for d, pd in seq_psp.dims_by_loc.items())
     )
     for actual, expected in zip(seq_psp.dims_by_loc, seq_psp_locs):
         assert actual == expected

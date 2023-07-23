@@ -2,18 +2,32 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
-## v2.6.0 *(work in progress)*
-### Features and Improvements
-- !74 adds a number of new YAML tags:
-    - Splitting and joining strings via `!split` and `!join`
-    - Handling paths via `!expanduser` and `!joinpath`
+## v2.6.0
+This is a maintenance release, adding the following (mostly internal) improvements:
 
-### Internal
 - The repository now uses `main` as its default branch.
 - !71 drops version bounds for requirements, making dependency resolution easier.
   This is also meant to promote always working with the latest package versions.
 - !71 uses a more modern theme for the documentation.
-- !75 extends the CI/CD tests to include Python 3.11 environments
+- !75 extends the CI/CD tests to include Python 3.11 environments.
+- !78 outsources YAML tools into a separate package, [`yayaml`](https://gitlab.com/blsqr/yayaml)
+    - Functionality is equivalent, but the package makes it much easier to add constructors and representers *after* import time.
+    - Prior to outsourcing, !74 added a number of new YAML tags, which were carried over to `yayaml`:
+        - Splitting and joining strings via `!split` and `!join`
+        - Handling paths via `!expanduser` and `!joinpath`
+- !78 also changes the default YAML tag for representing parameter dimensions to `!sweep` (instead of `!pdim`).
+  This behaviour is backwards-compatible.
+
+#### Bug fixes
+- !78 addresses a bug where `!sweep-default` returned a `Masked` object.
+
+#### Breaking changes & Removals
+- !78 changes the default value for the `order` parameter to 0, such that it is easier to define parameter dimensions that should be *last* (addressing #79).
+  This is a breaking change, because state number association changes if non-negative `order` values were set!
+  However, to retain backwards-compatibility with `ParamSpace` objects dumped from previous versions, objects that are constructed with `!pdim` will still have `inf` as their default value.
+  In practice, this should remedy all issues with dumps from before or after changing to version 2.6.
+- !78 removes the `!rec-update` YAML tag, which was highly error-prone.
+- !78 removes the deprecated arguments `use_coupled_default` and `use_coupled_values` from `CoupledParamDim`.
 
 
 ## v2.5.9

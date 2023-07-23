@@ -6,8 +6,7 @@ sense mostly to use as objects in a dict that is converted to a ParamSpace.
 import abc
 import copy
 import logging
-import warnings
-from typing import Hashable, Iterable, List, Sequence, Tuple, Union
+from typing import Any, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -51,7 +50,7 @@ class Masked:
             node (Masked): The node, i.e. an instance of this class
 
         Returns:
-            the scalar value that this object masks
+            the scalar value that this object masks, without tag
         """
         return representer.represent_data(node._val)
 
@@ -89,7 +88,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         *,
         default,
         values: Iterable = None,
-        order: float = None,
+        order: Optional[Union[int, float]] = 0,
         name: str = None,
         as_type: str = None,
         assert_unique: bool = True,
@@ -103,8 +102,9 @@ class ParamDimBase(metaclass=abc.ABCMeta):
                 dimension can take. This argument takes precedence over any
                 constructors given in the kwargs (like range, linspace, …).
             order (float, optional): If given, this allows to specify an order
-                within a ParamSpace that includes this ParamDim object. If not,
-                will use np.inf instead.
+                within a ParamSpace that includes this ParamDim object.
+                Dimensions with lowest ``order`` will then be iterated over
+                more frequently. Default is 0.
             name (str, optional): If given, this is an *additional* name of
                 this ParamDim object, and can be used by the ParamSpace to
                 access this object.
@@ -113,10 +113,12 @@ class ParamDimBase(metaclass=abc.ABCMeta):
                 are possible: str, int, bool, float
             assert_unique (bool, optional): Whether to assert uniqueness of
                 the values among them.
-            **kwargs: Constructors for the `values` argument, valid keys are
-                `range`, `linspace`, and `logspace`; corresponding values are
-                expected to be iterables and are passed to `range(*args)`,
-                `np.linspace(*args)`, or `np.logspace(*args)`, respectively.
+            **kwargs: Constructors for the ``values`` argument, valid keys are
+                ``range``, ``linspace``, and ``logspace``; corresponding
+                values are expected to be iterables and are passed to
+                ``range(*args)``, ``np.linspace(*args)``, or
+                ``np.logspace(*args)``, respectively.
+                See also: :py:func:`numpy.linspace`, :py:func:`numpy.logspace`.
 
         Raises:
             TypeError: For invalid arguments
@@ -126,7 +128,11 @@ class ParamDimBase(metaclass=abc.ABCMeta):
 
         # Set attributes that need no further checks
         self._name = name
-        self._order = order if order is not None else np.inf
+
+        # To allow for <2.6 `order` values, check against None.
+        if order is None:
+            order = 0
+        self._order = order
 
         # Package values into kwargs, for easier handling
         if values is not None:
@@ -233,8 +239,8 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         return self._order
 
     @property
-    def default(self):
-        """The default value."""
+    def default(self) -> Union[Any, Masked]:
+        """The default value, which may be masked."""
         return self._default
 
     @property
@@ -515,7 +521,7 @@ class ParamDimBase(metaclass=abc.ABCMeta):
     _YAML_UPDATE = dict()
 
     # Which entries to remove if they have a certain value
-    _YAML_REMOVE_IF = dict(name=(None,), order=(None,))
+    _YAML_REMOVE_IF = dict(name=(None,))
 
     @classmethod
     def to_yaml(cls, representer, node):
@@ -549,9 +555,11 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         return representer.represent_mapping(cls.yaml_tag, d)
 
     @classmethod
-    def from_yaml(cls, constructor, node):
-        """The default constructor for ParamDim-derived objects"""
-        return cls(**constructor.construct_mapping(node, deep=True))
+    def from_yaml(cls, loader, node):
+        """The default loader for ParamDim-derived objects"""
+        from .yaml_constructors import _pdim_constructor
+
+        return _pdim_constructor(loader, node, Cls=cls)
 
 
 # -----------------------------------------------------------------------------
@@ -570,8 +578,8 @@ class ParamDim(ParamDimBase):
     # Define the additional attribute names that are to be added to __repr__
     _REPR_ATTRS = ("mask",)
 
-    # Define the yaml tag to use
-    yaml_tag = "!pdim"
+    # The YAML tag to use for representation
+    yaml_tag = "!sweep"
 
     # And the other yaml representer settings
     _YAML_UPDATE = dict(
@@ -579,7 +587,6 @@ class ParamDim(ParamDimBase):
     )
     _YAML_REMOVE_IF = dict(
         name=(None,),
-        order=(None,),
         mask=(None, False),
     )
 
@@ -592,20 +599,23 @@ class ParamDim(ParamDimBase):
             mask (Union[bool, Tuple[bool]], optional): Which values of the
                 dimension to mask, i.e., skip in iteration. Note that masked
                 values still count to the length of the parameter dimension!
-            **kwargs: Passed to ``ParamDimBase.__init__``.
+            **kwargs: Passed to :py:meth:`ParamDimBase.__init__`.
                 Possible arguments:
 
-                - default: default value of this parameter dimension
-                - values (Iterable, optional): Which discrete values this
+                - ``default``: default value of this parameter dimension
+                - ``values`` (Iterable, optional): Which discrete values this
                     parameter dimension can take. This argument takes
                     precedence over any constructors given in the kwargs
                     (like range, linspace, …).
-                - order (float, optional): If given, this allows to specify an
-                    order within a ParamSpace that includes this ParamDim. If
-                    not given, np.inf will be used, i.e., dimension is last.
-                - name (str, optional): If given, this is an *additional* name
-                    of this ParamDim object, and can be used by the ParamSpace
-                    to access this object.
+                - ``order`` (float, optional): If given, this allows to
+                    specify an order within a ParamSpace that includes this
+                    ParamDim. If not given, 0 will be used.
+                    See :py:meth:`~paramspace.paramspace.ParamSpace.iterator`
+                    for more information on iteration order.
+                - ``name`` (str, optional): If given, this is an *additional*
+                    name of this ParamDim object, and can be used by the
+                    :py:class:`~paramspace.paramspace.ParamSpace` to access
+                    this object.
                 - ``**kwargs``: Constructors for the ``values`` argument, valid
                     keys are ``range``, ``linspace``, and ``logspace``;
                     corresponding values are expected to be iterables and are
@@ -709,6 +719,7 @@ class ParamDim(ParamDimBase):
             ValueError: If the length of the iterable does not match that of
                 this parameter dimension
         """
+
         # Helper function for setting a mask value
         def set_val(mask: bool, val):
             if mask and not isinstance(val, Masked):
@@ -853,8 +864,8 @@ class CoupledParamDim(ParamDimBase):
         "_use_coupled_values",
     )
 
-    # Define the yaml tag to use
-    yaml_tag = "!coupled-pdim"
+    # The YAML tag to use for representation
+    yaml_tag = "!coupled-sweep"
 
     # And the other yaml representer settings
     _YAML_UPDATE = dict(
@@ -866,8 +877,6 @@ class CoupledParamDim(ParamDimBase):
         assert_unique=(True, False),
         default=(None,),
         values=(None, [None]),
-        use_coupled_default=(None,),
-        use_coupled_values=(None,),
         target_name=(None,),
         target_pdim=(None,),
     )
@@ -880,8 +889,6 @@ class CoupledParamDim(ParamDimBase):
         default=None,
         target_pdim: ParamDim = None,
         target_name: Union[str, Sequence[str]] = None,
-        use_coupled_default: bool = None,
-        use_coupled_values: bool = None,
         **kwargs,
     ):
         """Initialize a coupled parameter dimension.
@@ -898,8 +905,6 @@ class CoupledParamDim(ParamDimBase):
                 the ParamDim object to couple to; needs to be within the same
                 ParamSpace and the ParamSpace needs to be able to resolve it
                 using this name.
-            use_coupled_default (bool, optional): DEPRECATED
-            use_coupled_values (bool, optional): DEPRECATED
             **kwargs: Passed to ParamDimBase.__init__
 
         Raises:
@@ -907,18 +912,6 @@ class CoupledParamDim(ParamDimBase):
                 or both were given
         """
         # TODO Make this __init__ more elegant!
-
-        # Deprecation warnings for old parameters
-        if use_coupled_default is not None or use_coupled_values is not None:
-            warnings.warn(
-                "The CoupledParamDim.__init__ parameters "
-                "`use_coupled_default` and `use_coupled_values` are "
-                "deprecated and will soon be removed. Whether the "
-                "counterpart from the coupled parameter dimension "
-                "is to be used is determined by whether the "
-                "`default` or any value-setting argument was given.",
-                DeprecationWarning,
-            )
 
         # Disallow mask argument
         if "mask" in kwargs:
@@ -1091,7 +1084,7 @@ class CoupledParamDim(ParamDimBase):
     # Properties that need to relay to the coupled ParamDim ...................
 
     @property
-    def default(self):
+    def default(self) -> Union[Any, Masked]:
         """The default value.
 
         Returns:

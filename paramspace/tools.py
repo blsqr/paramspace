@@ -33,50 +33,6 @@ class Skip:
 # Initialize a global Skip object, simplifying calls and detection.
 SKIP = Skip()
 
-# .............................................................................
-
-
-def create_indices(
-    *,
-    from_range: list = None,
-    unique: bool = False,
-    sort: bool = True,
-    append: list = None,
-    remove: list = None,
-) -> List[int]:
-    """Generates a list of integer elements.
-
-    Args:
-        from_range (list, optional): range arguments to use as the basis of the
-            list
-        unique (bool, optional): Whether to ascertain uniqueness of elements
-        sort (bool, optional): Whether to sort the list before returning
-        append (list, optional): Additional elements to append to the list
-        remove (list, optional): Elements to remove all occurrences of
-
-    Returns:
-        List[int]: The generated list
-    """
-    l = []
-    if from_range:
-        l += list(range(*from_range))
-
-    if append:
-        l += append
-
-    if remove:
-        for element_to_remove in list(set(remove)):
-            while element_to_remove in l:
-                l.remove(element_to_remove)
-
-    if unique:
-        l = list(set(l))
-
-    if sort:
-        l.sort()
-
-    return l
-
 
 # -----------------------------------------------------------------------------
 
@@ -476,6 +432,30 @@ def recursive_replace(
         # the same
 
     return obj
+
+
+def recursively_sort_dict(d: dict) -> collections.OrderedDict:
+    """Recursively sorts a dictionary by its keys, transforming it to an
+    OrderedDict in the process.
+
+    From: http://stackoverflow.com/a/22721724/1827608
+
+    Args:
+        d (dict): The dictionary to be sorted
+
+    Returns:
+        OrderedDict: the recursively sorted dict
+    """
+    # Start with empty ordered dict for this recursion level
+    res = collections.OrderedDict()
+
+    # Fill it with the values from the dictionary
+    for k, v in sorted(d.items()):
+        if isinstance(v, dict):
+            res[k] = recursively_sort_dict(v)
+        else:
+            res[k] = v
+    return res
 
 
 # Helpers ---------------------------------------------------------------------

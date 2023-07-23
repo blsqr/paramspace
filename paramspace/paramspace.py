@@ -6,8 +6,7 @@ import logging
 import warnings
 from collections import OrderedDict
 from functools import reduce
-from itertools import chain
-from typing import Any, Dict, Generator, List, Sequence, Set, Tuple, Union
+from typing import Dict, Generator, List, Sequence, Set, Tuple, Union
 
 import numpy as np
 import numpy.ma
@@ -79,7 +78,8 @@ class ParamSpace:
         log.debug("Gathering ParamDim objects ...")
 
         # Traverse the dict and look for ParamDim objects; collect them as
-        # (order, key, value) tuples
+        # (order, key, value) tuples, such that they can be sorted by the
+        # iteration order.
         pdims = recursive_collect(
             self._dict,
             select_func=lambda p: isinstance(p, ParamDim),
@@ -91,13 +91,15 @@ class ParamSpace:
         # Parse the dimension names
 
         # Sort them -- very important for consistency!
-        # This looks at the info first, which is the order entry, and then at
-        # the keys. If a ParamDim does not provide an order, it has entry
-        # np.inf there, such that those without order get sorted by the key.
+        # This looks at the info first, which is the `order` entry, and then at
+        # the keys. If a ParamDim does not provide an order, it has entry 0
+        # there, such that entries with the same `order` value get sorted by
+        # their key.
         pdims.sort()
 
         # For initializing OrderedDicts, need to reduce the list items to
-        # 2-tuples, ditching the first element (order, needed for sorting)
+        # 2-tuples, ditching the first element (order) which we needed for
+        # sorting
         pdims = [tpl[1:] for tpl in pdims]
 
         # Now, first save the objects with keys that represent their location
@@ -799,9 +801,7 @@ class ParamSpace:
             if pdim.mask is True:
                 l += [f"      fully masked -> using default:  {pdim.default}"]
 
-            if pdim.order < np.inf:
-                l += [f"      order: {pdim.order}"]
-
+            l += [f"      order: {pdim.order}"]
             l += [""]
 
         # CoupledParamDim information
@@ -902,9 +902,11 @@ class ParamSpace:
         return representer.represent_mapping(cls.yaml_tag, to_dict(d))
 
     @classmethod
-    def from_yaml(cls, constructor, node):
+    def from_yaml(cls, loader, node):
         """The default constructor for a ParamSpace object"""
-        return cls(**constructor.construct_mapping(node, deep=True))
+        from .yaml_constructors import _pspace_constructor
+
+        return _pspace_constructor(loader, node, Cls=cls)
 
     # Dict access .............................................................
     # This is a restricted interface for accessing dictionary items
@@ -956,21 +958,24 @@ class ParamSpace:
         """Returns an iterator (more precisely: a generator) yielding all
         unmasked points of the parameter space.
 
-        To control which information is returned at each point, the `with_info`
-        and `omit_pt` arguments can be used. By default, the generator will
-        return a single dictionary.
+        Iteration order depends on the ``order`` parameter, where smaller
+        values of a parameter dimension will lead to more frequent iterations.
+
+        To control which information is returned at each point, the
+        ``with_info`` and `omit_pt` arguments can be used. By default, the
+        generator will return a single dictionary for each iteration point.
 
         Note that an iteration is also possible for zero-volume parameter
         spaces, i.e. where no parameter dimensions were defined.
 
         Args:
             with_info (Union[str, Tuple[str]], optional): Can pass strings
-                here that are to be returned as the second value. Possible
-                values are: 'state_no', 'state_vector', 'state_no_str', and
-                'current_coords'.
-                To get multiple, add them to a tuple.
+                here that are to be returned as the second value.
+                Possible values are: ``state_no``, ``state_vector``,
+                ``state_no_str``, and ``current_coords``.
+                To get multiple of them, add them to a tuple.
             omit_pt (bool, optional): If true, the current value is omitted and
-                only the information is returned.
+                *only* the information tuple is returned.
 
         Returns:
             Generator[dict, None, None]: yields point after point of the
@@ -1337,7 +1342,7 @@ class ParamSpace:
 
         Args:
             *mask_specs: Can be tuples/lists or dicts which will be unpacked
-                (in the given order) and passed to .set_mask
+                (in the given order) and passed to :py:meth:`.set_mask`
         """
         log.debug("Setting %d masks ...", len(mask_specs))
 
