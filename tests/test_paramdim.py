@@ -134,8 +134,10 @@ def test_properties(various_pdims):
             # Can be a target of a coupled ParamDim
             pd.target_of
 
-    # Check that the default value is masked:
-    assert isinstance(vpd["one"].default, Masked)
+    # Check that the default value is masked (outside of iteration)
+    for pd in vpd.values():
+        assert isinstance(pd.default, Masked)
+        assert pd.default == 0
 
 
 def test_iteration(various_pdims):

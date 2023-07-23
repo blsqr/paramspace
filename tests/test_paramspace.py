@@ -178,12 +178,13 @@ def psp_nested(basic_psp):
 
 def test_init(basic_psp, adv_psp, seq_psp):
     """Test whether initialisation behaves as expected"""
-    # These should work
+    # These should work without warnings
     ParamSpace(dict(a=1))
     ParamSpace(OrderedDict(a=1))
 
     # These should also work, albeit not that practical
-    ParamSpace(list(range(10)))
+    with pytest.warns(UserWarning, match="Got unusual type <class 'list'>"):
+        ParamSpace(list(range(10)))
 
     # These should create a warning (not mutable)
     with pytest.warns(UserWarning, match="Got unusual type <class 'tuple'>"):

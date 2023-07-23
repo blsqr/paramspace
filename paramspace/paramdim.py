@@ -7,7 +7,7 @@ import abc
 import copy
 import logging
 import warnings
-from typing import Hashable, Iterable, List, Sequence, Tuple, Union
+from typing import Any, Iterable, List, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -51,7 +51,7 @@ class Masked:
             node (Masked): The node, i.e. an instance of this class
 
         Returns:
-            the scalar value that this object masks
+            the scalar value that this object masks, without tag
         """
         return representer.represent_data(node._val)
 
@@ -233,8 +233,8 @@ class ParamDimBase(metaclass=abc.ABCMeta):
         return self._order
 
     @property
-    def default(self):
-        """The default value."""
+    def default(self) -> Union[Any, Masked]:
+        """The default value, which may be masked."""
         return self._default
 
     @property
@@ -572,8 +572,8 @@ class ParamDim(ParamDimBase):
     # Define the additional attribute names that are to be added to __repr__
     _REPR_ATTRS = ("mask",)
 
-    # Define the yaml tag to use
-    yaml_tag = "!pdim"
+    # The YAML tag to use for representation
+    yaml_tag = "!sweep"
 
     # And the other yaml representer settings
     _YAML_UPDATE = dict(
@@ -856,8 +856,8 @@ class CoupledParamDim(ParamDimBase):
         "_use_coupled_values",
     )
 
-    # Define the yaml tag to use
-    yaml_tag = "!coupled-pdim"
+    # The YAML tag to use for representation
+    yaml_tag = "!coupled-sweep"
 
     # And the other yaml representer settings
     _YAML_UPDATE = dict(
@@ -1094,7 +1094,7 @@ class CoupledParamDim(ParamDimBase):
     # Properties that need to relay to the coupled ParamDim ...................
 
     @property
-    def default(self):
+    def default(self) -> Union[Any, Masked]:
         """The default value.
 
         Returns:

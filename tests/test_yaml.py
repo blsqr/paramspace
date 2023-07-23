@@ -1,13 +1,11 @@
 """Tests the yaml constructors"""
-import io
-
 import numpy as np
 import pytest
 from ruamel.yaml.constructor import ConstructorError
+from yayaml import yaml_dumps
 
 from paramspace import ParamDim, ParamSpace
-from paramspace.tools import recursive_update
-from paramspace.yaml import *
+from paramspace.yaml import yaml
 
 # Fixtures --------------------------------------------------------------------
 
@@ -39,51 +37,73 @@ def yamlstrs() -> dict:
         """,
         "pdims_only": """
             pdims:
-             - !pdim
+             - !sweep
                default: 0
                values: [1,2,3]
-             - !pdim
+             - !sweep
                default: 0
                range: [10]
-             - !pdim
+             - !sweep
                default: 0
                linspace: [1,2,3]
-             - !pdim
+             - !sweep
                default: 0
                logspace: [1,2,3]
-             - !pdim-default
+             - !sweep-default
                default: 0
                values: [1,2,3]
         """,
         "cpdims_only": """
             pdims:
-             - !coupled-pdim
+             - !coupled-sweep
                target_name: [foo, bar]
-             - !coupled-pdim
+             - !coupled-sweep
                target_name: [foo, bar]
-             - !coupled-pdim
+             - !coupled-sweep
                target_name: [foo, bar]
-             - !coupled-pdim
+             - !coupled-sweep
                target_name: [foo, bar]
-             - !coupled-pdim-default
+             - !coupled-sweep-default
                target_name: [foo, bar]
                default: 0
+        """,
+        "pspace_and_pdims": """
+            pspace: !pspace
+              foo: bar
+              spam:
+                fish: 123
+              some:
+                nested:
+                  param: !sweep
+                    default: 10
+                    values: [1,2,3]
+                    name: some_nested_param
+              another:
+                nesting:
+                  - !sweep
+                    default: 0
+                    range: [0, 20, 2]
+                  - !coupled-sweep
+                    target_name: some_nested_param
+                  - !coupled-sweep-default
+                    target_name: some_nested_param
+                    default: 123
         """,
         #
         # Failing or warning cases
         ("_pspace_scalar", TypeError): "scalar_node: !pspace 1",
-        ("_pdim1", TypeError): "not_a_mapping: !pdim 1",
-        ("_pdim2", TypeError): "not_a_mapping: !pdim [1,2,3]",
-        ("_pdim3", TypeError): "wrong_args: !pdim {foo: bar}",
-        ("cpdim1", TypeError): "not_a_mapping: !coupled-pdim 1",
-        ("cpdim2", TypeError): "not_a_mapping: !coupled-pdim [1,2,3]",
-        ("cpdim3", TypeError): "wrong_args: !coupled-pdim {foo: bar}",
+        ("_pdim1", TypeError): "not_a_mapping: !sweep 1",
+        ("_pdim2", TypeError): "not_a_mapping: !sweep [1,2,3]",
+        ("_pdim3", TypeError): "wrong_args: !sweep {foo: bar}",
+        ("cpdim1", TypeError): "not_a_mapping: !coupled-sweep 1",
+        ("cpdim2", TypeError): "not_a_mapping: !coupled-sweep [1,2,3]",
+        ("cpdim3", TypeError): "wrong_args: !coupled-sweep {foo: bar}",
         (
             "cpdim4",
             None,
             DeprecationWarning,
         ): """
-            too_many_args: !coupled-pdim
+            too_many_args: !coupled-sweep
               target_name: [foo, bar]
               default: 0
               use_coupled_default: True
@@ -93,7 +113,7 @@ def yamlstrs() -> dict:
             None,
             DeprecationWarning,
         ): """
-            too_many_args: !coupled-pdim
+            too_many_args: !coupled-sweep
               target_name: [foo, bar]
               values: [1,2,3]
               use_coupled_values: True
@@ -140,11 +160,19 @@ def test_load_and_safe(yamlstrs):
         obj = yaml.load(ystr)
 
         # Test the representer runs through
-        stream = io.StringIO("")
-        yaml.dump(obj, stream=stream)
-        output = "\n".join(stream.readlines())
+        output = yaml_dumps(obj)
 
-        # TODO Test output
+        # And that it uses the expected YAML tags
+        if name == "pspace_only":
+            assert output.count("!pspace") == 3
+
+        elif name == "pdims_only":
+            assert output.count("!sweep") == 4
+            assert output.count("!pdim") == 0
+
+        elif name == "cpdims_only":
+            assert output.count("!coupled-sweep") == 4
+            assert output.count("!coupled-pdim") == 0
 
 
 def test_correctness(yamlstrs):
@@ -161,6 +189,7 @@ def test_correctness(yamlstrs):
 
     # Test the ParamDim objects
     pdims = res["pdims_only"]["pdims"]
+    assert all(isinstance(pd, ParamDim) for pd in pdims[:4])
 
     assert pdims[0].default == 0
     assert pdims[0].values == (1, 2, 3)
@@ -174,6 +203,9 @@ def test_correctness(yamlstrs):
     assert pdims[3].default == 0
     assert pdims[3].values == tuple(np.logspace(1, 2, 3))
 
+    # ... defaulted
+    assert pdims[4] == 0
+    assert not isinstance(pdims[4], ParamDim)
     assert pdims[4] == 0
 
     # Test the ParamSpace's

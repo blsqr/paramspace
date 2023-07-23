@@ -8,7 +8,7 @@ from collections import OrderedDict
 import ruamel.yaml
 import yayaml as yay
 
-from .paramdim import CoupledParamDim, ParamDim, ParamDimBase
+from .paramdim import CoupledParamDim, Masked, ParamDim, ParamDimBase
 from .paramspace import ParamSpace
 from .tools import recursively_sort_dict
 
@@ -27,24 +27,36 @@ def pspace_unsorted(loader, node) -> ParamSpace:
     return _pspace_constructor(loader, node, sort_if_mapping=False)
 
 
-@yay.is_constructor("!pdim-default", aliases=("!sweep-default",))
+@yay.is_constructor("!sweep-default", aliases=("!pdim-default",))
 def pdim_default(loader, node) -> ParamDim:
     """constructor for creating a ParamDim object from a mapping, but only
     return the default value."""
     pdim = _pdim_constructor(loader, node, Cls=ParamDim)
     log.debug("Returning default value of constructed ParamDim.")
-    return pdim.default
+    default = pdim.default
+    if isinstance(default, Masked):
+        default = default.value
+    return default
 
 
 @yay.is_constructor(
-    "!coupled-pdim-default", aliases=("!coupled-sweep-default",)
+    "!coupled-sweep-default", aliases=("!coupled-pdim-default",)
 )
 def coupled_pdim_default(loader, node) -> CoupledParamDim:
-    """constructor for creating a CoupledParamDim object from a mapping, but
-    only return the default value."""
+    """Constructor for creating a CoupledParamDim object from a mapping, but
+    only return the default value.
+
+    .. note::
+
+        This can only be used for coupled parameter dimensions that do *not*
+        rely on the coupling target for their default value.
+    """
     cpdim = _pdim_constructor(loader, node, Cls=CoupledParamDim)
     log.debug("Returning default value of constructed CoupledParamDim.")
-    return cpdim.default
+    default = cpdim.default
+    if isinstance(default, Masked):
+        default = default.value
+    return default
 
 
 # -- The actual constructor functions -----------------------------------------
