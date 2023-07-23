@@ -98,26 +98,6 @@ def yamlstrs() -> dict:
         ("cpdim1", TypeError): "not_a_mapping: !coupled-sweep 1",
         ("cpdim2", TypeError): "not_a_mapping: !coupled-sweep [1,2,3]",
         ("cpdim3", TypeError): "wrong_args: !coupled-sweep {foo: bar}",
-        (
-            "cpdim4",
-            None,
-            DeprecationWarning,
-        ): """
-            too_many_args: !coupled-sweep
-              target_name: [foo, bar]
-              default: 0
-              use_coupled_default: True
-        """,
-        (
-            "cpdim5",
-            None,
-            DeprecationWarning,
-        ): """
-            too_many_args: !coupled-sweep
-              target_name: [foo, bar]
-              values: [1,2,3]
-              use_coupled_values: True
-        """,
     }
 
     return strs

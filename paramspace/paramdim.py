@@ -869,8 +869,6 @@ class CoupledParamDim(ParamDimBase):
         assert_unique=(True, False),
         default=(None,),
         values=(None, [None]),
-        use_coupled_default=(None,),
-        use_coupled_values=(None,),
         target_name=(None,),
         target_pdim=(None,),
     )
@@ -883,8 +881,6 @@ class CoupledParamDim(ParamDimBase):
         default=None,
         target_pdim: ParamDim = None,
         target_name: Union[str, Sequence[str]] = None,
-        use_coupled_default: bool = None,
-        use_coupled_values: bool = None,
         **kwargs,
     ):
         """Initialize a coupled parameter dimension.
@@ -901,8 +897,6 @@ class CoupledParamDim(ParamDimBase):
                 the ParamDim object to couple to; needs to be within the same
                 ParamSpace and the ParamSpace needs to be able to resolve it
                 using this name.
-            use_coupled_default (bool, optional): DEPRECATED
-            use_coupled_values (bool, optional): DEPRECATED
             **kwargs: Passed to ParamDimBase.__init__
 
         Raises:
@@ -910,18 +904,6 @@ class CoupledParamDim(ParamDimBase):
                 or both were given
         """
         # TODO Make this __init__ more elegant!
-
-        # Deprecation warnings for old parameters
-        if use_coupled_default is not None or use_coupled_values is not None:
-            warnings.warn(
-                "The CoupledParamDim.__init__ parameters "
-                "`use_coupled_default` and `use_coupled_values` are "
-                "deprecated and will soon be removed. Whether the "
-                "counterpart from the coupled parameter dimension "
-                "is to be used is determined by whether the "
-                "`default` or any value-setting argument was given.",
-                DeprecationWarning,
-            )
 
         # Disallow mask argument
         if "mask" in kwargs:
