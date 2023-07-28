@@ -32,7 +32,6 @@ def pspace_unsorted(loader, node) -> ParamSpace:
 def pdim(loader, node) -> ParamDim:
     """constructor for creating a ParamDim object from a mapping, but only
     return the default value."""
-    print("!pdim constructor")
     return _pdim_constructor(loader, node, Cls=ParamDim, default_order=np.inf)
 
 
@@ -129,9 +128,7 @@ def _pdim_constructor(
                 kwargs["order"] = default_order
 
         # Can now construct the object:
-        print(kwargs)
         pdim = Cls(**kwargs)
-        print("order:", pdim.order)
 
     else:
         raise TypeError(
