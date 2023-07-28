@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.6.2
+- !79 removes left-over `print` statements 🤦
+
 ## v2.6.1
 Post-release of v2.6.0 due to botched PyPI deployment.
 
