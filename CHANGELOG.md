@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.7.0
+- !82 removes the deprecated unsafe YAML loader (`yaml_unsafe`)
+
 ## v2.6.2
 - !79 removes left-over `print` statements 🤦
 
