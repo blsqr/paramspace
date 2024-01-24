@@ -87,7 +87,7 @@ release = find_version("..", "paramspace", "__init__.py")
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-needs_sphinx = "4.5"
+needs_sphinx = "5.3"
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
@@ -102,7 +102,7 @@ extensions = [
     "sphinx.ext.ifconfig",
     "sphinx.ext.viewcode",
     #
-    ### Additional extensions...
+    # Additional extensions...
     #   ... to allow toggling content
     "sphinx_togglebutton",
     #   ... to pre-process Google-style Python docstrings
@@ -163,8 +163,8 @@ html_theme = "sphinx_book_theme"
 html_theme_options = {
     "repository_url": "https://gitlab.com/blsqr/paramspace",
     "use_repository_button": True,
-    "use_issues_button": True,
-    "use_edit_page_button": False,  # NOTE Not working with GitLab repos yet
+    "use_issues_button": False,  # Not working with GitLab repos yet
+    "use_edit_page_button": False,  # Not working with GitLab repos yet
     "use_download_button": True,
     "use_fullscreen_button": False,
 }
@@ -327,6 +327,9 @@ napoleon_include_special_with_doc = True
 
 # fmt: off
 intersphinx_mapping = {
+    #
+    # First-party docs:
+    "yayaml":       ("https://yayaml.readthedocs.io/en/latest/", None),
     #
     # Third-party docs
     "python":       ("https://docs.python.org/3/", None),
