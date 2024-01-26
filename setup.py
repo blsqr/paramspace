@@ -6,7 +6,7 @@ install_deps = [
     "numpy < 2.0",
     "xarray",
     "ruamel.yaml",
-    "yayaml",
+    "yayaml>=0.2",
 ]
 
 # Dependencies for executing tests
@@ -18,8 +18,8 @@ test_deps = [
 
 # Dependencies for documentation building
 doc_deps = [
-    "sphinx == 4.*",
-    "sphinx-book-theme == 0.3.*",
+    "sphinx == 5.*",
+    "sphinx-book-theme",
     "sphinx-togglebutton",
     "ipython",
 ]

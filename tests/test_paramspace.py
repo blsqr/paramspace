@@ -1261,53 +1261,6 @@ def test_nested(psp_nested, basic_psp):
 # YAML Dumping ----------------------------------------------------------------
 
 
-def test_yaml_unsafe_dump_and_load(
-    tmpdir, small_psp, adv_psp, seq_psp, psp_with_coupled
-):
-    """Tests that YAML dumping and reloading works"""
-    yaml = yaml_unsafe
-
-    d_out = dict(
-        small=small_psp, adv=adv_psp, seq=seq_psp, coupled=psp_with_coupled
-    )
-    path = tmpdir.join("out.yml")
-
-    # Dump it
-    with open(path, "x") as out_file:
-        yaml.dump(d_out, stream=out_file)
-
-    # Read what was written
-    with open(path) as in_file:
-        print("Content of written file:\n")
-        print("".join(in_file.readlines()))
-        print("--- end of file ---")
-
-    # Load it again
-    with open(path) as in_file:
-        d_in = yaml.load(in_file)
-
-    # Check that the contents are equivalent
-    for k_out, v_out in d_out.items():
-        assert k_out in d_in
-        psp = d_in[k_out]
-
-        print(
-            k_out,
-            ":",
-        )
-        print(
-            "  dims:   \n   ",
-            "\n    ".join([f"{k}: {v}" for k, v in psp.dims.items()]),
-        )
-
-        print(
-            "  coupled:\n   ",
-            "\n    ".join([f"{k}: {v}" for k, v in psp.coupled_dims.items()]),
-        )
-
-        assert v_out == psp
-
-
 def test_yaml_safe_dump_and_load(
     tmpdir, small_psp, adv_psp, seq_psp, psp_with_coupled
 ):
@@ -1333,11 +1286,12 @@ def test_yaml_safe_dump_and_load(
         small=small_psp, adv=adv_psp, seq=seq_psp, coupled=psp_with_coupled
     )
 
-    # Test all possible combinations of dump and load methods
+    # Test all possible combinations of dump and load methods;
+    # the combinations with the unsafe loader no longer need to be tested.
     methods = [
-        ("unsafe-unsafe", yaml_unsafe.dump, yaml_unsafe.load),
-        ("unsafe-safe", yaml_unsafe.dump, yaml_safe.load),
-        ("safe-unsafe", yaml_safe.dump, yaml_unsafe.load),
+        # ("unsafe-unsafe", yaml_unsafe.dump, yaml_unsafe.load),
+        # ("unsafe-safe", yaml_unsafe.dump, yaml_safe.load),
+        # ("safe-unsafe", yaml_safe.dump, yaml_unsafe.load),
         ("safe-safe", yaml_safe.dump, yaml_safe.load),
     ]
 
