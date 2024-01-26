@@ -6,7 +6,7 @@ install_deps = [
     "numpy < 2.0",
     "xarray",
     "ruamel.yaml",
-    "yayaml @ git+https://gitlab.com/blsqr/yayaml.git@use-utf8-in-load-yml",
+    "yayaml>=0.2",
 ]
 
 # Dependencies for executing tests
