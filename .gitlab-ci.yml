@@ -17,7 +17,6 @@ workflow:
 
 include:
   - template: SAST.gitlab-ci.yml
-  - template: Security/License-Scanning.gitlab-ci.yml
   - template: Dependency-Scanning.gitlab-ci.yml
 
 variables:
@@ -73,9 +72,6 @@ check:hooks:
     - pip install pre-commit
   script:
     - pre-commit run --all-files --verbose --show-diff-on-failure
-
-license_scanning:
-  <<: *optional_checks
 
 semgrep-sast:
   <<: *optional_checks
