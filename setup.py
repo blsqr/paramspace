@@ -3,10 +3,10 @@ from setuptools import setup
 
 # Dependencies for paramspace itself
 install_deps = [
-    "numpy < 2.0",
+    "numpy",
     "xarray",
     "ruamel.yaml",
-    "yayaml>=0.2",
+    "yayaml>=0.2.1",
 ]
 
 # Dependencies for executing tests
