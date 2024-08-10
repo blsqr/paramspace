@@ -2,6 +2,9 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.7.1
+- !83 adds numpy >= 2 compatibility.
+
 ## v2.7.0
 - !82 removes the deprecated unsafe YAML loader (`yaml_unsafe`)
 
