@@ -6,6 +6,7 @@
 - !84 uses simple Python dicts (instead of `OrderedDict`) when loading `ParamSpace` objects from YAML.
   This not simplifies nested dict-like objects, while maintaining key-sorting, but also avoids downstream issues with other YAML libraries.
 - !84 extends `tools.recursive_replace` to allow continuing recursion after a replacement was made.
+- !85 adds test jobs for Python 3.12 and 3.13
 
 ## v2.7.1
 - !83 adds numpy >= 2 compatibility.
