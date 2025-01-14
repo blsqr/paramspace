@@ -119,10 +119,22 @@ test:py310:
     - tox -e py310
 
 test:py311:
-  image: python:3.11-rc  # FIXME Drop -rc once released
+  image: python:3.11
   extends: test:py36
   script:
     - tox -e py311
+
+test:py312:
+  image: python:3.12
+  extends: test:py36
+  script:
+    - tox -e py312
+
+test:py313:
+  image: python:3.13
+  extends: test:py36
+  script:
+    - tox -e py313
 
 
 # Build -----------------------------------------------------------------------

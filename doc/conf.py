@@ -73,7 +73,7 @@ def setup(app):
 # -- Project information -----------------------------------------------------
 
 project = "paramspace"
-copyright = "2017 - 2024, Yunus Sevinchan"
+copyright = "2017 - 2025, Yunus Sevinchan"
 author = "Yunus Sevinchan"
 
 # The short X.Y version
