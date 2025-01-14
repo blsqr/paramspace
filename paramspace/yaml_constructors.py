@@ -21,11 +21,19 @@ log = logging.getLogger(__name__)
 
 @yay.is_constructor("!pspace-unsorted")
 def pspace_unsorted(loader, node) -> ParamSpace:
+    """yaml constructor for creating a ParamSpace object from a mapping;
+    behaves exactly like the regular constructor, with keys *not* being sorted.
+    """
+    return _pspace_constructor(loader, node, sort_if_mapping=False)
+
+
+@yay.is_constructor("!pspace-sorted")
+def pspace_sorted(loader, node) -> ParamSpace:
     """yaml constructor for creating a ParamSpace object from a mapping.
 
-    Unlike the regular constructor, this one does NOT sort the input before
+    Unlike the regular constructor, this one DOES sort the keys before
     instantiating ParamSpace."""
-    return _pspace_constructor(loader, node, sort_if_mapping=False)
+    return _pspace_constructor(loader, node, sort_if_mapping=True)
 
 
 @yay.is_constructor("!pdim")
@@ -78,7 +86,7 @@ def coupled_pdim_default(loader, node) -> CoupledParamDim:
 
 
 def _pspace_constructor(
-    loader, node, sort_if_mapping: bool = True, Cls=ParamSpace
+    loader, node, sort_if_mapping: bool = False, Cls=ParamSpace
 ) -> ParamSpace:
     """Constructor for instantiating ParamSpace from a mapping or a sequence"""
     log.debug("Encountered tag associated with ParamSpace.")
@@ -91,7 +99,7 @@ def _pspace_constructor(
         # Recursively order the content to have consistent loading
         if sort_if_mapping:
             log.debug("Recursively sorting the mapping ...")
-            d = recursively_sort_dict(OrderedDict(d))
+            d = recursively_sort_dict(d)
 
     else:
         raise TypeError(

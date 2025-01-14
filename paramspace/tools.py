@@ -458,6 +458,27 @@ def recursively_sort_dict(d: dict) -> collections.OrderedDict:
     return res
 
 
+def to_simple_dict(od: collections.OrderedDict) -> dict:
+    """Recursively go through given dict-like object and cast dict on all
+    OrderedDict entries, such that they are stored as plain dicts.
+    Also recurses along tuples and lists, in case they contain OrderedDicts.
+    """
+    OD = collections.OrderedDict
+
+    for k, v in od.items():
+        if isinstance(v, (OD, dict)):
+            od[k] = to_simple_dict(v)
+        elif isinstance(v, (tuple, list)):
+            # may need to continue recursion
+            od[k] = type(v)(
+                _v if not isinstance(_v, (OD, dict)) else to_simple_dict(_v)
+                for _v in v
+            )
+        # else: scalar, non-recursible type; nothing to do.
+
+    return dict(od)
+
+
 # Helpers ---------------------------------------------------------------------
 
 

@@ -12,7 +12,12 @@ import numpy as np
 import numpy.ma
 
 from .paramdim import CoupledParamDim, Masked, ParamDim, ParamDimBase
-from .tools import recursive_collect, recursive_replace, recursive_update
+from .tools import (
+    recursive_collect,
+    recursive_replace,
+    recursive_update,
+    to_simple_dict,
+)
 
 log = logging.getLogger(__name__)
 
@@ -879,7 +884,7 @@ class ParamSpace:
         attribute needs to be saved. It can be plugged into a constructor
         without any issues.
         However, to make the string representation a bit simpler, the
-        OrderedDict is resolved to an unordered one.
+        OrderedDict is resolved to a simple dict.
 
         Args:
             representer (ruamel.yaml.representer): The representer module
@@ -888,18 +893,9 @@ class ParamSpace:
         Returns:
             a yaml mapping that is able to recreate this object
         """
-        # Get the objects _dict
         d = copy.deepcopy(node._dict)
-
-        # Recursively go through it and cast dict on all OrderedDict entries
-        def to_dict(od: OrderedDict):
-            for k, v in od.items():
-                if isinstance(v, OrderedDict):
-                    od[k] = to_dict(v)
-            return dict(od)
-
-        # Can now call the representer
-        return representer.represent_mapping(cls.yaml_tag, to_dict(d))
+        d = to_simple_dict(d)
+        return representer.represent_mapping(cls.yaml_tag, d)
 
     @classmethod
     def from_yaml(cls, loader, node):

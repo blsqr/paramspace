@@ -1,7 +1,6 @@
 """Tests the yaml constructors"""
 import numpy as np
 import pytest
-from ruamel.yaml.constructor import ConstructorError
 from yayaml import yaml_dumps
 
 from paramspace import ParamDim, ParamSpace
@@ -18,9 +17,9 @@ def yamlstrs() -> dict:
         "pspace_only": """
             mapping: !pspace
               a: 1
-              b: 2
               c: 3
-            mapping_sorted: !pspace
+              b: 2
+            mapping_sorted: !pspace-sorted
               a: 1
               c: 3
               b: 2
