@@ -1271,14 +1271,17 @@ def test_yaml_safe_dump_and_load(
     def dump_load_assert_equal(d_out: dict, *, path, dump_func, load_func):
         """Helper method for dumping, loading, and asserting equality"""
         # Dump it
+        print("  Dumping ...")
         with open(path, "x") as out_file:
             dump_func(d_out, stream=out_file)
 
         # Read it in again
+        print("  Reading ...")
         with open(path) as in_file:
             d_in = load_func(in_file)
 
         # Check that the contents are equivalent
+        print("  Checking ...")
         assert d_out == d_in
 
     # Use the dict of ParamDim objects for testing
@@ -1300,11 +1303,11 @@ def test_yaml_safe_dump_and_load(
         fname = prefix + ".yml"
         path = tmpdir.join(fname)
 
-        print(f"Now testing combination:  {prefix}  ... ", end="")
+        print(f"Now testing combination:  {prefix}  ... ")
 
         # Call the test function
         dump_load_assert_equal(
             d_out, path=path, dump_func=dump_func, load_func=load_func
         )
 
-        print("Works!")
+        print("Works!\n\n")

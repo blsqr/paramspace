@@ -1,7 +1,6 @@
 """Tests the yaml constructors"""
 import numpy as np
 import pytest
-from ruamel.yaml.constructor import ConstructorError
 from yayaml import yaml_dumps
 
 from paramspace import ParamDim, ParamSpace
@@ -24,9 +23,6 @@ def yamlstrs() -> dict:
               a: 1
               c: 3
               b: 2
-              foo:
-                bar: 1
-                baz: 2
             mapping_unsorted: !pspace-unsorted
               a: 1
               c: 3
@@ -167,6 +163,7 @@ def test_load_and_safe(yamlstrs):
         output = yaml_dumps(obj)
 
         # And that it uses the expected YAML tags
+        print(output)
         if name == "pspace_only":
             assert output.count("!pspace") == 3
 
