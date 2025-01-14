@@ -1,4 +1,5 @@
 """Tests for the tool functions of the paramspace package"""
+import collections
 import copy
 
 import pytest
@@ -234,3 +235,46 @@ def test_recursive_update():
     assert du["l4"] == [2, 3, 3, 4]
     assert du["l5"] == [2, 3, 4, dict(a=2, b=3)]
     assert du["l6"] == [1, 2, 4]
+
+
+def test_recursively_sort_dict():
+    d = dict(b=2, a=1, c=3)
+    d2 = [copy.copy(d), [copy.copy(d)], [[(), 1, 2, copy.copy(d)]]]
+    d3 = dict(foo=copy.copy(d), bar=(copy.copy(d),))
+
+    assert tuple(t.recursively_sort_dict(d).keys()) == ("a", "b", "c")
+
+    sd2 = t.recursively_sort_dict(d2)
+    assert tuple(sd2[0].keys()) == ("a", "b", "c")
+    assert tuple(sd2[1][0].keys()) == ("a", "b", "c")
+    assert tuple(sd2[2][0][-1].keys()) == ("a", "b", "c")
+
+    # cannot replace within tuples, because item assignment is not possible
+    with pytest.raises(TypeError, match="item assignment"):
+        t.recursively_sort_dict(d3)
+
+
+def test_to_simple_dict():
+    OD = collections.OrderedDict
+
+    d = OD()
+    d["b"] = 2
+    d["a"] = 1
+    d["c"] = 3
+    assert isinstance(d, OD)
+
+    d2 = OD()
+    d2["c"] = OD(b=copy.copy(d), a=copy.copy(d), foo="bar")
+    d2["a"] = [copy.copy(d), copy.copy(d), 123, "foo", ["foo"]]
+    d2["b"] = copy.copy(d)
+
+    sd = t.to_simple_dict(d)
+    assert not isinstance(sd, OD)
+
+    sd2 = t.to_simple_dict(d2)
+    assert not isinstance(sd2, OD)
+    assert not isinstance(sd2["b"], OD)
+    assert not isinstance(sd2["a"][0], OD)
+    assert not isinstance(sd2["a"][1], OD)
+    assert not isinstance(sd2["c"]["a"], OD)
+    assert not isinstance(sd2["c"]["b"], OD)

@@ -10,7 +10,16 @@ Attributes:
 import collections
 import logging
 import warnings
-from typing import Callable, Iterator, List, Mapping, Sequence, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Iterator,
+    List,
+    Mapping,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 log = logging.getLogger(__name__)
 
@@ -360,6 +369,7 @@ def recursive_replace(
     *,
     select_func: Callable,
     replace_func: Callable,
+    recurse_after_replace: bool = False,
     stop_recursion_types: Sequence[type] = None,
 ) -> Union[Mapping, Sequence]:
     """Go recursively through a mapping or sequence and call a replace
@@ -377,6 +387,11 @@ def recursive_replace(
         replace_func (Callable): Called if the ``select_func`` returned True.
             The return value replaces the existing object at the selected
             position inside ``obj``.
+
+        recurse_after_replace(bool, optional): if True, will continue the
+            recursion after having applied the replace function; in effect,
+            the ``recursive_replace`` call continues on the *result* of the
+            ``replace_func``.
 
         stop_recursion_types (Sequence[type], optional): Can specify types here
             that will not be further recursed through. NOTE that strings are
@@ -410,13 +425,18 @@ def recursive_replace(
 
     # Go through all items
     for key, val in get_key_val_iter(obj):
-        if select_func(val):
+        selected: bool = select_func(val)
+        if selected:
             # found the desired element -> replace by the value returned from
             # the replace_func
             replace(obj, key=key, replace_by=replace_func(val))
+            val = obj[key]
 
-        elif not isinstance(val, stop_recursion_types) and is_iterable(val):
-            # Not the desired element, but recursion possible ...
+        if selected and not recurse_after_replace:
+            continue
+
+        if not isinstance(val, stop_recursion_types) and is_iterable(val):
+            # Recursion possible ...
             replace(
                 obj,
                 key=key,
@@ -424,6 +444,7 @@ def recursive_replace(
                     val,
                     select_func=select_func,
                     replace_func=replace_func,
+                    recurse_after_replace=recurse_after_replace,
                     stop_recursion_types=stop_recursion_types,
                 ),
             )
@@ -434,49 +455,66 @@ def recursive_replace(
     return obj
 
 
-def recursively_sort_dict(d: dict) -> collections.OrderedDict:
-    """Recursively sorts a dictionary by its keys, transforming it to an
-    OrderedDict in the process.
+# .. Applications .............................................................
 
-    From: http://stackoverflow.com/a/22721724/1827608
+
+def recursively_sort_dict(obj: Union[dict, Any], **kwargs) -> Union[dict, Any]:
+    """Recursively sorts dicts inside a nested objects by its keys.
+
+    Also recurses along lists or tuples, in case they contain other dicts that
+    may require key-sorting.
+
+    .. note::
+
+        Does *not* use :py:class:`~collections.OrderedDict` types, but instead
+        reconstructs dicts with sorted keys, hence generating shallow copies.
 
     Args:
-        d (dict): The dictionary to be sorted
+        obj (Union[dict, Any]): The object potentially containing to-be-sorted
+            dicts or dict-like objects.
+        **kwargs: Passed on to :py:func:`.recursive_replace` which is used
+            for sorting.
 
     Returns:
-        OrderedDict: the recursively sorted dict
+        Union[dict, Any]: the object with contained dicts recursively sorted
+            by their keys
     """
-    # Start with empty ordered dict for this recursion level
-    res = collections.OrderedDict()
 
-    # Fill it with the values from the dictionary
-    for k, v in sorted(d.items()):
-        if isinstance(v, dict):
-            res[k] = recursively_sort_dict(v)
-        else:
-            res[k] = v
-    return res
+    def sort_by_keys(d) -> dict:
+        return {k: d[k] for k in sorted(d.keys())}
+
+    return recursive_replace(
+        sort_by_keys(obj) if isinstance(obj, dict) else obj,
+        select_func=lambda v: isinstance(v, dict),
+        replace_func=sort_by_keys,
+        recurse_after_replace=True,
+        **kwargs,
+    )
 
 
-def to_simple_dict(od: collections.OrderedDict) -> dict:
+def to_simple_dict(obj: Union[dict, Any], **kwargs) -> Union[dict, Any]:
     """Recursively go through given dict-like object and cast dict on all
-    OrderedDict entries, such that they are stored as plain dicts.
-    Also recurses along tuples and lists, in case they contain OrderedDicts.
+    entries, such that they are stored as *plain* dicts.
+
+    Also recurses along tuples and lists in case they have dicts as elements.
+
+    Args:
+        obj (Union[dict, Any]): The dictionary or any other nestable object that
+            may contain dict-like object that should be cast to plain dicts.
+        **kwargs: Passed on to :py:func:`.recursive_replace` which is used
+            for recursively converting to dict.
+
+    Returns:
+        Union[dict, Any]: the object, but with nested dict-like objects cast
+            to plain dicts.
     """
-    OD = collections.OrderedDict
-
-    for k, v in od.items():
-        if isinstance(v, (OD, dict)):
-            od[k] = to_simple_dict(v)
-        elif isinstance(v, (tuple, list)):
-            # may need to continue recursion
-            od[k] = type(v)(
-                _v if not isinstance(_v, (OD, dict)) else to_simple_dict(_v)
-                for _v in v
-            )
-        # else: scalar, non-recursible type; nothing to do.
-
-    return dict(od)
+    return recursive_replace(
+        dict(obj) if isinstance(obj, dict) else obj,
+        select_func=lambda o: isinstance(o, (dict, collections.OrderedDict)),
+        replace_func=lambda d: dict(d),
+        recurse_after_replace=True,
+        **kwargs,
+    )
 
 
 # Helpers ---------------------------------------------------------------------

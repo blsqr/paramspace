@@ -17,15 +17,12 @@ def yamlstrs() -> dict:
         "pspace_only": """
             mapping: !pspace
               a: 1
-              c: 3
               b: 2
-            mapping_sorted: !pspace-sorted
+              c: 3
+            mapping_sorted: !pspace
               a: 1
               c: 3
               b: 2
-              foo:
-                bar: 1
-                baz: 2
             mapping_unsorted: !pspace-unsorted
               a: 1
               c: 3
@@ -166,6 +163,7 @@ def test_load_and_safe(yamlstrs):
         output = yaml_dumps(obj)
 
         # And that it uses the expected YAML tags
+        print(output)
         if name == "pspace_only":
             assert output.count("!pspace") == 3
 

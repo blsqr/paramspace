@@ -24,16 +24,7 @@ def pspace_unsorted(loader, node) -> ParamSpace:
     """yaml constructor for creating a ParamSpace object from a mapping;
     behaves exactly like the regular constructor, with keys *not* being sorted.
     """
-    return _pspace_constructor(loader, node, sort_if_mapping=False)
-
-
-@yay.is_constructor("!pspace-sorted")
-def pspace_sorted(loader, node) -> ParamSpace:
-    """yaml constructor for creating a ParamSpace object from a mapping.
-
-    Unlike the regular constructor, this one DOES sort the keys before
-    instantiating ParamSpace."""
-    return _pspace_constructor(loader, node, sort_if_mapping=True)
+    return _pspace_constructor(loader, node, sort_dicts_by_key=False)
 
 
 @yay.is_constructor("!pdim")
@@ -86,20 +77,25 @@ def coupled_pdim_default(loader, node) -> CoupledParamDim:
 
 
 def _pspace_constructor(
-    loader, node, sort_if_mapping: bool = False, Cls=ParamSpace
+    loader, node, sort_dicts_by_key: bool = True, Cls=ParamSpace
 ) -> ParamSpace:
     """Constructor for instantiating ParamSpace from a mapping or a sequence"""
-    log.debug("Encountered tag associated with ParamSpace.")
+    log.debug("Encountered tag '%s' associated with ParamSpace.", node.tag)
 
     # get fields as mapping or sequence
     if isinstance(node, ruamel.yaml.nodes.MappingNode):
         log.debug("Constructing mapping from node ...")
         d = loader.construct_mapping(node, deep=True)
 
-        # Recursively order the content to have consistent loading
-        if sort_if_mapping:
-            log.debug("Recursively sorting the mapping ...")
-            d = recursively_sort_dict(d)
+        # Recursively order dict-like objects by their key to have consistent
+        # mapping. Does not use OrderedDict but reconstructs dicts with keys
+        # in order ...
+        if sort_dicts_by_key:
+            log.debug("Recursively sorting the mapping by its keys ...")
+            d = recursively_sort_dict(
+                d,
+                stop_recursion_types=(ParamDim, CoupledParamDim),
+            )
 
     else:
         raise TypeError(
@@ -107,7 +103,7 @@ def _pspace_constructor(
             f"sequence, got node of type {type(node)} with value:\n{node}."
         )
 
-    log.debug("Instantiating ParamSpace ...")
+    log.debug("Instantiating %s ...", Cls.__name__)
     return Cls(d)
 
 

@@ -894,7 +894,13 @@ class ParamSpace:
             a yaml mapping that is able to recreate this object
         """
         d = copy.deepcopy(node._dict)
-        d = to_simple_dict(d)
+        d = to_simple_dict(
+            d,
+            stop_recursion_types=(
+                ParamDim,
+                CoupledParamDim,
+            ),
+        )
         return representer.represent_mapping(cls.yaml_tag, d)
 
     @classmethod
