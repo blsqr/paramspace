@@ -139,7 +139,7 @@ test:py313:
 test:py314:
   image: python:3.14-rc-slim  # TODO update once released
   extends: test:py36
-  allow_failure: true
+  when: manual
   script:
     - tox -e py314
 
