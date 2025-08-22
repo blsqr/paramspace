@@ -2,6 +2,10 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.8.1
+Maintenance release; no code changes.
+
+
 ## v2.8.0
 - !84 uses simple Python dicts (instead of `OrderedDict`) when loading `ParamSpace` objects from YAML.
   This not simplifies nested dict-like objects, while maintaining key-sorting, but also avoids downstream issues with other YAML libraries.

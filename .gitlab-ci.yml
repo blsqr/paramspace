@@ -136,6 +136,13 @@ test:py313:
   script:
     - tox -e py313
 
+test:py314:
+  image: python:3.14-rc-slim  # TODO update once released
+  extends: test:py36
+  when: manual
+  script:
+    - tox -e py314
+
 
 # Build -----------------------------------------------------------------------
 
