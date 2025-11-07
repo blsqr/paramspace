@@ -2,6 +2,10 @@
 
 `paramspace` aims to adhere to [semantic versioning](https://semver.org/).
 
+## v2.8.2
+Another maintenance release; now officially supporting Python 3.14.
+
+
 ## v2.8.1
 Maintenance release; no code changes.
 
